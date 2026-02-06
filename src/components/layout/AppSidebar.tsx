@@ -72,9 +72,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       )}
     >
       {/* Logo */}
-      <div className="flex items-center justify-between p-5 border-b border-sidebar-border">
+      <div className="flex items-center justify-between p-3 border-b border-sidebar-border">
         {!collapsed && (
-          <img src={logoLight} alt="Quadra Arquitetura" className="h-28 animate-fade-in" />
+          <div className="h-16 overflow-hidden flex-1">
+            <img src={logoLight} alt="Quadra Arquitetura" className="h-24 -mt-4 object-contain object-left animate-fade-in" />
+          </div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
