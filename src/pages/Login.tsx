@@ -52,7 +52,7 @@ export default function Login() {
       {/* Left - Form */}
       <div className="flex flex-col justify-center w-full lg:w-1/2 px-8 sm:px-16 lg:px-20 py-12">
         <div className="w-full max-w-md mx-auto">
-          <img src={logoDark} alt="Quadra Arquitetura" className="h-16 mb-10" />
+          <img src={logoDark} alt="Quadra Arquitetura" className="h-24 mb-10" />
 
           <h2 className="text-2xl font-display font-bold mb-1">
             Bem-vindo(a) de volta
