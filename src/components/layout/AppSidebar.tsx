@@ -70,9 +70,9 @@ export function AppSidebar() {
       )}
     >
       {/* Logo */}
-      <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
+      <div className="flex items-center justify-between p-5 border-b border-sidebar-border">
         {!collapsed && (
-          <img src={logoLight} alt="Quadra Arquitetura" className="h-20 animate-fade-in" />
+          <img src={logoLight} alt="Quadra Arquitetura" className="h-28 animate-fade-in" />
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
