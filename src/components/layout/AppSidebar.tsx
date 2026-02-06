@@ -91,7 +91,7 @@ export function AppSidebar() {
               <>
                 <button
                   onClick={() => toggleGroup(group.label)}
-                  className="flex items-center justify-between w-full px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/60 hover:text-sidebar-foreground/90 transition-colors"
+                  className="flex items-center justify-between w-full px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-sidebar-foreground hover:text-sidebar-accent-foreground transition-colors"
                 >
                   {group.label}
                   <ChevronDown
