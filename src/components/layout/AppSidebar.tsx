@@ -1,8 +1,7 @@
 import {
-  LogOut, ChevronLeft, ChevronRight, ChevronDown,
+  ChevronLeft, ChevronRight, ChevronDown,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import logoLight from "@/assets/logo-light.png";
@@ -51,11 +50,14 @@ const menuGroups = [
   },
 ];
 
-export function AppSidebar() {
-  const { signOut } = useAuth();
+interface AppSidebarProps {
+  onNavigate?: () => void;
+}
+
+export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
-    Object.fromEntries(menuGroups.map((g) => [g.label, true]))
+    Object.fromEntries(menuGroups.map((g) => [g.label, false]))
   );
 
   const toggleGroup = (label: string) => {
@@ -65,7 +67,7 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "flex flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300 ease-in-out",
+        "flex flex-col h-full border-r border-sidebar-border bg-sidebar transition-all duration-300 ease-in-out",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -115,6 +117,7 @@ export function AppSidebar() {
                           end={item.url === "/dashboard"}
                           className="block rounded-md px-4 py-2 text-sm font-medium text-sidebar-foreground transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                           activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                          onClick={onNavigate}
                         >
                           {item.title}
                         </NavLink>
@@ -129,20 +132,6 @@ export function AppSidebar() {
           </div>
         ))}
       </nav>
-
-      {/* Logout */}
-      <div className="border-t border-sidebar-border p-2">
-        <button
-          onClick={signOut}
-          className={cn(
-            "flex items-center gap-3 w-full rounded-md px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-            collapsed && "justify-center px-2"
-          )}
-        >
-          <LogOut className="h-4.5 w-4.5 flex-shrink-0" />
-          {!collapsed && <span>Sair</span>}
-        </button>
-      </div>
     </aside>
   );
 }
