@@ -1,55 +1,52 @@
 import {
-  LayoutDashboard, Users, Ruler, Wallet, ClipboardList,
-  CreditCard, HardHat, Truck, FileText, BarChart3, Settings,
-  LogOut, ChevronLeft, ChevronRight,
+  LogOut, ChevronLeft, ChevronRight, ChevronDown,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import logoDark from "@/assets/logo-dark.png";
 import logoLight from "@/assets/logo-light.png";
 
 const menuGroups = [
   {
     label: "Principal",
     items: [
-      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+      { title: "Dashboard", url: "/dashboard" },
     ],
   },
   {
     label: "Gestão",
     items: [
-      { title: "Clientes", url: "/clients", icon: Users },
-      { title: "Projetos", url: "/projects", icon: Ruler },
+      { title: "Clientes", url: "/clients" },
+      { title: "Projetos", url: "/projects" },
     ],
   },
   {
     label: "Financeiro",
     items: [
-      { title: "Orçamentos", url: "/budgets", icon: Wallet },
-      { title: "Compras", url: "/purchases", icon: ClipboardList },
-      { title: "Financeiro", url: "/financial", icon: CreditCard },
+      { title: "Orçamentos", url: "/budgets" },
+      { title: "Compras", url: "/purchases" },
+      { title: "Pagamentos", url: "/financial" },
     ],
   },
   {
     label: "Operacional",
     items: [
-      { title: "Acomp. de Obra", url: "/site-tracking", icon: HardHat },
-      { title: "Fornecedores", url: "/suppliers", icon: Truck },
+      { title: "Acomp. de Obra", url: "/site-tracking" },
+      { title: "Fornecedores", url: "/suppliers" },
     ],
   },
   {
     label: "Arquivos",
     items: [
-      { title: "Documentos", url: "/documents", icon: FileText },
-      { title: "Relatórios", url: "/reports", icon: BarChart3 },
+      { title: "Documentos", url: "/documents" },
+      { title: "Relatórios", url: "/reports" },
     ],
   },
   {
     label: "Sistema",
     items: [
-      { title: "Configurações", url: "/settings", icon: Settings },
+      { title: "Configurações", url: "/settings" },
     ],
   },
 ];
@@ -57,6 +54,13 @@ const menuGroups = [
 export function AppSidebar() {
   const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
+    Object.fromEntries(menuGroups.map((g) => [g.label, true]))
+  );
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
 
   return (
     <aside
@@ -82,31 +86,46 @@ export function AppSidebar() {
       {/* Navigation */}
       <nav className="flex-1 py-2 overflow-y-auto">
         {menuGroups.map((group) => (
-          <div key={group.label} className="mb-1">
-            {!collapsed && (
-              <span className="px-4 py-2 block text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-                {group.label}
-              </span>
-            )}
-            {collapsed && <div className="my-1 mx-3 border-t border-sidebar-border" />}
-            <ul className="space-y-0.5 px-2">
-              {group.items.map((item) => (
-                <li key={item.url}>
-                  <NavLink
-                    to={item.url}
-                    end={item.url === "/dashboard"}
+          <div key={group.label} className="mb-0.5">
+            {!collapsed ? (
+              <>
+                <button
+                  onClick={() => toggleGroup(group.label)}
+                  className="flex items-center justify-between w-full px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/60 hover:text-sidebar-foreground/90 transition-colors"
+                >
+                  {group.label}
+                  <ChevronDown
                     className={cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      collapsed && "justify-center px-2"
+                      "h-3 w-3 transition-transform duration-200",
+                      !openGroups[group.label] && "-rotate-90"
                     )}
-                    activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-                  >
-                    <item.icon className="h-4.5 w-4.5 flex-shrink-0" />
-                    {!collapsed && <span className="truncate">{item.title}</span>}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
+                  />
+                </button>
+                <div
+                  className={cn(
+                    "overflow-hidden transition-all duration-200",
+                    openGroups[group.label] ? "max-h-96" : "max-h-0"
+                  )}
+                >
+                  <ul className="space-y-0.5 px-2 pb-1">
+                    {group.items.map((item) => (
+                      <li key={item.url}>
+                        <NavLink
+                          to={item.url}
+                          end={item.url === "/dashboard"}
+                          className="block rounded-md px-4 py-2 text-sm font-medium text-sidebar-foreground transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                        >
+                          {item.title}
+                        </NavLink>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            ) : (
+              <div className="my-1 mx-3 border-t border-sidebar-border" />
+            )}
           </div>
         ))}
       </nav>
