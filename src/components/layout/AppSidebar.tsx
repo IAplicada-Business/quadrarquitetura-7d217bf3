@@ -10,7 +10,8 @@ const menuGroups = [
   {
     label: "Principal",
     items: [
-      { title: "Dashboard", url: "/dashboard" },
+      { title: "Escritório", url: "/dashboard/escritorio" },
+      { title: "Obras", url: "/dashboard/obras" },
     ],
   },
   {

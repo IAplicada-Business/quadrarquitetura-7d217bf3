@@ -6,7 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
+import DashboardEscritorio from "./pages/DashboardEscritorio";
+import DashboardObras from "./pages/DashboardObras";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
@@ -52,7 +53,9 @@ const App = () => (
                 </ProtectedRoute>
               }
             >
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Navigate to="/dashboard/escritorio" replace />} />
+              <Route path="/dashboard/escritorio" element={<DashboardEscritorio />} />
+              <Route path="/dashboard/obras" element={<DashboardObras />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
