@@ -1,0 +1,73 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+
+export function usePendingItems(projectId: string | undefined) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["pending_items", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pending_items")
+        .select("*")
+        .eq("project_id", projectId!)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projectId,
+  });
+
+  const create = useMutation({
+    mutationFn: async (item: {
+      description: string;
+      discipline?: string;
+      responsible?: string;
+      status?: string;
+      inclusion_date?: string;
+      conclusion_date?: string;
+    }) => {
+      const { error } = await supabase.from("pending_items").insert({
+        ...item,
+        status: item.status ?? "pendente",
+        project_id: projectId!,
+        user_id: user!.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pending_items", projectId] });
+      toast({ title: "Pendência adicionada" });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const update = useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string } & Record<string, unknown>) => {
+      const { error } = await supabase.from("pending_items").update(updates).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pending_items", projectId] });
+      toast({ title: "Pendência atualizada" });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("pending_items").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pending_items", projectId] });
+      toast({ title: "Pendência removida" });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  return { items: query.data ?? [], isLoading: query.isLoading, create, update, remove };
+}

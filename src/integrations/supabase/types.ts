@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      budget_quote_items: {
+        Row: {
+          budget_quote_id: string
+          created_at: string
+          description: string
+          id: string
+          updated_at: string
+          user_id: string
+          value: number | null
+        }
+        Insert: {
+          budget_quote_id: string
+          created_at?: string
+          description: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          value?: number | null
+        }
+        Update: {
+          budget_quote_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_quote_items_budget_quote_id_fkey"
+            columns: ["budget_quote_id"]
+            isOneToOne: false
+            referencedRelation: "budget_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       budget_quotes: {
         Row: {
           created_at: string
@@ -203,6 +241,108 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      discipline_material_estimates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          project_id: string
+          revision_number: number | null
+          scope_item_id: string
+          updated_at: string
+          user_id: string
+          value: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          project_id: string
+          revision_number?: number | null
+          scope_item_id: string
+          updated_at?: string
+          user_id: string
+          value?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          project_id?: string
+          revision_number?: number | null
+          scope_item_id?: string
+          updated_at?: string
+          user_id?: string
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_material_estimates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_material_estimates_scope_item_id_fkey"
+            columns: ["scope_item_id"]
+            isOneToOne: false
+            referencedRelation: "scope_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discipline_priorities: {
+        Row: {
+          created_at: string
+          id: string
+          is_prioritized: boolean | null
+          priority: number | null
+          project_id: string
+          revision_number: number | null
+          scope_item_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_prioritized?: boolean | null
+          priority?: number | null
+          project_id: string
+          revision_number?: number | null
+          scope_item_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_prioritized?: boolean | null
+          priority?: number | null
+          project_id?: string
+          revision_number?: number | null
+          scope_item_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_priorities_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discipline_priorities_scope_item_id_fkey"
+            columns: ["scope_item_id"]
+            isOneToOne: false
+            referencedRelation: "scope_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       documents: {
         Row: {
