@@ -11,7 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ProjectForm } from "@/components/projects/ProjectForm";
-import { Constants } from "@/integrations/supabase/types";
+import {
+  PROJECT_STATUSES,
+  statusLabels,
+  statusColors,
+} from "@/lib/projectConstants";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,45 +29,11 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const statusLabels: Record<string, string> = {
-  proposta_enviada: "Proposta Enviada",
-  contrato_assinado: "Contrato Assinado",
-  levantamento: "Levantamento",
-  briefing: "Briefing",
-  estudo_preliminar: "Estudo Preliminar",
-  revisao: "Revisão",
-  anteprojeto_3d: "Anteprojeto (3D)",
-  projeto_executivo: "Projeto Executivo",
-  memoria_calculo: "Memória de Cálculo",
-  orcamento: "Orçamento",
-  reuniao_prioridades: "Reunião Prioridades",
-  mobilizacao_fornecedores: "Mobilização",
-  execucao_obra: "Execução da Obra",
-  concluido: "Concluído",
-};
-
 const typeLabels: Record<string, string> = {
   residencial: "Residencial",
   comercial: "Comercial",
   saude: "Saúde",
   outro: "Outro",
-};
-
-const statusColors: Record<string, string> = {
-  proposta_enviada: "bg-muted text-muted-foreground",
-  contrato_assinado: "bg-primary/10 text-primary",
-  levantamento: "bg-warning/10 text-warning",
-  briefing: "bg-warning/10 text-warning",
-  estudo_preliminar: "bg-secondary text-secondary-foreground",
-  revisao: "bg-secondary text-secondary-foreground",
-  anteprojeto_3d: "bg-accent/10 text-accent",
-  projeto_executivo: "bg-accent/10 text-accent",
-  memoria_calculo: "bg-primary/10 text-primary",
-  orcamento: "bg-primary/10 text-primary",
-  reuniao_prioridades: "bg-primary/10 text-primary",
-  mobilizacao_fornecedores: "bg-warning/10 text-warning",
-  execucao_obra: "bg-success/10 text-success",
-  concluido: "bg-success/20 text-success",
 };
 
 export default function Projects() {
@@ -94,7 +64,7 @@ export default function Projects() {
       const insertData = {
         name: data.name as string,
         client_id: (data.client_id as string) || null,
-        status: (data.status as "proposta_enviada" | "contrato_assinado" | "levantamento" | "briefing" | "estudo_preliminar" | "revisao" | "anteprojeto_3d" | "projeto_executivo" | "memoria_calculo" | "orcamento" | "reuniao_prioridades" | "mobilizacao_fornecedores" | "execucao_obra" | "concluido") || "proposta_enviada",
+        status: (data.status as "proposta" | "contrato" | "projeto" | "planejamento" | "mobilizacao" | "execucao" | "concluido") || "proposta",
         project_type: (data.project_type as "residencial" | "comercial" | "saude" | "outro") || "residencial",
         address: (data.address as string) || null,
         neighborhood: (data.neighborhood as string) || null,
@@ -199,7 +169,7 @@ export default function Projects() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os status</SelectItem>
-            {Constants.public.Enums.project_status.map((s) => (
+            {PROJECT_STATUSES.map((s) => (
               <SelectItem key={s} value={s}>{statusLabels[s] || s}</SelectItem>
             ))}
           </SelectContent>
@@ -210,7 +180,7 @@ export default function Projects() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os tipos</SelectItem>
-            {Constants.public.Enums.client_type.map((t) => (
+            {(["residencial", "comercial", "saude", "outro"] as const).map((t) => (
               <SelectItem key={t} value={t}>{typeLabels[t] || t}</SelectItem>
             ))}
           </SelectContent>

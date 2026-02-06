@@ -128,10 +128,10 @@ const urgentItems = [
 ];
 
 const recentProjects = [
-  { name: "Reforma Apto 142", client: "João Silva", status: "execucao_obra", value: 185000 },
-  { name: "Casa Jardins", client: "Maria Santos", status: "orcamento", value: 320000 },
-  { name: "Clínica Saúde+", client: "Dr. Carlos", status: "projeto_executivo", value: 150000 },
-  { name: "Escritório Tech", client: "TechCorp", status: "briefing", value: 95000 },
+  { name: "Reforma Apto 142", client: "João Silva", status: "execucao", value: 185000 },
+  { name: "Casa Jardins", client: "Maria Santos", status: "planejamento", value: 320000 },
+  { name: "Clínica Saúde+", client: "Dr. Carlos", status: "projeto", value: 150000 },
+  { name: "Escritório Tech", client: "TechCorp", status: "proposta", value: 95000 },
 ];
 
 const upcomingPayments = [
@@ -142,10 +142,10 @@ const upcomingPayments = [
 ];
 
 const statusLabels: Record<string, string> = {
-  execucao_obra: "Em Execução",
-  orcamento: "Orçamento",
-  projeto_executivo: "Projeto Executivo",
-  briefing: "Briefing",
+  execucao: "Em Execução",
+  planejamento: "Planejamento",
+  projeto: "Projeto",
+  proposta: "Proposta",
 };
 
 function fmt(value: number) {

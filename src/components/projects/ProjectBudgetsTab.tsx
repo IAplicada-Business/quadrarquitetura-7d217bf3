@@ -3,10 +3,12 @@ import { Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useScopeItems } from "@/hooks/useScopeItems";
 import { useBudgetQuotes } from "@/hooks/useBudgetQuotes";
 import { BudgetQuoteCard } from "./BudgetQuoteCard";
 import { BudgetQuoteForm } from "./BudgetQuoteForm";
+import { ProjectPurchasesTab } from "./ProjectPurchasesTab";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -101,6 +103,13 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <Tabs defaultValue="cotacoes">
+        <TabsList>
+          <TabsTrigger value="cotacoes">Cotações</TabsTrigger>
+          <TabsTrigger value="compras">Compras</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="cotacoes" className="space-y-6 mt-4">
       {/* Header with revision selector */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
@@ -201,6 +210,12 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
         revisionNumber={currentRev}
         isLoading={create.isPending || update.isPending}
       />
+        </TabsContent>
+
+        <TabsContent value="compras" className="mt-4">
+          <ProjectPurchasesTab projectId={projectId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

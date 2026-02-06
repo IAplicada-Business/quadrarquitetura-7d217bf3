@@ -2,23 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-
-const statusLabels: Record<string, string> = {
-  proposta_enviada: "Proposta Enviada",
-  contrato_assinado: "Contrato Assinado",
-  levantamento: "Levantamento",
-  briefing: "Briefing",
-  estudo_preliminar: "Estudo Preliminar",
-  revisao: "Revisão",
-  anteprojeto_3d: "Anteprojeto (3D)",
-  projeto_executivo: "Projeto Executivo",
-  memoria_calculo: "Memória de Cálculo",
-  orcamento: "Orçamento",
-  reuniao_prioridades: "Reunião de Prioridades",
-  mobilizacao_fornecedores: "Mobilização",
-  execucao_obra: "Execução da Obra",
-  concluido: "Concluído",
-};
+import { statusLabels } from "@/lib/projectConstants";
 
 const typeLabels: Record<string, string> = {
   residencial: "Residencial",
