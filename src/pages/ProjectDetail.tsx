@@ -4,33 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProjectDetail } from "@/hooks/useProjectDetail";
+import { statusLabels } from "@/lib/projectConstants";
 import { ProjectSummaryTab } from "@/components/projects/ProjectSummaryTab";
 import { ProjectScopeTab } from "@/components/projects/ProjectScopeTab";
 import { ProjectBudgetsTab } from "@/components/projects/ProjectBudgetsTab";
 import { ProjectMaterialsTab } from "@/components/projects/ProjectMaterialsTab";
-import { ProjectPurchasesTab } from "@/components/projects/ProjectPurchasesTab";
 import { ProjectScheduleTab } from "@/components/projects/ProjectScheduleTab";
-import { ProjectPendingTab } from "@/components/projects/ProjectPendingTab";
 import { ProjectFinancialTab } from "@/components/projects/ProjectFinancialTab";
 import { ProjectDocumentsTab } from "@/components/projects/ProjectDocumentsTab";
 import { ProjectTrackingTab } from "@/components/projects/ProjectTrackingTab";
-
-const statusLabels: Record<string, string> = {
-  proposta_enviada: "Proposta Enviada",
-  contrato_assinado: "Contrato Assinado",
-  levantamento: "Levantamento",
-  briefing: "Briefing",
-  estudo_preliminar: "Estudo Preliminar",
-  revisao: "Revisão",
-  anteprojeto_3d: "Anteprojeto (3D)",
-  projeto_executivo: "Projeto Executivo",
-  memoria_calculo: "Memória de Cálculo",
-  orcamento: "Orçamento",
-  reuniao_prioridades: "Reunião de Prioridades",
-  mobilizacao_fornecedores: "Mobilização",
-  execucao_obra: "Execução da Obra",
-  concluido: "Concluído",
-};
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -84,10 +66,8 @@ export default function ProjectDetail() {
           <TabsTrigger value="escopo">Escopo</TabsTrigger>
           <TabsTrigger value="orcamentos">Orçamentos</TabsTrigger>
           <TabsTrigger value="materiais">Materiais</TabsTrigger>
-          <TabsTrigger value="compras">Compras</TabsTrigger>
           <TabsTrigger value="cronograma">Cronograma</TabsTrigger>
-          <TabsTrigger value="pendencias">Pendências</TabsTrigger>
-          <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
+          <TabsTrigger value="financeiro">Prestação de Contas</TabsTrigger>
           <TabsTrigger value="documentos">Documentos</TabsTrigger>
           <TabsTrigger value="acompanhamento">Acompanhamento</TabsTrigger>
         </TabsList>
@@ -105,14 +85,8 @@ export default function ProjectDetail() {
           <TabsContent value="materiais">
             <ProjectMaterialsTab projectId={project.id} />
           </TabsContent>
-          <TabsContent value="compras">
-            <ProjectPurchasesTab projectId={project.id} />
-          </TabsContent>
           <TabsContent value="cronograma">
             <ProjectScheduleTab projectId={project.id} />
-          </TabsContent>
-          <TabsContent value="pendencias">
-            <ProjectPendingTab projectId={project.id} />
           </TabsContent>
           <TabsContent value="financeiro">
             <ProjectFinancialTab projectId={project.id} />

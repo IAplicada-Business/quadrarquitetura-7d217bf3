@@ -741,6 +741,7 @@ export type Database = {
           real_end_date: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"] | null
+          sub_status: string | null
           updated_at: string
           user_id: string
         }
@@ -761,6 +762,7 @@ export type Database = {
           real_end_date?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"] | null
+          sub_status?: string | null
           updated_at?: string
           user_id: string
         }
@@ -781,6 +783,7 @@ export type Database = {
           real_end_date?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"] | null
+          sub_status?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1147,19 +1150,12 @@ export type Database = {
         | "orcamento"
       payment_status: "pendente" | "notificado" | "pago" | "atrasado"
       project_status:
-        | "proposta_enviada"
-        | "contrato_assinado"
-        | "levantamento"
-        | "briefing"
-        | "estudo_preliminar"
-        | "revisao"
-        | "anteprojeto_3d"
-        | "projeto_executivo"
-        | "memoria_calculo"
-        | "orcamento"
-        | "reuniao_prioridades"
-        | "mobilizacao_fornecedores"
-        | "execucao_obra"
+        | "proposta"
+        | "contrato"
+        | "projeto"
+        | "planejamento"
+        | "mobilizacao"
+        | "execucao"
         | "concluido"
       purchase_status: "pendente" | "comprado" | "entregue" | "instalado"
       tracking_type: "checkin" | "voz" | "foto" | "nota"
@@ -1304,19 +1300,12 @@ export const Constants = {
       ],
       payment_status: ["pendente", "notificado", "pago", "atrasado"],
       project_status: [
-        "proposta_enviada",
-        "contrato_assinado",
-        "levantamento",
-        "briefing",
-        "estudo_preliminar",
-        "revisao",
-        "anteprojeto_3d",
-        "projeto_executivo",
-        "memoria_calculo",
-        "orcamento",
-        "reuniao_prioridades",
-        "mobilizacao_fornecedores",
-        "execucao_obra",
+        "proposta",
+        "contrato",
+        "projeto",
+        "planejamento",
+        "mobilizacao",
+        "execucao",
         "concluido",
       ],
       purchase_status: ["pendente", "comprado", "entregue", "instalado"],

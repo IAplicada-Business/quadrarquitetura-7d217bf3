@@ -7,24 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Constants } from "@/integrations/supabase/types";
-
-const statusLabels: Record<string, string> = {
-  proposta_enviada: "Proposta Enviada",
-  contrato_assinado: "Contrato Assinado",
-  levantamento: "Levantamento",
-  briefing: "Briefing",
-  estudo_preliminar: "Estudo Preliminar",
-  revisao: "Revisão",
-  anteprojeto_3d: "Anteprojeto (3D)",
-  projeto_executivo: "Projeto Executivo",
-  memoria_calculo: "Memória de Cálculo",
-  orcamento: "Orçamento",
-  reuniao_prioridades: "Reunião de Prioridades",
-  mobilizacao_fornecedores: "Mobilização de Fornecedores",
-  execucao_obra: "Execução da Obra",
-  concluido: "Concluído",
-};
+import { PROJECT_STATUSES, statusLabels, subStatusOptions } from "@/lib/projectConstants";
 
 const typeLabels: Record<string, string> = {
   residencial: "Residencial",
@@ -44,7 +27,8 @@ interface ProjectFormProps {
 export function ProjectForm({ open, onOpenChange, onSubmit, initialData, isLoading }: ProjectFormProps) {
   const [name, setName] = useState("");
   const [clientId, setClientId] = useState("");
-  const [status, setStatus] = useState("proposta_enviada");
+  const [status, setStatus] = useState("proposta");
+  const [subStatus, setSubStatus] = useState("");
   const [projectType, setProjectType] = useState("residencial");
   const [address, setAddress] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
@@ -68,7 +52,8 @@ export function ProjectForm({ open, onOpenChange, onSubmit, initialData, isLoadi
     if (initialData) {
       setName((initialData.name as string) || "");
       setClientId((initialData.client_id as string) || "");
-      setStatus((initialData.status as string) || "proposta_enviada");
+      setStatus((initialData.status as string) || "proposta");
+      setSubStatus((initialData.sub_status as string) || "");
       setProjectType((initialData.project_type as string) || "residencial");
       setAddress((initialData.address as string) || "");
       setNeighborhood((initialData.neighborhood as string) || "");
@@ -79,7 +64,7 @@ export function ProjectForm({ open, onOpenChange, onSubmit, initialData, isLoadi
       setEstimatedBudget(initialData.estimated_budget ? String(initialData.estimated_budget) : "");
       setFinishLevel(initialData.finish_level ? String(initialData.finish_level) : "");
     } else {
-      setName(""); setClientId(""); setStatus("proposta_enviada"); setProjectType("residencial");
+      setName(""); setClientId(""); setStatus("proposta"); setSubStatus(""); setProjectType("residencial");
       setAddress(""); setNeighborhood(""); setCity(""); setAreaSqm(""); setStartDate("");
       setExpectedEndDate(""); setEstimatedBudget(""); setFinishLevel("");
     }
@@ -91,6 +76,7 @@ export function ProjectForm({ open, onOpenChange, onSubmit, initialData, isLoadi
       name,
       client_id: clientId || null,
       status,
+      sub_status: subStatus || null,
       project_type: projectType,
       address: address || null,
       neighborhood: neighborhood || null,
@@ -128,21 +114,34 @@ export function ProjectForm({ open, onOpenChange, onSubmit, initialData, isLoadi
             </div>
             <div>
               <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={setStatus}>
+              <Select value={status} onValueChange={(v) => { setStatus(v); setSubStatus(""); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Constants.public.Enums.project_status.map((s) => (
+                  {PROJECT_STATUSES.map((s) => (
                     <SelectItem key={s} value={s}>{statusLabels[s] || s}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            {subStatusOptions[status] && (
+              <div>
+                <Label htmlFor="sub_status">Sub-fase</Label>
+                <Select value={subStatus} onValueChange={setSubStatus}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {subStatusOptions[status].map((ss) => (
+                      <SelectItem key={ss} value={ss}>{ss}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label htmlFor="type">Tipo</Label>
               <Select value={projectType} onValueChange={setProjectType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Constants.public.Enums.client_type.map((t) => (
+                  {(["residencial", "comercial", "saude", "outro"] as const).map((t) => (
                     <SelectItem key={t} value={t}>{typeLabels[t] || t}</SelectItem>
                   ))}
                 </SelectContent>

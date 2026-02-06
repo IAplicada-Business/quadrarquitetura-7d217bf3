@@ -123,21 +123,21 @@ const recentProjects = [
   { 
     name: "Reforma Apto 142", 
     client: "João Silva", 
-    status: "execucao_obra",
+    status: "execucao",
     progress: 75,
     value: 185000
   },
   { 
     name: "Casa Jardins", 
     client: "Maria Santos", 
-    status: "orcamento",
+    status: "planejamento",
     progress: 45,
     value: 320000
   },
   { 
     name: "Clínica Saúde+", 
     client: "Dr. Carlos", 
-    status: "projeto_executivo",
+    status: "projeto",
     progress: 30,
     value: 150000
   },
@@ -183,17 +183,17 @@ const urgentItems = [
 ];
 
 const statusLabels: Record<string, string> = {
-  execucao_obra: "Em Execução",
-  orcamento: "Orçamento",
-  projeto_executivo: "Projeto Executivo",
-  briefing: "Briefing",
+  execucao: "Em Execução",
+  planejamento: "Planejamento",
+  projeto: "Projeto",
+  proposta: "Proposta",
 };
 
 const statusColors: Record<string, string> = {
-  execucao_obra: "bg-emerald-500",
-  orcamento: "bg-amber-500",
-  projeto_executivo: "bg-blue-500",
-  briefing: "bg-purple-500",
+  execucao: "bg-emerald-500",
+  planejamento: "bg-amber-500",
+  projeto: "bg-blue-500",
+  proposta: "bg-purple-500",
 };
 
 function formatCurrency(value: number) {

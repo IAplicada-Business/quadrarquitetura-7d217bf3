@@ -2,10 +2,12 @@ import { useState, useMemo } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useScheduleTasks } from "@/hooks/useScheduleTasks";
 import { useScopeItems } from "@/hooks/useScopeItems";
 import { ScheduleTaskForm } from "./ScheduleTaskForm";
+import { ProjectPendingTab } from "./ProjectPendingTab";
 
 function formatDate(d: string | null) {
   if (!d) return "—";
@@ -38,6 +40,13 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-4 animate-fade-in">
+      <Tabs defaultValue="cronograma">
+        <TabsList>
+          <TabsTrigger value="cronograma">Cronograma</TabsTrigger>
+          <TabsTrigger value="pendencias">Pendências</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="cronograma" className="space-y-4 mt-4">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-display">Cronograma da Obra</h3>
@@ -122,6 +131,12 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
         isLoading={create.isPending || update.isPending}
         scopeItems={scopeItems.filter((s) => !s.parent_id).map((s) => ({ id: s.id, discipline: s.discipline }))}
       />
+        </TabsContent>
+
+        <TabsContent value="pendencias" className="mt-4">
+          <ProjectPendingTab projectId={projectId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
