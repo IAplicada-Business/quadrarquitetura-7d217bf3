@@ -17,13 +17,11 @@ const slides = [
 ];
 
 export default function Login() {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const { signIn, signUp, session } = useAuth();
+  const { signIn, session } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,26 +38,11 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    if (isLogin) {
-      const { error } = await signIn(email, password);
-      if (error) {
-        toast.error("Erro ao entrar", { description: error.message });
-      } else {
-        toast.success("Bem-vindo(a)!");
-      }
+    const { error } = await signIn(email, password);
+    if (error) {
+      toast.error("Erro ao entrar", { description: error.message });
     } else {
-      if (!fullName.trim()) {
-        toast.error("Informe seu nome completo");
-        setLoading(false);
-        return;
-      }
-      const { error } = await signUp(email, password, fullName);
-      if (error) {
-        toast.error("Erro ao criar conta", { description: error.message });
-      } else {
-        toast.success("Conta criada com sucesso!");
-      }
+      toast.success("Bem-vindo(a)!");
     }
     setLoading(false);
   };
@@ -72,28 +55,13 @@ export default function Login() {
           <img src={logoDark} alt="Quadra Arquitetura" className="h-16 mb-10" />
 
           <h2 className="text-2xl font-display font-bold mb-1">
-            {isLogin ? "Bem-vindo(a) de volta" : "Criar sua conta"}
+            Bem-vindo(a) de volta
           </h2>
           <p className="text-muted-foreground mb-8">
-            {isLogin
-              ? "Acesse o sistema de gestão Quadra"
-              : "Preencha os dados para começar"}
+            Acesse o sistema de gestão Quadra
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Nome completo</Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  placeholder="Seu nome"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required={!isLogin}
-                />
-              </div>
-            )}
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
               <Input
@@ -119,20 +87,9 @@ export default function Login() {
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Carregando..." : isLogin ? "Entrar" : "Criar conta"}
+              {loading ? "Carregando..." : "Entrar"}
             </Button>
           </form>
-
-          <p className="text-sm text-center text-muted-foreground mt-6">
-            {isLogin ? "Não tem uma conta?" : "Já tem uma conta?"}{" "}
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-accent font-medium hover:underline"
-            >
-              {isLogin ? "Criar conta" : "Fazer login"}
-            </button>
-          </p>
         </div>
       </div>
 
