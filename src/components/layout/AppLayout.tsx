@@ -12,11 +12,14 @@ import {
 export function AppLayout() {
   const isMobile = useIsMobile();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
-      {/* Desktop sidebar */}
-      {!isMobile && <AppSidebar />}
+      {/* Desktop sidebar - completely hidden when collapsed */}
+      {!isMobile && !sidebarCollapsed && (
+        <AppSidebar onNavigate={undefined} />
+      )}
 
       {/* Mobile sidebar via Sheet */}
       {isMobile && (
@@ -32,6 +35,8 @@ export function AppLayout() {
         <AppHeader
           showMenuButton={isMobile}
           onMenuClick={() => setMobileOpen(true)}
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         <main className="flex-1 overflow-y-auto">
           <div className="p-6 lg:p-8 animate-fade-in">
