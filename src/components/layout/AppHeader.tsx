@@ -1,4 +1,4 @@
-import { Bell, LogOut, Menu, Settings, User } from "lucide-react";
+import { Bell, ChevronLeft, ChevronRight, LogOut, Menu, Settings, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -11,13 +11,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import logoLight from "@/assets/logo-light.png";
 
 interface AppHeaderProps {
   onMenuClick?: () => void;
   showMenuButton?: boolean;
+  sidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
 }
 
-export function AppHeader({ onMenuClick, showMenuButton }: AppHeaderProps) {
+export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onToggleSidebar }: AppHeaderProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -33,17 +36,49 @@ export function AppHeader({ onMenuClick, showMenuButton }: AppHeaderProps) {
     : email.charAt(0).toUpperCase();
 
   return (
-    <header className="flex items-center justify-between h-14 px-4 lg:px-6 border-b border-border bg-background shrink-0">
-      {/* Left side */}
+    <header className="flex items-center justify-between h-14 px-4 lg:px-6 border-b border-sidebar-border bg-sidebar shrink-0">
+      {/* Left side - Logo + toggle */}
       <div className="flex items-center gap-2">
-        {showMenuButton && (
+        {showMenuButton ? (
           <button
             onClick={onMenuClick}
-            className="p-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            className="p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
             aria-label="Abrir menu"
           >
             <Menu className="h-5 w-5" />
           </button>
+        ) : (
+          onToggleSidebar && (
+            <button
+              onClick={onToggleSidebar}
+              className="p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+              aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+            >
+              {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </button>
+          )
+        )}
+
+        {/* Logo in header when sidebar is collapsed */}
+        {sidebarCollapsed && !showMenuButton && (
+          <div className="h-10 overflow-hidden">
+            <img
+              src={logoLight}
+              alt="Quadra Arquitetura"
+              className="h-16 -mt-3 object-contain object-left animate-fade-in"
+            />
+          </div>
+        )}
+
+        {/* Logo in header on mobile */}
+        {showMenuButton && (
+          <div className="h-10 overflow-hidden">
+            <img
+              src={logoLight}
+              alt="Quadra Arquitetura"
+              className="h-16 -mt-3 object-contain object-left animate-fade-in"
+            />
+          </div>
         )}
       </div>
 
@@ -51,13 +86,13 @@ export function AppHeader({ onMenuClick, showMenuButton }: AppHeaderProps) {
       <div className="flex items-center gap-3">
         {/* Notifications */}
         <button
-          className="relative p-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+          className="relative p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
           aria-label="Notificações"
         >
           <Bell className="h-5 w-5" />
           <Badge
             variant="default"
-            className="absolute -top-0.5 -right-0.5 h-4 w-4 p-0 flex items-center justify-center text-[10px] leading-none"
+            className="absolute -top-0.5 -right-0.5 h-4 w-4 p-0 flex items-center justify-center text-[10px] leading-none bg-accent text-accent-foreground"
           >
             3
           </Badge>
@@ -66,9 +101,9 @@ export function AppHeader({ onMenuClick, showMenuButton }: AppHeaderProps) {
         {/* User dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+            <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-sidebar-ring focus:ring-offset-2 focus:ring-offset-sidebar">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
+                <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-medium">
                   {initials}
                 </AvatarFallback>
               </Avatar>
