@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { project, isLoading } = useProjectDetail(id);
+  const [activeTab, setActiveTab] = useState("resumo");
 
   if (isLoading) {
     return (
@@ -61,7 +63,7 @@ export default function ProjectDetail() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="resumo" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1 bg-muted/50">
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
           <TabsTrigger value="cenarios">Cenários</TabsTrigger>
@@ -76,7 +78,7 @@ export default function ProjectDetail() {
 
         <div className="mt-4">
           <TabsContent value="resumo">
-            <ProjectSummaryTab project={project as Record<string, unknown>} />
+            <ProjectSummaryTab project={project as Record<string, unknown>} onTabChange={setActiveTab} />
           </TabsContent>
           <TabsContent value="cenarios">
             <ProjectScenariosTab projectId={project.id} />
