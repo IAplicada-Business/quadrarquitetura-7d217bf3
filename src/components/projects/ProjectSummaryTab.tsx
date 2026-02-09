@@ -6,6 +6,8 @@ import { ptBR } from "date-fns/locale";
 import { statusLabels } from "@/lib/projectConstants";
 import { Button } from "@/components/ui/button";
 import { Wallet, Hammer, FileText, HardHat } from "lucide-react";
+import { useScheduleTasks } from "@/hooks/useScheduleTasks";
+import { useProjectPayments } from "@/hooks/useProjectPayments";
 
 function formatCurrency(value: number | null | undefined) {
   if (value == null) return "—";
@@ -24,14 +26,24 @@ interface ProjectSummaryTabProps {
 
 export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabProps) {
   const clientName = (project.clients as { name: string } | null)?.name;
-  
-  // Calculate indicators (mocked for now, but structure is ready)
+  const projectId = project.id as string;
+
+  const { items: tasks } = useScheduleTasks(projectId);
+  const { items: payments } = useProjectPayments(projectId);
+
   const idealBudget = (project.ideal_budget as number) || 0;
   const contractedBudget = (project.estimated_budget as number) || 0;
-  const realBudget = (project.real_budget as number) || 0;
-  const progress = (project.finish_level as number) || 0;
 
-  // Safe percentage calculation
+  // Real budget from paid payments
+  const realBudget = payments
+    .filter((p: any) => p.status === "pago")
+    .reduce((sum: number, p: any) => sum + (p.value || 0), 0);
+
+  // Progress from schedule tasks
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter((t: any) => t.status === "executado").length;
+  const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
   const contractedPercent = idealBudget > 0 ? Math.min((contractedBudget / idealBudget) * 100, 100) : 0;
   const realPercent = contractedBudget > 0 ? Math.min((realBudget / contractedBudget) * 100, 100) : 0;
 
@@ -73,6 +85,7 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
               <Badge variant="outline">{statusLabels[project.status as string] || String(project.status ?? "")}</Badge>
             </div>
             <Progress value={progress} className="h-2" />
+            <p className="text-[10px] text-muted-foreground mt-1">{completedTasks}/{totalTasks} etapas concluídas</p>
           </CardContent>
         </Card>
       </div>
@@ -83,7 +96,6 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
           <CardTitle className="text-base font-semibold text-display">Comparativo Financeiro</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Ideal vs Contracted vs Real */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Idealizado</span>
@@ -92,16 +104,13 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
             <div className="h-4 bg-muted rounded-full overflow-hidden">
               <div className="h-full bg-blue-400" style={{ width: "100%" }} />
             </div>
-            
+
             <div className="flex justify-between text-sm mt-2">
               <span>Contratado</span>
               <span className="font-medium">{formatCurrency(contractedBudget)}</span>
             </div>
             <div className="h-4 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-purple-500" 
-                style={{ width: `${contractedPercent}%` }} 
-              />
+              <div className="h-full bg-purple-500" style={{ width: `${contractedPercent}%` }} />
             </div>
 
             <div className="flex justify-between text-sm mt-2">
@@ -109,10 +118,7 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
               <span className="font-medium">{formatCurrency(realBudget)}</span>
             </div>
             <div className="h-4 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-green-500" 
-                style={{ width: `${realPercent}%` }} 
-              />
+              <div className="h-full bg-green-500" style={{ width: `${realPercent}%` }} />
             </div>
           </div>
         </CardContent>
@@ -126,9 +132,9 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
           { icon: FileText, label: "Documentos", tab: "documentos" },
           { icon: HardHat, label: "Diário de Obra", tab: "acompanhamento" },
         ].map((link, i) => (
-          <Button 
-            key={i} 
-            variant="outline" 
+          <Button
+            key={i}
+            variant="outline"
             className="h-20 flex flex-col items-center justify-center gap-2 hover:bg-primary/5 hover:border-primary/30 transition-all"
             onClick={() => onTabChange?.(link.tab)}
           >

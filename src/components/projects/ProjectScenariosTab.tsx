@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useScenarios, Scenario } from "@/hooks/useScenarios";
 import { useProjectDetail } from "@/hooks/useProjectDetail";
@@ -14,6 +15,12 @@ function formatCurrency(v: number | null | undefined) {
   if (v == null) return "—";
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 }
+
+const finishLevels = [
+  { value: 1, label: "Básico" },
+  { value: 2, label: "Intermediário" },
+  { value: 3, label: "Alto Padrão" },
+];
 
 interface ProjectScenariosTabProps {
   projectId: string;
@@ -52,6 +59,7 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
   };
 
   const clientBudget = (project as any)?.client_budget as number | null;
+  const projectData = project as any;
 
   if (isLoading) {
     return <div className="flex justify-center py-12"><div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" /></div>;
@@ -59,24 +67,49 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Budget Input */}
+      {/* Project Context */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <DollarSign className="h-4 w-4" /> Orçamento do Cliente
-          </CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">Contexto do Projeto</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-3">
-            <Input
-              type="number"
-              placeholder="Ex: 250000"
-              value={budgetInput}
-              onChange={(e) => setBudgetInput(e.target.value)}
-              className="max-w-[200px]"
-            />
-            <Button size="sm" variant="outline" onClick={handleSaveBudget} disabled={updateProject.isPending}>Salvar</Button>
-            {clientBudget != null && <span className="text-sm font-semibold">{formatCurrency(clientBudget)}</span>}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <Label className="text-xs">Orçamento do Cliente</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <Input
+                  type="number"
+                  placeholder="R$"
+                  value={budgetInput}
+                  onChange={(e) => setBudgetInput(e.target.value)}
+                  className="h-8 text-sm"
+                />
+                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleSaveBudget} disabled={updateProject.isPending}>OK</Button>
+              </div>
+              {clientBudget != null && <span className="text-xs font-semibold text-primary">{formatCurrency(clientBudget)}</span>}
+            </div>
+            <div>
+              <Label className="text-xs">Nível de Acabamento</Label>
+              <Select
+                value={String(projectData?.finish_level || "")}
+                onValueChange={(v) => updateProject.mutate({ finish_level: Number(v) })}
+              >
+                <SelectTrigger className="h-8 text-sm mt-1"><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                <SelectContent>
+                  {finishLevels.map(fl => (
+                    <SelectItem key={fl.value} value={String(fl.value)}>{fl.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Área (m²)</Label>
+              <p className="text-sm font-medium mt-2">{projectData?.area_sqm ? `${projectData.area_sqm} m²` : "—"}</p>
+            </div>
+            <div>
+              <Label className="text-xs">Tipo de Obra</Label>
+              <p className="text-sm font-medium mt-2 capitalize">{projectData?.project_type || "—"}</p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -95,13 +128,13 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
         </Button>
       </div>
 
-      {/* Scenarios List */}
+      {/* Scenarios */}
       {scenarios.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
           Nenhum cenário criado. Crie um cenário para começar a simulação.
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className={scenarios.length >= 2 ? "grid grid-cols-1 lg:grid-cols-2 gap-4" : "space-y-4"}>
           {scenarios.map((scenario) => {
             const items = scenario.scenario_items || [];
             const totalIncluded = items.filter((i) => i.is_included).reduce((sum, i) => sum + (i.estimated_value || 0), 0);
@@ -129,20 +162,20 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {/* Summary */}
-                  <div className="flex gap-4 text-sm">
+                  <div className="flex gap-4 text-sm flex-wrap">
                     <span>Incluído: <strong className={overBudget ? "text-destructive" : "text-green-600"}>{formatCurrency(totalIncluded)}</strong></span>
                     <span>Total: <strong>{formatCurrency(totalAll)}</strong></span>
                     {clientBudget != null && (
                       <span className={overBudget ? "text-destructive" : "text-muted-foreground"}>
-                        {overBudget ? "⚠️ Acima do orçamento" : "✅ Dentro do orçamento"}
+                        {overBudget
+                          ? `⚠️ +${formatCurrency(totalIncluded - clientBudget)}`
+                          : `✅ -${formatCurrency(clientBudget - totalIncluded)}`}
                       </span>
                     )}
                   </div>
 
-                  {/* Items */}
                   {items.length > 0 && (
-                    <div className="border rounded-lg divide-y">
+                    <div className="border rounded-lg divide-y max-h-[400px] overflow-y-auto">
                       {items.map((item) => (
                         <div key={item.id} className="flex items-center gap-3 px-3 py-2 text-sm">
                           <Checkbox
@@ -151,7 +184,7 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
                           />
                           <span className={`flex-1 ${!item.is_included ? "line-through text-muted-foreground" : ""}`}>
                             {item.discipline}
-                            {item.description && <span className="text-muted-foreground ml-1">— {item.description}</span>}
+                            {item.description && <span className="text-muted-foreground ml-1 text-xs">— {item.description}</span>}
                           </span>
                           <Input
                             type="number"

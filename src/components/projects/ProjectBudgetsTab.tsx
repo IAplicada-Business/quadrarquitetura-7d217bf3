@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, RefreshCw, ShoppingCart, CheckCircle, FileText } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,12 +7,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useScopeItems } from "@/hooks/useScopeItems";
 import { useBudgetQuotes } from "@/hooks/useBudgetQuotes";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { BudgetQuoteCard } from "./BudgetQuoteCard";
 import { BudgetQuoteForm } from "./BudgetQuoteForm";
 import { ProjectPurchasesTab } from "./ProjectPurchasesTab";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+}
+
+function parsePaymentTerms(terms: string | null, totalValue: number): { percent: number; value: number }[] {
+  if (!terms) return [{ percent: 100, value: totalValue }];
+  const cleaned = terms.toLowerCase().trim();
+  if (cleaned === "a vista" || cleaned === "à vista") return [{ percent: 100, value: totalValue }];
+
+  // Try parsing "50%/50%" or "50/50" or "30/30/40"
+  const parts = cleaned.replace(/%/g, "").split(/[\/,;]+/).map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+  if (parts.length === 0) return [{ percent: 100, value: totalValue }];
+
+  const sum = parts.reduce((a, b) => a + b, 0);
+  return parts.map(p => {
+    const pct = sum > 0 ? p / sum * 100 : 100 / parts.length;
+    return { percent: Math.round(pct), value: Math.round(totalValue * pct / 100) };
+  });
 }
 
 interface ProjectBudgetsTabProps {
@@ -22,11 +42,12 @@ interface ProjectBudgetsTabProps {
 export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
   const { items: scopeItems } = useScopeItems(projectId);
   const { quotes, isLoading, create, update, remove, createRevision } = useBudgetQuotes(projectId);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editingQuote, setEditingQuote] = useState<Record<string, unknown> | null>(null);
   const [activeScopeId, setActiveScopeId] = useState<string | null>(null);
 
-  // Get available revisions
   const revisions = useMemo(() => {
     const revNums = [...new Set(quotes.map((q) => q.revision_number))].sort((a, b) => (a ?? 0) - (b ?? 0));
     return revNums.length > 0 ? revNums : [1];
@@ -35,12 +56,10 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
   const [selectedRevision, setSelectedRevision] = useState<number | null>(null);
   const currentRev = selectedRevision ?? (revisions[revisions.length - 1] || 1);
 
-  // Filter quotes by current revision
   const currentQuotes = useMemo(() => {
     return quotes.filter((q) => q.revision_number === currentRev);
   }, [quotes, currentRev]);
 
-  // Group quotes by scope item
   const groupedQuotes = useMemo(() => {
     const groups: Record<string, typeof currentQuotes> = {};
     for (const q of currentQuotes) {
@@ -51,10 +70,8 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
     return groups;
   }, [currentQuotes]);
 
-  // Only show contracted scope items
   const contractedScopeItems = scopeItems.filter(s => s.scope_type === 'contratado');
 
-  // Calculate totals
   const totals = useMemo(() => {
     let total = 0;
     const byDiscipline: Record<string, number> = {};
@@ -90,8 +107,8 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
     setEditingQuote(null);
   };
 
-  const handleApprove = (quoteId: string, scopeItemId: string | null) => {
-    // Reject all others for same scope item in current revision, approve this one
+  const handleApprove = async (quoteId: string, scopeItemId: string | null) => {
+    // Reject all others for same scope item in current revision
     const siblings = currentQuotes.filter(
       (q) => q.scope_item_id === scopeItemId && q.id !== quoteId
     );
@@ -101,7 +118,40 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
       }
     }
     update.mutate({ id: quoteId, status: "aprovado" });
-    // TODO: Create payment installments automatically (future improvement)
+
+    // Generate payment installments automatically
+    const quote = currentQuotes.find(q => q.id === quoteId);
+    if (quote && user) {
+      const totalValue = (quote.value || 0) + (quote.material_estimate || 0);
+      if (totalValue > 0) {
+        const installments = parsePaymentTerms(quote.payment_terms, totalValue);
+        const today = new Date();
+        const paymentInserts = installments.map((inst, idx) => {
+          const dueDate = new Date(today);
+          dueDate.setDate(dueDate.getDate() + (idx * 30));
+          return {
+            user_id: user.id,
+            project_id: projectId,
+            value: inst.value,
+            description: `${scopeItems.find(s => s.id === scopeItemId)?.discipline || "Serviço"} - Parcela ${idx + 1}/${installments.length}`,
+            supplier_name: quote.supplier_name,
+            budget_quote_id: quoteId,
+            due_date: dueDate.toISOString().split("T")[0],
+            installment_number: idx + 1,
+            total_installments: installments.length,
+            status: "pendente" as const,
+          };
+        });
+
+        const { error } = await supabase.from("payments").insert(paymentInserts);
+        if (error) {
+          toast({ title: "Aviso", description: "Cotação aprovada, mas erro ao gerar parcelas: " + error.message, variant: "destructive" });
+        } else {
+          queryClient.invalidateQueries({ queryKey: ["project_payments", projectId] });
+          toast({ title: `${installments.length} parcela(s) gerada(s) automaticamente` });
+        }
+      }
+    }
   };
 
   const activeScopeName = scopeItems.find((s) => s.id === activeScopeId)?.discipline;
@@ -115,7 +165,6 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
         </TabsList>
 
         <TabsContent value="cotacoes" className="space-y-6 mt-4">
-          {/* Header with revision selector */}
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <h3 className="text-lg font-semibold text-display">Orçamentos (Escopo Contratado)</h3>
@@ -123,9 +172,7 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
             </div>
             <div className="flex items-center gap-2">
               <Select value={String(currentRev)} onValueChange={(v) => setSelectedRevision(Number(v))}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {revisions.map((r) => (
                     <SelectItem key={r} value={String(r)}>Rev {r}</SelectItem>
@@ -133,8 +180,7 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
                 </SelectContent>
               </Select>
               <Button variant="outline" size="sm" onClick={() => createRevision.mutate(currentRev)} disabled={createRevision.isPending}>
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Nova Revisão
+                <RefreshCw className="h-4 w-4 mr-1" /> Nova Revisão
               </Button>
             </div>
           </div>
@@ -196,7 +242,6 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
                 );
               })}
 
-              {/* Total geral */}
               <Card className="bg-primary/5 border-primary/20 sticky bottom-4 shadow-lg">
                 <CardContent className="py-4">
                   <div className="flex items-center justify-between">

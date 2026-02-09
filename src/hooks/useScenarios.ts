@@ -57,7 +57,6 @@ export function useScenarios(projectId: string) {
         .single();
       if (error) throw error;
 
-      // Auto-populate with default disciplines
       if (defaultDisciplines.length > 0) {
         const items = defaultDisciplines.map((d) => ({
           scenario_id: scenario.id,
@@ -124,14 +123,16 @@ export function useScenarios(projectId: string) {
 
   const approveScenario = useMutation({
     mutationFn: async (scenario: Scenario) => {
-      // 1. Mark scenario as approved
+      const allItems = scenario.scenario_items || [];
+      const includedItems = allItems.filter((i) => i.is_included);
+
+      // 1. Mark scenario as approved, un-approve others
       const { error: approveErr } = await supabase
         .from("scenarios")
         .update({ is_approved: true })
         .eq("id", scenario.id);
       if (approveErr) throw approveErr;
 
-      // 2. Un-approve others
       const { error: unApproveErr } = await supabase
         .from("scenarios")
         .update({ is_approved: false })
@@ -139,38 +140,64 @@ export function useScenarios(projectId: string) {
         .neq("id", scenario.id);
       if (unApproveErr) throw unApproveErr;
 
-      // 3. Copy items to scope_items with scope_type='projeto'
-      const includedItems = (scenario.scenario_items || []).filter((i) => i.is_included);
-      if (includedItems.length > 0) {
-        // Clear existing scope first? Maybe optional, but for now append or sync logic is complex.
-        // Let's just append new ones if scope is empty, or warn user.
-        // For simplicity: Append.
-        const scopeInserts = includedItems.map((item, idx) => ({
+      // 2. Clear existing scope_items for this project (avoid duplicates on re-approval)
+      const { error: clearErr } = await supabase
+        .from("scope_items")
+        .delete()
+        .eq("project_id", projectId);
+      if (clearErr) throw clearErr;
+
+      // 3. Insert ALL items as scope_type="projeto" (idealized scope)
+      if (allItems.length > 0) {
+        const projetoInserts = allItems.map((item, idx) => ({
           user_id: user!.id,
           project_id: projectId,
           discipline: item.discipline,
           description: item.description,
           estimated_value: item.estimated_value,
           entry_order: idx + 1,
-          scope_type: "projeto", // Explicitly set scope type
+          scope_type: "projeto",
+          status: "planejado",
         }));
-        const { error: scopeErr } = await supabase.from("scope_items").insert(scopeInserts);
-        if (scopeErr) throw scopeErr;
+        const { error: projErr } = await supabase.from("scope_items").insert(projetoInserts);
+        if (projErr) throw projErr;
       }
 
-      // 4. Update project total
-      const total = includedItems.reduce((sum, i) => sum + (i.estimated_value || 0), 0);
-      const { error: projErr } = await supabase
+      // 4. Insert INCLUDED items as scope_type="contratado"
+      if (includedItems.length > 0) {
+        const contratadoInserts = includedItems.map((item, idx) => ({
+          user_id: user!.id,
+          project_id: projectId,
+          discipline: item.discipline,
+          description: item.description,
+          estimated_value: item.estimated_value,
+          entry_order: idx + 1,
+          scope_type: "contratado",
+          status: "planejado",
+        }));
+        const { error: contErr } = await supabase.from("scope_items").insert(contratadoInserts);
+        if (contErr) throw contErr;
+      }
+
+      // 5. Update project budgets
+      const idealTotal = allItems.reduce((sum, i) => sum + (i.estimated_value || 0), 0);
+      const contractedTotal = includedItems.reduce((sum, i) => sum + (i.estimated_value || 0), 0);
+      const { error: updErr } = await supabase
         .from("projects")
-        .update({ approved_scenario_id: scenario.id, client_budget: total })
+        .update({
+          approved_scenario_id: scenario.id,
+          ideal_budget: idealTotal,
+          estimated_budget: contractedTotal,
+          client_budget: contractedTotal,
+        })
         .eq("id", projectId);
-      if (projErr) throw projErr;
+      if (updErr) throw updErr;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["scenarios", projectId] });
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       queryClient.invalidateQueries({ queryKey: ["scope_items", projectId] });
-      toast({ title: "Cenário aprovado e escopo preenchido!" });
+      toast({ title: "Cenário aprovado! Escopo preenchido automaticamente." });
     },
     onError: (e: Error) => toast({ title: "Erro ao aprovar", description: e.message, variant: "destructive" }),
   });

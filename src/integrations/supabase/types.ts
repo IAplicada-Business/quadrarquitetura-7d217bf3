@@ -1721,6 +1721,7 @@ export type Database = {
           project_id: string
           scope_type: string | null
           service_duration: string | null
+          status: string | null
           suppliers_to_quote: string | null
           updated_at: string
           user_id: string
@@ -1738,6 +1739,7 @@ export type Database = {
           project_id: string
           scope_type?: string | null
           service_duration?: string | null
+          status?: string | null
           suppliers_to_quote?: string | null
           updated_at?: string
           user_id: string
@@ -1755,6 +1757,7 @@ export type Database = {
           project_id?: string
           scope_type?: string | null
           service_duration?: string | null
+          status?: string | null
           suppliers_to_quote?: string | null
           updated_at?: string
           user_id?: string
@@ -1811,6 +1814,59 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      site_diary_entries: {
+        Row: {
+          created_at: string
+          disciplines_active: string[] | null
+          entry_date: string
+          id: string
+          observations: string | null
+          photos: string[] | null
+          project_id: string
+          summary: string | null
+          updated_at: string
+          user_id: string
+          weather: string | null
+          workers_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          disciplines_active?: string[] | null
+          entry_date?: string
+          id?: string
+          observations?: string | null
+          photos?: string[] | null
+          project_id: string
+          summary?: string | null
+          updated_at?: string
+          user_id: string
+          weather?: string | null
+          workers_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          disciplines_active?: string[] | null
+          entry_date?: string
+          id?: string
+          observations?: string | null
+          photos?: string[] | null
+          project_id?: string
+          summary?: string | null
+          updated_at?: string
+          user_id?: string
+          weather?: string | null
+          workers_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_diary_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       site_tracking: {
         Row: {
