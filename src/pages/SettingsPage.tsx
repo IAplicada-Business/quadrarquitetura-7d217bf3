@@ -34,7 +34,7 @@ export default function SettingsPage() {
       <h1 className="text-2xl font-bold font-display mb-1">Configurações</h1>
       <p className="text-muted-foreground mb-8">Personalize o sistema</p>
 
-      <div className="space-y-6 max-w-2xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Profile */}
         <Card>
           <CardHeader>

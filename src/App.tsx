@@ -20,6 +20,7 @@ import Suppliers from "./pages/Suppliers";
 import Documents from "./pages/Documents";
 import Reports from "./pages/Reports";
 import SettingsPage from "./pages/SettingsPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,6 +73,7 @@ const App = () => (
               <Route path="/construction/reports" element={<Reports />} />
               {/* Administrativo */}
               <Route path="/admin/settings" element={<SettingsPage />} />
+              <Route path="/admin/users" element={<AdminUsersPage />} />
               {/* Redirects de compatibilidade */}
               <Route path="/site-tracking" element={<Navigate to="/construction/tracking" replace />} />
               <Route path="/suppliers" element={<Navigate to="/construction/suppliers" replace />} />
