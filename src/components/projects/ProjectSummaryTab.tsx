@@ -5,8 +5,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { statusLabels } from "@/lib/projectConstants";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { ArrowRight, Wallet, Hammer, FileText, BarChart3, Users, HardHat } from "lucide-react";
+import { Wallet, Hammer, FileText, HardHat } from "lucide-react";
 
 function formatCurrency(value: number | null | undefined) {
   if (value == null) return "—";
@@ -20,9 +19,10 @@ function formatDate(date: string | null | undefined) {
 
 interface ProjectSummaryTabProps {
   project: Record<string, unknown>;
+  onTabChange?: (tab: string) => void;
 }
 
-export function ProjectSummaryTab({ project }: ProjectSummaryTabProps) {
+export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabProps) {
   const clientName = (project.clients as { name: string } | null)?.name;
   
   // Calculate indicators (mocked for now, but structure is ready)
@@ -121,28 +121,19 @@ export function ProjectSummaryTab({ project }: ProjectSummaryTabProps) {
       {/* Quick Links */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { icon: Wallet, label: "Financeiro", href: "financeiro" },
-          { icon: Hammer, label: "Cronograma", href: "cronograma" },
-          { icon: FileText, label: "Documentos", href: "documentos" },
-          { icon: HardHat, label: "Diário de Obra", href: "/construction/tracking" },
+          { icon: Wallet, label: "Financeiro", tab: "financeiro" },
+          { icon: Hammer, label: "Cronograma", tab: "cronograma" },
+          { icon: FileText, label: "Documentos", tab: "documentos" },
+          { icon: HardHat, label: "Diário de Obra", tab: "acompanhamento" },
         ].map((link, i) => (
           <Button 
             key={i} 
             variant="outline" 
             className="h-20 flex flex-col items-center justify-center gap-2 hover:bg-primary/5 hover:border-primary/30 transition-all"
-            asChild
+            onClick={() => onTabChange?.(link.tab)}
           >
-            {link.href.startsWith("/") ? (
-              <Link to={link.href}>
-                <link.icon className="h-6 w-6 text-primary" />
-                <span>{link.label}</span>
-              </Link>
-            ) : (
-              <div className="cursor-pointer"> {/* This would just be visual if inside tabs */}
-                <link.icon className="h-6 w-6 text-primary" />
-                <span>{link.label}</span>
-              </div>
-            )}
+            <link.icon className="h-6 w-6 text-primary" />
+            <span>{link.label}</span>
           </Button>
         ))}
       </div>
