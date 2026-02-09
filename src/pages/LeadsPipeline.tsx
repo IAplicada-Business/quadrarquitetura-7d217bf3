@@ -161,11 +161,11 @@ export default function LeadsPipeline() {
 
       {/* Kanban View */}
       {view === "kanban" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 overflow-x-auto">
+        <div className="flex gap-4 overflow-x-auto pb-4">
           {LEAD_STATUSES.map((status) => {
             const columnLeads = filtered.filter((l) => l.status === status);
             return (
-              <div key={status} className="min-w-[220px]">
+              <div key={status} className="min-w-[250px] w-[250px] flex-shrink-0">
                 <div className={`rounded-t-lg px-3 py-2 border ${statusColors[status]} font-medium text-sm flex items-center justify-between`}>
                   <span>{leadStatusLabels[status]}</span>
                   <Badge variant="outline" className="text-xs">{columnLeads.length}</Badge>
