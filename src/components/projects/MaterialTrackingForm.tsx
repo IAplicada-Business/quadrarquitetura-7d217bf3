@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface MaterialTrackingFormProps {
@@ -17,12 +18,17 @@ interface MaterialTrackingFormProps {
     purchase_date?: string;
     delivery_date?: string;
     notes?: string;
+    discipline?: string;
+    unit?: string;
+    supplier_name?: string;
+    product_link?: string;
   }) => void;
   initialData?: Record<string, unknown> | null;
   isLoading?: boolean;
+  disciplines?: string[];
 }
 
-export function MaterialTrackingForm({ open, onOpenChange, onSubmit, initialData, isLoading }: MaterialTrackingFormProps) {
+export function MaterialTrackingForm({ open, onOpenChange, onSubmit, initialData, isLoading, disciplines = [] }: MaterialTrackingFormProps) {
   const [name, setName] = useState(initialData?.material_name as string || "");
   const [needed, setNeeded] = useState(initialData?.quantity_needed ? String(initialData.quantity_needed) : "");
   const [purchased, setPurchased] = useState(initialData?.quantity_purchased ? String(initialData.quantity_purchased) : "");
@@ -31,6 +37,10 @@ export function MaterialTrackingForm({ open, onOpenChange, onSubmit, initialData
   const [purchaseDate, setPurchaseDate] = useState(initialData?.purchase_date as string || "");
   const [deliveryDate, setDeliveryDate] = useState(initialData?.delivery_date as string || "");
   const [notes, setNotes] = useState(initialData?.notes as string || "");
+  const [discipline, setDiscipline] = useState(initialData?.discipline as string || "");
+  const [unit, setUnit] = useState(initialData?.unit as string || "");
+  const [supplierName, setSupplierName] = useState(initialData?.supplier_name as string || "");
+  const [productLink, setProductLink] = useState(initialData?.product_link as string || "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,15 +54,20 @@ export function MaterialTrackingForm({ open, onOpenChange, onSubmit, initialData
       purchase_date: purchaseDate || undefined,
       delivery_date: deliveryDate || undefined,
       notes: notes || undefined,
+      discipline: discipline || undefined,
+      unit: unit || undefined,
+      supplier_name: supplierName || undefined,
+      product_link: productLink || undefined,
     });
     onOpenChange(false);
     setName(""); setNeeded(""); setPurchased(""); setDelivered("");
     setUsed(""); setPurchaseDate(""); setDeliveryDate(""); setNotes("");
+    setDiscipline(""); setUnit(""); setSupplierName(""); setProductLink("");
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-display">
             {initialData ? "Editar Material" : "Novo Material"}
@@ -62,6 +77,30 @@ export function MaterialTrackingForm({ open, onOpenChange, onSubmit, initialData
           <div>
             <Label>Nome do Material</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Cimento CP II, Areia média..." required />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Disciplina</Label>
+              <Select value={discipline} onValueChange={setDiscipline}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {disciplines.map((d) => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Unidade</Label>
+              <Select value={unit} onValueChange={setUnit}>
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  {["un", "m²", "m³", "m", "kg", "L", "sc", "pç", "cx", "rolo"].map((u) => (
+                    <SelectItem key={u} value={u}>{u}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -79,6 +118,16 @@ export function MaterialTrackingForm({ open, onOpenChange, onSubmit, initialData
             <div>
               <Label>Qtd Usada</Label>
               <Input type="number" step="0.01" value={used} onChange={(e) => setUsed(e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Fornecedor</Label>
+              <Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="Nome do fornecedor" />
+            </div>
+            <div>
+              <Label>Link de Compra</Label>
+              <Input value={productLink} onChange={(e) => setProductLink(e.target.value)} placeholder="https://..." />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">

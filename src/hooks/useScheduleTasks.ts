@@ -31,6 +31,13 @@ export function useScheduleTasks(projectId: string | undefined) {
       status?: string;
       payment_note?: string;
       order_index?: number;
+      supplier_name?: string;
+      discipline?: string;
+      is_client_visible?: boolean;
+      is_daily_detail?: boolean;
+      requires_presence?: boolean;
+      progress_percentage?: number;
+      color?: string;
     }) => {
       const { error } = await supabase.from("schedule_tasks").insert({
         ...item,

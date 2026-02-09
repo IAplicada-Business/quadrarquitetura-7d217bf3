@@ -2,12 +2,16 @@ import { useState, useMemo } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useScheduleTasks } from "@/hooks/useScheduleTasks";
 import { useScopeItems } from "@/hooks/useScopeItems";
 import { ScheduleTaskForm } from "./ScheduleTaskForm";
 import { ProjectPendingTab } from "./ProjectPendingTab";
+import { GanttChart } from "./GanttChart";
+import { ClientScheduleView } from "./ClientScheduleView";
 
 function formatDate(d: string | null) {
   if (!d) return "—";
@@ -26,80 +30,185 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const { items: scopeItems } = useScopeItems(projectId);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
+  const [ganttView, setGanttView] = useState<"week" | "month">("week");
+  const [filterDiscipline, setFilterDiscipline] = useState("all");
 
-  // Group by discipline
-  const grouped = useMemo(() => {
-    const groups: Record<string, typeof items> = {};
-    for (const task of items) {
-      const discipline = (task as Record<string, unknown> & { scope_items?: { discipline: string } }).scope_items?.discipline || "Sem Disciplina";
-      if (!groups[discipline]) groups[discipline] = [];
-      groups[discipline].push(task);
-    }
-    return groups;
+  const disciplines = useMemo(() => {
+    const set = new Set<string>();
+    items.forEach((t: any) => {
+      const d = t.discipline || (t.scope_items as any)?.discipline;
+      if (d) set.add(d);
+    });
+    return Array.from(set).sort();
   }, [items]);
+
+  const filteredItems = useMemo(() => {
+    if (filterDiscipline === "all") return items;
+    return items.filter((t: any) => {
+      const d = t.discipline || (t.scope_items as any)?.discipline;
+      return d === filterDiscipline;
+    });
+  }, [items, filterDiscipline]);
+
+  const clientTasks = useMemo(() =>
+    items.filter((t: any) => t.is_client_visible !== false).map((t: any) => ({
+      id: t.id,
+      task_name: t.task_name,
+      start_date: t.start_date,
+      end_date: t.end_date,
+      status: t.status,
+      discipline: t.discipline || (t.scope_items as any)?.discipline || null,
+      color: t.color,
+      progress_percentage: t.progress_percentage,
+    })),
+  [items]);
+
+  // Metrics
+  const total = items.length;
+  const inProgress = items.filter((t: any) => t.status === "em_execucao").length;
+  const overdue = items.filter((t: any) => t.status === "atrasado").length;
+  const completed = items.filter((t: any) => t.status === "executado").length;
+
+  const handleEdit = (task: any) => {
+    setEditing(task as Record<string, unknown>);
+    setFormOpen(true);
+  };
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <Tabs defaultValue="cronograma">
+      <Tabs defaultValue="gantt">
         <TabsList>
-          <TabsTrigger value="cronograma">Cronograma</TabsTrigger>
+          <TabsTrigger value="gantt">Gantt (Interno)</TabsTrigger>
+          <TabsTrigger value="lista">Lista</TabsTrigger>
+          <TabsTrigger value="cliente">Visão Cliente</TabsTrigger>
           <TabsTrigger value="pendencias">Pendências</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="cronograma" className="space-y-4 mt-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-display">Cronograma da Obra</h3>
-          <p className="text-sm text-muted-foreground">Etapas agrupadas por disciplina com status de execução</p>
-        </div>
-        <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}>
-          <Plus className="h-4 w-4 mr-1" /> Nova Etapa
-        </Button>
-      </div>
+        {/* ===== GANTT ===== */}
+        <TabsContent value="gantt" className="space-y-4 mt-4">
+          {/* Metrics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card><CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-display">{total}</p>
+              <p className="text-xs text-muted-foreground">Total</p>
+            </CardContent></Card>
+            <Card><CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-primary">{inProgress}</p>
+              <p className="text-xs text-muted-foreground">Em Execução</p>
+            </CardContent></Card>
+            <Card><CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-destructive">{overdue}</p>
+              <p className="text-xs text-muted-foreground">Atrasadas</p>
+            </CardContent></Card>
+            <Card><CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-success">{completed}</p>
+              <p className="text-xs text-muted-foreground">Concluídas</p>
+            </CardContent></Card>
+          </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
-        </div>
-      ) : items.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-          Nenhuma etapa cadastrada no cronograma.
-        </div>
-      ) : (
-        Object.entries(grouped).map(([discipline, tasks]) => (
-          <div key={discipline} className="space-y-2">
-            <h4 className="font-semibold text-sm text-display flex items-center gap-2">
-              <Badge variant="outline">{discipline}</Badge>
-              <span className="text-xs text-muted-foreground">({tasks.length} etapas)</span>
-            </h4>
+          {/* Filters & Actions */}
+          <div className="flex flex-wrap items-center gap-2 justify-between">
+            <div className="flex gap-2">
+              <Select value={ganttView} onValueChange={(v) => setGanttView(v as any)}>
+                <SelectTrigger className="w-[120px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="week">Semana</SelectItem>
+                  <SelectItem value="month">Mês</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterDiscipline} onValueChange={setFilterDiscipline}>
+                <SelectTrigger className="w-[160px] h-8 text-xs">
+                  <SelectValue placeholder="Disciplina" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {disciplines.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}>
+              <Plus className="h-4 w-4 mr-1" /> Nova Etapa
+            </Button>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+            </div>
+          ) : (
+            <GanttChart
+              tasks={filteredItems.map((t: any) => ({
+                id: t.id,
+                task_name: t.task_name,
+                start_date: t.start_date,
+                end_date: t.end_date,
+                status: t.status,
+                discipline: t.discipline || (t.scope_items as any)?.discipline || null,
+                supplier_name: t.supplier_name,
+                progress_percentage: t.progress_percentage,
+                color: t.color,
+                requires_presence: t.requires_presence,
+                is_daily_detail: t.is_daily_detail,
+              }))}
+              onEdit={handleEdit}
+              viewMode={ganttView}
+            />
+          )}
+        </TabsContent>
+
+        {/* ===== LISTA ===== */}
+        <TabsContent value="lista" className="space-y-4 mt-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-display">Lista de Etapas</h3>
+            <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}>
+              <Plus className="h-4 w-4 mr-1" /> Nova Etapa
+            </Button>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+            </div>
+          ) : items.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+              Nenhuma etapa cadastrada.
+            </div>
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Etapa</TableHead>
+                  <TableHead>Disciplina</TableHead>
+                  <TableHead>Responsável</TableHead>
                   <TableHead>Início</TableHead>
                   <TableHead>Fim</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Pagamento</TableHead>
+                  <TableHead className="text-center">%</TableHead>
                   <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tasks.map((task) => {
+                {items.map((task: any) => {
                   const st = statusConfig[task.status || "planejado"];
+                  const disc = task.discipline || (task.scope_items as any)?.discipline;
                   return (
                     <TableRow key={task.id}>
                       <TableCell className="text-muted-foreground">{task.order_index || "—"}</TableCell>
                       <TableCell className="font-medium">{task.task_name}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{disc || "—"}</TableCell>
+                      <TableCell className="text-xs">{task.supplier_name || "—"}</TableCell>
                       <TableCell>{formatDate(task.start_date)}</TableCell>
                       <TableCell>{formatDate(task.end_date)}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={st?.className}>{st?.label || task.status}</Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{task.payment_note || "—"}</TableCell>
+                      <TableCell className="text-center text-xs">{task.progress_percentage ?? 0}%</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditing(task as Record<string, unknown>); setFormOpen(true); }}>
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleEdit(task)}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
                           <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove.mutate(task.id)}>
@@ -112,9 +221,19 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
                 })}
               </TableBody>
             </Table>
-          </div>
-        ))
-      )}
+          )}
+        </TabsContent>
+
+        {/* ===== VISÃO CLIENTE ===== */}
+        <TabsContent value="cliente" className="mt-4">
+          <ClientScheduleView tasks={clientTasks} />
+        </TabsContent>
+
+        {/* ===== PENDÊNCIAS ===== */}
+        <TabsContent value="pendencias" className="mt-4">
+          <ProjectPendingTab projectId={projectId} />
+        </TabsContent>
+      </Tabs>
 
       <ScheduleTaskForm
         open={formOpen}
@@ -131,12 +250,6 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
         isLoading={create.isPending || update.isPending}
         scopeItems={scopeItems.filter((s) => !s.parent_id).map((s) => ({ id: s.id, discipline: s.discipline }))}
       />
-        </TabsContent>
-
-        <TabsContent value="pendencias" className="mt-4">
-          <ProjectPendingTab projectId={projectId} />
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }

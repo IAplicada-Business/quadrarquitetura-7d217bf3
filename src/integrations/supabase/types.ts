@@ -899,47 +899,65 @@ export type Database = {
       }
       material_tracking: {
         Row: {
+          budget_quote_id: string | null
           created_at: string
           delivery_date: string | null
+          discipline: string | null
           id: string
           material_name: string
           notes: string | null
+          product_link: string | null
           project_id: string
           purchase_date: string | null
           quantity_delivered: number | null
           quantity_needed: number | null
           quantity_purchased: number | null
           quantity_used: number | null
+          source: string | null
+          supplier_name: string | null
+          unit: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          budget_quote_id?: string | null
           created_at?: string
           delivery_date?: string | null
+          discipline?: string | null
           id?: string
           material_name: string
           notes?: string | null
+          product_link?: string | null
           project_id: string
           purchase_date?: string | null
           quantity_delivered?: number | null
           quantity_needed?: number | null
           quantity_purchased?: number | null
           quantity_used?: number | null
+          source?: string | null
+          supplier_name?: string | null
+          unit?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          budget_quote_id?: string | null
           created_at?: string
           delivery_date?: string | null
+          discipline?: string | null
           id?: string
           material_name?: string
           notes?: string | null
+          product_link?: string | null
           project_id?: string
           purchase_date?: string | null
           quantity_delivered?: number | null
           quantity_needed?: number | null
           quantity_purchased?: number | null
           quantity_used?: number | null
+          source?: string | null
+          supplier_name?: string | null
+          unit?: string | null
           updated_at?: string
           user_id?: string
         }
