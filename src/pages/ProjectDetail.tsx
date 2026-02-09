@@ -7,6 +7,7 @@ import { useProjectDetail } from "@/hooks/useProjectDetail";
 import { statusLabels } from "@/lib/projectConstants";
 import { ProjectSummaryTab } from "@/components/projects/ProjectSummaryTab";
 import { ProjectScopeTab } from "@/components/projects/ProjectScopeTab";
+import { ProjectScenariosTab } from "@/components/projects/ProjectScenariosTab";
 import { ProjectBudgetsTab } from "@/components/projects/ProjectBudgetsTab";
 import { ProjectMaterialsTab } from "@/components/projects/ProjectMaterialsTab";
 import { ProjectScheduleTab } from "@/components/projects/ProjectScheduleTab";
@@ -63,6 +64,7 @@ export default function ProjectDetail() {
       <Tabs defaultValue="resumo" className="w-full">
         <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1 bg-muted/50">
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
+          <TabsTrigger value="cenarios">Cenários</TabsTrigger>
           <TabsTrigger value="escopo">Escopo</TabsTrigger>
           <TabsTrigger value="orcamentos">Orçamentos</TabsTrigger>
           <TabsTrigger value="materiais">Materiais</TabsTrigger>
@@ -75,6 +77,9 @@ export default function ProjectDetail() {
         <div className="mt-4">
           <TabsContent value="resumo">
             <ProjectSummaryTab project={project as Record<string, unknown>} />
+          </TabsContent>
+          <TabsContent value="cenarios">
+            <ProjectScenariosTab projectId={project.id} />
           </TabsContent>
           <TabsContent value="escopo">
             <ProjectScopeTab projectId={project.id} />

@@ -45,6 +45,11 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
       <TableCell className="text-sm">{item.payment_terms || "—"}</TableCell>
       <TableCell className="text-center text-sm">{item.entry_order ?? "—"}</TableCell>
       <TableCell className="text-sm">{item.service_duration || "—"}</TableCell>
+      <TableCell className="text-sm text-right">
+        {(item as any).estimated_value != null
+          ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((item as any).estimated_value)
+          : "—"}
+      </TableCell>
       <TableCell>
         <div className="flex gap-1">
           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleEdit(item as Record<string, unknown>)}>
@@ -90,6 +95,7 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
                 <TableHead>Pagamento</TableHead>
                 <TableHead className="text-center">Ordem</TableHead>
                 <TableHead>Tempo</TableHead>
+                <TableHead className="text-right">Valor Est.</TableHead>
                 <TableHead className="w-20">Ações</TableHead>
               </TableRow>
             </TableHeader>

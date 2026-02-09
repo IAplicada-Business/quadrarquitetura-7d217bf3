@@ -242,6 +242,82 @@ export type Database = {
         }
         Relationships: []
       }
+      contracts: {
+        Row: {
+          address: string | null
+          city: string | null
+          clauses: string | null
+          client_id: string | null
+          created_at: string
+          id: string
+          payment_conditions: string | null
+          project_id: string | null
+          proposal_id: string
+          start_date: string | null
+          status: string
+          template_name: string | null
+          updated_at: string
+          user_id: string
+          value: number | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          clauses?: string | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          payment_conditions?: string | null
+          project_id?: string | null
+          proposal_id: string
+          start_date?: string | null
+          status?: string
+          template_name?: string | null
+          updated_at?: string
+          user_id: string
+          value?: number | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          clauses?: string | null
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          payment_conditions?: string | null
+          project_id?: string | null
+          proposal_id?: string
+          start_date?: string | null
+          status?: string
+          template_name?: string | null
+          updated_at?: string
+          user_id?: string
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discipline_material_estimates: {
         Row: {
           created_at: string
@@ -444,6 +520,68 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          converted_client_id: string | null
+          created_at: string
+          email: string | null
+          id: string
+          meeting_date: string | null
+          name: string
+          notes: string | null
+          origin: Database["public"]["Enums"]["client_origin"]
+          phone: string
+          phone_secondary: string | null
+          project_type: Database["public"]["Enums"]["client_type"]
+          responsible: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          converted_client_id?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          meeting_date?: string | null
+          name: string
+          notes?: string | null
+          origin?: Database["public"]["Enums"]["client_origin"]
+          phone: string
+          phone_secondary?: string | null
+          project_type?: Database["public"]["Enums"]["client_type"]
+          responsible?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          converted_client_id?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          meeting_date?: string | null
+          name?: string
+          notes?: string | null
+          origin?: Database["public"]["Enums"]["client_origin"]
+          phone?: string
+          phone_secondary?: string | null
+          project_type?: Database["public"]["Enums"]["client_type"]
+          responsible?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_converted_client_id_fkey"
+            columns: ["converted_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -726,9 +864,12 @@ export type Database = {
       projects: {
         Row: {
           address: string | null
+          approved_scenario_id: string | null
           area_sqm: number | null
           city: string | null
+          client_budget: number | null
           client_id: string | null
+          contract_id: string | null
           created_at: string
           estimated_budget: number | null
           expected_end_date: string | null
@@ -747,9 +888,12 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          approved_scenario_id?: string | null
           area_sqm?: number | null
           city?: string | null
+          client_budget?: number | null
           client_id?: string | null
+          contract_id?: string | null
           created_at?: string
           estimated_budget?: number | null
           expected_end_date?: string | null
@@ -768,9 +912,12 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          approved_scenario_id?: string | null
           area_sqm?: number | null
           city?: string | null
+          client_budget?: number | null
           client_id?: string | null
+          contract_id?: string | null
           created_at?: string
           estimated_budget?: number | null
           expected_end_date?: string | null
@@ -789,10 +936,77 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "projects_approved_scenario_id_fkey"
+            columns: ["approved_scenario_id"]
+            isOneToOne: false
+            referencedRelation: "scenarios"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "projects_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposals: {
+        Row: {
+          created_at: string
+          deadline: string | null
+          discount_percent: number | null
+          id: string
+          lead_id: string
+          payment_conditions: string | null
+          project_description: string | null
+          status: string
+          template_name: string | null
+          updated_at: string
+          user_id: string
+          value: number | null
+        }
+        Insert: {
+          created_at?: string
+          deadline?: string | null
+          discount_percent?: number | null
+          id?: string
+          lead_id: string
+          payment_conditions?: string | null
+          project_description?: string | null
+          status?: string
+          template_name?: string | null
+          updated_at?: string
+          user_id: string
+          value?: number | null
+        }
+        Update: {
+          created_at?: string
+          deadline?: string | null
+          discount_percent?: number | null
+          id?: string
+          lead_id?: string
+          payment_conditions?: string | null
+          project_description?: string | null
+          status?: string
+          template_name?: string | null
+          updated_at?: string
+          user_id?: string
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
@@ -866,6 +1080,94 @@ export type Database = {
           },
         ]
       }
+      scenario_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          discipline: string
+          display_order: number | null
+          estimated_value: number | null
+          id: string
+          is_included: boolean | null
+          scenario_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          discipline: string
+          display_order?: number | null
+          estimated_value?: number | null
+          id?: string
+          is_included?: boolean | null
+          scenario_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          discipline?: string
+          display_order?: number | null
+          estimated_value?: number | null
+          id?: string
+          is_included?: boolean | null
+          scenario_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scenario_items_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scenarios: {
+        Row: {
+          created_at: string
+          id: string
+          is_approved: boolean | null
+          name: string
+          project_id: string
+          total_value: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_approved?: boolean | null
+          name: string
+          project_id: string
+          total_value?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_approved?: boolean | null
+          name?: string
+          project_id?: string
+          total_value?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scenarios_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schedule_tasks: {
         Row: {
           created_at: string
@@ -932,6 +1234,7 @@ export type Database = {
           description: string | null
           discipline: string
           entry_order: number | null
+          estimated_value: number | null
           id: string
           parent_id: string | null
           payment_terms: string | null
@@ -946,6 +1249,7 @@ export type Database = {
           description?: string | null
           discipline: string
           entry_order?: number | null
+          estimated_value?: number | null
           id?: string
           parent_id?: string | null
           payment_terms?: string | null
@@ -960,6 +1264,7 @@ export type Database = {
           description?: string | null
           discipline?: string
           entry_order?: number | null
+          estimated_value?: number | null
           id?: string
           parent_id?: string | null
           payment_terms?: string | null

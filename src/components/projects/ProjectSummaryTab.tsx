@@ -59,6 +59,38 @@ export function ProjectSummaryTab({ project }: ProjectSummaryTabProps) {
         </Card>
       </div>
 
+      {/* Budget comparison from scenarios */}
+      {(project.client_budget != null || project.approved_scenario_id) && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-display text-sm">Cenários</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-6 text-sm">
+              <div>
+                <span className="text-muted-foreground">Orçamento do Cliente: </span>
+                <strong>{formatCurrency(project.client_budget as number)}</strong>
+              </div>
+              {project.approved_scenario_id && (
+                <Badge variant="default" className="text-xs">Cenário aprovado</Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Contract origin */}
+      {project.contract_id && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-display text-sm">Origem</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">Este projeto foi gerado automaticamente a partir de um contrato assinado.</p>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-display">Informações Gerais</CardTitle>
