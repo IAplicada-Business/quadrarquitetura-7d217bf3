@@ -225,7 +225,7 @@ export default function LeadsPipeline() {
           {LEAD_STATUSES.map((status) => {
             const columnLeads = filtered.filter((l) => l.status === status);
             return (
-              <div key={status} className="min-w-[250px] w-[250px] flex-shrink-0">
+              <div key={status} className="min-w-[250px] flex-1 flex-shrink-0">
                 <div className={`rounded-t-lg px-3 py-2 border ${statusColors[status]} font-medium text-sm flex items-center justify-between`}>
                   <span>{leadStatusLabels[status]}</span>
                   <Badge variant="outline" className="text-xs">{columnLeads.length}</Badge>
