@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, ShoppingCart, CheckCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { useScopeItems } from "@/hooks/useScopeItems";
 import { useBudgetQuotes } from "@/hooks/useBudgetQuotes";
 import { BudgetQuoteCard } from "./BudgetQuoteCard";
@@ -49,6 +50,9 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
     }
     return groups;
   }, [currentQuotes]);
+
+  // Only show contracted scope items
+  const contractedScopeItems = scopeItems.filter(s => s.scope_type === 'contratado');
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -97,6 +101,7 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
       }
     }
     update.mutate({ id: quoteId, status: "aprovado" });
+    // TODO: Create payment installments automatically (future improvement)
   };
 
   const activeScopeName = scopeItems.find((s) => s.id === activeScopeId)?.discipline;
@@ -105,111 +110,119 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
     <div className="space-y-6 animate-fade-in">
       <Tabs defaultValue="cotacoes">
         <TabsList>
-          <TabsTrigger value="cotacoes">Cotações</TabsTrigger>
-          <TabsTrigger value="compras">Compras</TabsTrigger>
+          <TabsTrigger value="cotacoes">Cotações por Disciplina</TabsTrigger>
+          <TabsTrigger value="compras">Lista de Compras</TabsTrigger>
         </TabsList>
 
         <TabsContent value="cotacoes" className="space-y-6 mt-4">
-      {/* Header with revision selector */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-display">Orçamentos por Disciplina</h3>
-          <p className="text-sm text-muted-foreground">Compare cotações e aprove fornecedores</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Select value={String(currentRev)} onValueChange={(v) => setSelectedRevision(Number(v))}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {revisions.map((r) => (
-                <SelectItem key={r} value={String(r)}>Rev {r}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="sm" onClick={() => createRevision.mutate(currentRev)} disabled={createRevision.isPending}>
-            <RefreshCw className="h-4 w-4 mr-1" />
-            Nova Revisão
-          </Button>
-        </div>
-      </div>
+          {/* Header with revision selector */}
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-display">Orçamentos (Escopo Contratado)</h3>
+              <p className="text-sm text-muted-foreground">Compare cotações e aprove fornecedores para cada disciplina</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={String(currentRev)} onValueChange={(v) => setSelectedRevision(Number(v))}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {revisions.map((r) => (
+                    <SelectItem key={r} value={String(r)}>Rev {r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" onClick={() => createRevision.mutate(currentRev)} disabled={createRevision.isPending}>
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Nova Revisão
+              </Button>
+            </div>
+          </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
-        </div>
-      ) : scopeItems.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-          Cadastre disciplinas na aba "Escopo" para começar a adicionar cotações.
-        </div>
-      ) : (
-        <>
-          {scopeItems.filter((s) => !s.parent_id).map((scope) => {
-            const scopeQuotes = groupedQuotes[scope.id] || [];
-            const subtotal = totals.byDiscipline[scope.id] || 0;
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+            </div>
+          ) : contractedScopeItems.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+              Cadastre disciplinas contratadas na aba "Escopo" para começar a adicionar cotações.
+            </div>
+          ) : (
+            <>
+              {contractedScopeItems.filter((s) => !s.parent_id).map((scope) => {
+                const scopeQuotes = groupedQuotes[scope.id] || [];
+                const subtotal = totals.byDiscipline[scope.id] || 0;
+                const approvedQuote = scopeQuotes.find(q => q.status === 'aprovado');
 
-            return (
-              <Card key={scope.id}>
-                <CardHeader className="pb-3">
+                return (
+                  <Card key={scope.id} className={approvedQuote ? "border-green-500/50 bg-green-50/10" : ""}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-base text-display">{scope.discipline}</CardTitle>
+                          {approvedQuote && <Badge variant="default" className="bg-green-600 text-[10px]">Fornecedor Definido</Badge>}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-semibold text-primary">{formatCurrency(subtotal)}</span>
+                          <Button size="sm" variant="outline" onClick={() => handleAddQuote(scope.id)}>
+                            <Plus className="h-3.5 w-3.5 mr-1" /> Cotação
+                          </Button>
+                        </div>
+                      </div>
+                      {scope.description && (
+                        <p className="text-xs text-muted-foreground mt-1">{scope.description}</p>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      {scopeQuotes.length === 0 ? (
+                        <div className="flex items-center justify-center py-6 text-sm text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+                          Nenhuma cotação. Clique em "Cotação" para adicionar.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {scopeQuotes.map((q) => (
+                            <BudgetQuoteCard
+                              key={q.id}
+                              quote={q as Record<string, unknown>}
+                              onEdit={() => handleEditQuote(q as Record<string, unknown>)}
+                              onDelete={() => remove.mutate(q.id)}
+                              onApprove={() => handleApprove(q.id, q.scope_item_id)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+
+              {/* Total geral */}
+              <Card className="bg-primary/5 border-primary/20 sticky bottom-4 shadow-lg">
+                <CardContent className="py-4">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base text-display">{scope.discipline}</CardTitle>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-primary">{formatCurrency(subtotal)}</span>
-                      <Button size="sm" variant="outline" onClick={() => handleAddQuote(scope.id)}>
-                        <Plus className="h-3.5 w-3.5 mr-1" /> Cotação
-                      </Button>
+                    <div>
+                      <span className="text-lg font-semibold text-display">Total Geral Aprovado</span>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Soma dos fornecedores aprovados + estimativa de material por disciplina
+                      </p>
                     </div>
+                    <span className="text-2xl font-bold text-primary">{formatCurrency(totals.total)}</span>
                   </div>
-                  {scope.description && (
-                    <p className="text-xs text-muted-foreground mt-1">{scope.description}</p>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  {scopeQuotes.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">Nenhuma cotação cadastrada</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {scopeQuotes.map((q) => (
-                        <BudgetQuoteCard
-                          key={q.id}
-                          quote={q as Record<string, unknown>}
-                          onEdit={() => handleEditQuote(q as Record<string, unknown>)}
-                          onDelete={() => remove.mutate(q.id)}
-                          onApprove={() => handleApprove(q.id, q.scope_item_id)}
-                        />
-                      ))}
-                    </div>
-                  )}
                 </CardContent>
               </Card>
-            );
-          })}
+            </>
+          )}
 
-          {/* Total geral */}
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-semibold text-display">Total Geral do Orçamento</span>
-                <span className="text-2xl font-bold text-primary">{formatCurrency(totals.total)}</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Soma dos fornecedores aprovados + estimativa de material por disciplina
-              </p>
-            </CardContent>
-          </Card>
-        </>
-      )}
-
-      <BudgetQuoteForm
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        onSubmit={handleSubmit}
-        initialData={editingQuote}
-        scopeItemId={activeScopeId || undefined}
-        scopeItemName={activeScopeName}
-        revisionNumber={currentRev}
-        isLoading={create.isPending || update.isPending}
-      />
+          <BudgetQuoteForm
+            open={formOpen}
+            onOpenChange={setFormOpen}
+            onSubmit={handleSubmit}
+            initialData={editingQuote}
+            scopeItemId={activeScopeId || undefined}
+            scopeItemName={activeScopeName}
+            revisionNumber={currentRev}
+            isLoading={create.isPending || update.isPending}
+          />
         </TabsContent>
 
         <TabsContent value="compras" className="mt-4">

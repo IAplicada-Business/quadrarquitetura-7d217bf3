@@ -197,6 +197,39 @@ export type Database = {
           },
         ]
       }
+      calculation_parameters: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          parameter_key: string
+          parameter_value: Json
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          parameter_key: string
+          parameter_value?: Json
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          parameter_key?: string
+          parameter_value?: Json
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           client_type: Database["public"]["Enums"]["client_type"] | null
@@ -442,6 +475,33 @@ export type Database = {
           },
         ]
       }
+      default_disciplines: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       discipline_material_estimates: {
         Row: {
           created_at: string
@@ -553,8 +613,10 @@ export type Database = {
           file_url: string | null
           id: string
           name: string
+          notes: string | null
           project_id: string | null
           updated_at: string
+          uploaded_by: string | null
           user_id: string
         }
         Insert: {
@@ -565,8 +627,10 @@ export type Database = {
           file_url?: string | null
           id?: string
           name: string
+          notes?: string | null
           project_id?: string | null
           updated_at?: string
+          uploaded_by?: string | null
           user_id: string
         }
         Update: {
@@ -577,8 +641,10 @@ export type Database = {
           file_url?: string | null
           id?: string
           name?: string
+          notes?: string | null
           project_id?: string | null
           updated_at?: string
+          uploaded_by?: string | null
           user_id?: string
         }
         Relationships: [
@@ -602,12 +668,15 @@ export type Database = {
         Row: {
           category: string | null
           created_at: string
+          date: string | null
           description: string | null
           file_url: string | null
           id: string
           invoice_number: string | null
           project_id: string
+          receipt_image_url: string | null
           store_name: string | null
+          type: string | null
           updated_at: string
           user_id: string
           value: number | null
@@ -615,12 +684,15 @@ export type Database = {
         Insert: {
           category?: string | null
           created_at?: string
+          date?: string | null
           description?: string | null
           file_url?: string | null
           id?: string
           invoice_number?: string | null
           project_id: string
+          receipt_image_url?: string | null
           store_name?: string | null
+          type?: string | null
           updated_at?: string
           user_id: string
           value?: number | null
@@ -628,12 +700,15 @@ export type Database = {
         Update: {
           category?: string | null
           created_at?: string
+          date?: string | null
           description?: string | null
           file_url?: string | null
           id?: string
           invoice_number?: string | null
           project_id?: string
+          receipt_image_url?: string | null
           store_name?: string | null
+          type?: string | null
           updated_at?: string
           user_id?: string
           value?: number | null
@@ -888,11 +963,13 @@ export type Database = {
           id: string
           installment_number: number | null
           paid_date: string | null
+          payment_method: string | null
           pix_key: string | null
           project_id: string | null
           receipt_url: string | null
           status: Database["public"]["Enums"]["payment_status"] | null
           supplier_id: string | null
+          supplier_name: string | null
           total_installments: number | null
           updated_at: string
           user_id: string
@@ -907,11 +984,13 @@ export type Database = {
           id?: string
           installment_number?: number | null
           paid_date?: string | null
+          payment_method?: string | null
           pix_key?: string | null
           project_id?: string | null
           receipt_url?: string | null
           status?: Database["public"]["Enums"]["payment_status"] | null
           supplier_id?: string | null
+          supplier_name?: string | null
           total_installments?: number | null
           updated_at?: string
           user_id: string
@@ -926,11 +1005,13 @@ export type Database = {
           id?: string
           installment_number?: number | null
           paid_date?: string | null
+          payment_method?: string | null
           pix_key?: string | null
           project_id?: string | null
           receipt_url?: string | null
           status?: Database["public"]["Enums"]["payment_status"] | null
           supplier_id?: string | null
+          supplier_name?: string | null
           total_installments?: number | null
           updated_at?: string
           user_id?: string
@@ -1052,17 +1133,21 @@ export type Database = {
           city: string | null
           client_budget: number | null
           client_id: string | null
+          contingency_percentage: number | null
           contract_id: string | null
           created_at: string
           estimated_budget: number | null
           expected_end_date: string | null
           finish_level: number | null
           id: string
+          ideal_budget: number | null
           name: string
           neighborhood: string | null
+          notes: string | null
           project_type: Database["public"]["Enums"]["client_type"] | null
           real_budget: number | null
           real_end_date: string | null
+          real_start_date: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"] | null
           sub_status: string | null
@@ -1076,17 +1161,21 @@ export type Database = {
           city?: string | null
           client_budget?: number | null
           client_id?: string | null
+          contingency_percentage?: number | null
           contract_id?: string | null
           created_at?: string
           estimated_budget?: number | null
           expected_end_date?: string | null
           finish_level?: number | null
           id?: string
+          ideal_budget?: number | null
           name: string
           neighborhood?: string | null
+          notes?: string | null
           project_type?: Database["public"]["Enums"]["client_type"] | null
           real_budget?: number | null
           real_end_date?: string | null
+          real_start_date?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"] | null
           sub_status?: string | null
@@ -1100,17 +1189,21 @@ export type Database = {
           city?: string | null
           client_budget?: number | null
           client_id?: string | null
+          contingency_percentage?: number | null
           contract_id?: string | null
           created_at?: string
           estimated_budget?: number | null
           expected_end_date?: string | null
           finish_level?: number | null
           id?: string
+          ideal_budget?: number | null
           name?: string
           neighborhood?: string | null
+          notes?: string | null
           project_type?: Database["public"]["Enums"]["client_type"] | null
           real_budget?: number | null
           real_end_date?: string | null
+          real_start_date?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"] | null
           sub_status?: string | null
@@ -1478,43 +1571,64 @@ export type Database = {
       }
       schedule_tasks: {
         Row: {
+          color: string | null
           created_at: string
+          discipline: string | null
           end_date: string | null
           id: string
+          is_client_visible: boolean | null
+          is_daily_detail: boolean | null
           order_index: number | null
           payment_note: string | null
+          progress_percentage: number | null
           project_id: string
+          requires_presence: boolean | null
           scope_item_id: string | null
           start_date: string | null
           status: string | null
+          supplier_name: string | null
           task_name: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
+          discipline?: string | null
           end_date?: string | null
           id?: string
+          is_client_visible?: boolean | null
+          is_daily_detail?: boolean | null
           order_index?: number | null
           payment_note?: string | null
+          progress_percentage?: number | null
           project_id: string
+          requires_presence?: boolean | null
           scope_item_id?: string | null
           start_date?: string | null
           status?: string | null
+          supplier_name?: string | null
           task_name: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          color?: string | null
           created_at?: string
+          discipline?: string | null
           end_date?: string | null
           id?: string
+          is_client_visible?: boolean | null
+          is_daily_detail?: boolean | null
           order_index?: number | null
           payment_note?: string | null
+          progress_percentage?: number | null
           project_id?: string
+          requires_presence?: boolean | null
           scope_item_id?: string | null
           start_date?: string | null
           status?: string | null
+          supplier_name?: string | null
           task_name?: string
           updated_at?: string
           user_id?: string
@@ -1538,6 +1652,7 @@ export type Database = {
       }
       scope_items: {
         Row: {
+          activities: string | null
           created_at: string
           description: string | null
           discipline: string
@@ -1547,12 +1662,14 @@ export type Database = {
           parent_id: string | null
           payment_terms: string | null
           project_id: string
+          scope_type: string | null
           service_duration: string | null
           suppliers_to_quote: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          activities?: string | null
           created_at?: string
           description?: string | null
           discipline: string
@@ -1562,12 +1679,14 @@ export type Database = {
           parent_id?: string | null
           payment_terms?: string | null
           project_id: string
+          scope_type?: string | null
           service_duration?: string | null
           suppliers_to_quote?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          activities?: string | null
           created_at?: string
           description?: string | null
           discipline?: string
@@ -1577,6 +1696,7 @@ export type Database = {
           parent_id?: string | null
           payment_terms?: string | null
           project_id?: string
+          scope_type?: string | null
           service_duration?: string | null
           suppliers_to_quote?: string | null
           updated_at?: string
@@ -1673,6 +1793,110 @@ export type Database = {
           },
         ]
       }
+      site_visits: {
+        Row: {
+          created_at: string
+          id: string
+          is_recurring: boolean | null
+          notes: string | null
+          project_id: string
+          recurrence_rule: string | null
+          updated_at: string
+          user_id: string
+          visit_date: string
+          visit_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_recurring?: boolean | null
+          notes?: string | null
+          project_id: string
+          recurrence_rule?: string | null
+          updated_at?: string
+          user_id: string
+          visit_date: string
+          visit_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_recurring?: boolean | null
+          notes?: string | null
+          project_id?: string
+          recurrence_rule?: string | null
+          updated_at?: string
+          user_id?: string
+          visit_date?: string
+          visit_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_visits_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_allocations: {
+        Row: {
+          created_at: string
+          discipline: string
+          end_date: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          start_date: string | null
+          status: string | null
+          supplier_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          discipline: string
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          project_id: string
+          start_date?: string | null
+          status?: string | null
+          supplier_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          discipline?: string
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          project_id?: string
+          start_date?: string | null
+          status?: string | null
+          supplier_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_allocations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_allocations_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           category: string | null
@@ -1680,7 +1904,9 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          is_active: boolean | null
           name: string
+          notes: string | null
           payment_conditions: string | null
           phone: string | null
           pix_key: string | null
@@ -1694,7 +1920,9 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          is_active?: boolean | null
           name: string
+          notes?: string | null
           payment_conditions?: string | null
           phone?: string | null
           pix_key?: string | null
@@ -1708,7 +1936,9 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          is_active?: boolean | null
           name?: string
+          notes?: string | null
           payment_conditions?: string | null
           phone?: string | null
           pix_key?: string | null

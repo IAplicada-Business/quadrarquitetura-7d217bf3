@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { useDefaultDisciplines } from "@/hooks/useDefaultDisciplines";
 
 export interface ScenarioItem {
   id: string;
@@ -31,6 +32,7 @@ export interface Scenario {
 export function useScenarios(projectId: string) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { disciplines: defaultDisciplines } = useDefaultDisciplines();
 
   const scenariosQuery = useQuery({
     queryKey: ["scenarios", projectId],
@@ -48,8 +50,25 @@ export function useScenarios(projectId: string) {
 
   const createScenario = useMutation({
     mutationFn: async (name: string) => {
-      const { error } = await supabase.from("scenarios").insert({ user_id: user!.id, project_id: projectId, name });
+      const { data: scenario, error } = await supabase
+        .from("scenarios")
+        .insert({ user_id: user!.id, project_id: projectId, name })
+        .select()
+        .single();
       if (error) throw error;
+
+      // Auto-populate with default disciplines
+      if (defaultDisciplines.length > 0) {
+        const items = defaultDisciplines.map((d) => ({
+          scenario_id: scenario.id,
+          user_id: user!.id,
+          discipline: d.name,
+          display_order: d.display_order,
+          estimated_value: 0,
+          is_included: true,
+        }));
+        await supabase.from("scenario_items").insert(items);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["scenarios", projectId] });
@@ -112,7 +131,7 @@ export function useScenarios(projectId: string) {
         .eq("id", scenario.id);
       if (approveErr) throw approveErr;
 
-      // 2. Un-approve other scenarios for same project
+      // 2. Un-approve others
       const { error: unApproveErr } = await supabase
         .from("scenarios")
         .update({ is_approved: false })
@@ -120,9 +139,12 @@ export function useScenarios(projectId: string) {
         .neq("id", scenario.id);
       if (unApproveErr) throw unApproveErr;
 
-      // 3. Copy included items to scope_items
+      // 3. Copy items to scope_items with scope_type='projeto'
       const includedItems = (scenario.scenario_items || []).filter((i) => i.is_included);
       if (includedItems.length > 0) {
+        // Clear existing scope first? Maybe optional, but for now append or sync logic is complex.
+        // Let's just append new ones if scope is empty, or warn user.
+        // For simplicity: Append.
         const scopeInserts = includedItems.map((item, idx) => ({
           user_id: user!.id,
           project_id: projectId,
@@ -130,12 +152,13 @@ export function useScenarios(projectId: string) {
           description: item.description,
           estimated_value: item.estimated_value,
           entry_order: idx + 1,
+          scope_type: "projeto", // Explicitly set scope type
         }));
         const { error: scopeErr } = await supabase.from("scope_items").insert(scopeInserts);
         if (scopeErr) throw scopeErr;
       }
 
-      // 4. Calculate total and update project
+      // 4. Update project total
       const total = includedItems.reduce((sum, i) => sum + (i.estimated_value || 0), 0);
       const { error: projErr } = await supabase
         .from("projects")
@@ -146,10 +169,10 @@ export function useScenarios(projectId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["scenarios", projectId] });
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["scope-items", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["scope_items", projectId] });
       toast({ title: "Cenário aprovado e escopo preenchido!" });
     },
-    onError: (e: Error) => toast({ title: "Erro ao aprovar cenário", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Erro ao aprovar", description: e.message, variant: "destructive" }),
   });
 
   return {
