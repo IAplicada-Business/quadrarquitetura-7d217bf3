@@ -1,232 +1,238 @@
 
-# Adequacao Completa: Leads, Propostas e Contratos conforme Documento v2
+# Implementacao Completa: Modulo Projetos (8 abas) + Modulo Obra (4 paginas)
 
-## Resumo
+## Resumo do Estado Atual
 
-O sistema atual tem uma implementacao basica dos modulos de Leads, Propostas e Contratos, mas esta muito simplificada em relacao ao documento de especificacao. As principais lacunas sao:
+O sistema ja possui as tabelas base: `projects`, `scenarios`, `scenario_items`, `scope_items`, `budget_quotes`, `purchases`, `material_calculations`, `material_tracking`, `schedule_tasks`, `payments`, `invoices`, `documents`, `suppliers`. Os componentes para as 8 abas do projeto ja existem com funcionalidade basica. Porem, ha lacunas significativas entre o que existe e o que o documento especifica.
 
-1. **Banco de dados**: Faltam tabelas inteiras (`proposal_templates`, `contract_templates`, `lead_form_submissions`) e muitas colunas nas tabelas existentes
-2. **Propostas**: Falta geracao automatica via IA, preview em tempo real, templates, campos detalhados, exportacao PDF
-3. **Contratos**: Falta templates com placeholders, preview em tempo real, campos detalhados
-4. **Leads**: Faltam campos (construction_type, message, source_detail, lost_reason, converted_at) e funcionalidades (KPI cards, filtros, formulario publico)
+## Lacunas Identificadas
 
----
+### Banco de Dados
 
-## Fase 1 — Migracao de Banco de Dados
+**Tabelas que NAO existem e precisam ser criadas:**
+- `supplier_allocations` — alocacao de fornecedores em projetos
+- `site_visits` — visitas de obra recorrentes
+- `default_disciplines` — disciplinas padrao para cenarios (com 16 registros)
+- `calculation_parameters` — parametros de calculo de materiais (com registros padrao)
 
-### 1.1 Novas tabelas a criar:
+**Colunas faltantes em tabelas existentes:**
+- `projects`: faltam `ideal_budget`, `contingency_percentage`, `real_start_date`, `notes`, `sub_status` precisa ser revisado contra o documento
+- `scope_items`: faltam `scope_type` (projeto/contratado), `activities`, `estimated_value` (ja existe no schema) — o schema atual nao tem `scope_type` nem `activities`
+- `schedule_tasks`: faltam `discipline`, `supplier_name`, `is_daily_detail`, `is_client_visible`, `requires_presence`, `progress_percentage`, `color` — atualmente usa `scope_item_id`, `task_name`, `order_index`, `payment_note` com schema diferente
+- `payments`: faltam `supplier_name` (campo separado), `payment_method`, `pix_key` — atualmente ja tem `pix_key` e `budget_quote_id` mas falta `supplier_name` como texto, `total_value`, `installment_value` vs `value`
+- `invoices`: schema atual tem `invoice_number`, `store_name`, `category`, `value`, `file_url` — faltam `type` (deposito/compra), `date`, `receipt_image_url`
+- `suppliers`: faltam `notes`, `is_active`
+- `documents`: faltam `uploaded_by`, `notes`
 
-**`proposal_templates`** — Templates reutilizaveis para propostas
-- id, user_id, name, template_type, introduction, methodology, differentials, terms, footer, is_active, display_order, created_at, updated_at
-- Inserir 1 registro padrao "Modelo Padrao Residencial" com textos do documento
+### Frontend — Projetos
 
-**`contract_templates`** — Templates reutilizaveis para contratos
-- id, user_id, name, contract_type, clause_object, clause_scope, clause_value, clause_duration, clause_obligations_contractor, clause_obligations_client, clause_termination, clause_confidentiality, clause_general, is_active, display_order, created_at, updated_at
-- Inserir 1 registro padrao "Contrato Projeto + Acompanhamento de Obra"
+**Lista de Projetos (`/projects`):**
+- Falta visao Kanban (7 colunas com drag & drop)
+- Falta os novos status: briefing, estudo, projeto, planejamento, mobilizacao, execucao, concluido (atualmente usa: proposta, contrato, projeto, planejamento, mobilizacao, execucao, concluido)
 
-**`lead_form_submissions`** — Formulario publico (sem auth para INSERT)
-- id, name, email, phone, project_type, message, processed, generated_lead_id, created_at
-- RLS: anon pode INSERT; autenticados podem SELECT/UPDATE
+**Aba Resumo:**
+- Faltam indicadores dinamicos (cotacoes aprovadas X de Y, tarefas concluidas, etc.)
+- Falta comparacao orcamento idealizado vs contratado vs cotado vs pago com barras visuais
+- Faltam links rapidos para cada aba
 
-### 1.2 Colunas novas na tabela `leads`:
-- `construction_type` text (nullable)
-- `message` text (nullable)
-- `source_detail` text (nullable)
-- `lost_reason` text (nullable)
-- `converted_at` timestamptz (nullable)
+**Aba Cenarios:**
+- Falta carregar disciplinas padrao de `default_disciplines` ao criar cenario
+- Falta barra visual comparando total vs orcamento do cliente (verde/amarelo/vermelho)
+- Faltam acoes Duplicar e Editar nome
+- Falta automacao de preencher escopo ao aprovar (com `scope_type`)
 
-Nota: o campo `origin` existente sera mantido como equivalente ao `source` do documento.
+**Aba Escopo:**
+- Falta toggle Escopo do Projeto / Escopo Contratado (campo `scope_type`)
+- Falta campo `activities` (lista de atividades por linha)
+- Falta indicador de status de cotacao por disciplina (sem cotacao / em cotacao / aprovada)
+- Falta botao "Solicitar Cotacao"
 
-### 1.3 Colunas novas na tabela `proposals`:
-- `client_id` uuid (nullable, FK clients)
-- `template_id` uuid (nullable, FK proposal_templates)
-- `proposal_number` text (nullable) — gerado automaticamente PROP-{ANO}-{SEQ}
-- `title` text (nullable)
-- `project_type` text (nullable)
-- `estimated_area` numeric (nullable)
-- `estimated_duration` text (nullable)
-- `includes_architectural_project` boolean (default true)
-- `includes_construction_management` boolean (default true)
-- `includes_interior_design` boolean (default false)
-- `includes_3d_visualization` boolean (default false)
-- `custom_services` text (nullable)
-- `discount_value` numeric (nullable)
-- `final_value` numeric (nullable)
-- `payment_method` text (nullable)
-- `sent_at` timestamptz (nullable)
-- `approved_at` timestamptz (nullable)
-- `rejected_at` timestamptz (nullable)
-- `rejection_reason` text (nullable)
-- `created_by` text (nullable)
-- `notes` text (nullable)
+**Aba Orcamentos:**
+- Falta organizacao por disciplina do escopo contratado
+- Falta acao "Aprovar Cotacao" com geracao de parcelas
+- Falta lista de compras embutida POR disciplina
 
-### 1.4 Colunas novas na tabela `contracts`:
-- `template_id` uuid (nullable, FK contract_templates)
-- `contract_number` text (nullable) — CONTR-{ANO}-{SEQ}
-- `title` text (nullable)
-- `client_name` text (nullable)
-- `client_cpf_cnpj` text (nullable)
-- `client_email` text (nullable)
-- `client_phone` text (nullable)
-- `client_address` text (nullable)
-- `construction_neighborhood` text (nullable)
-- `service_description` text (nullable)
-- `payment_method` text (nullable)
-- `estimated_duration` text (nullable)
-- `custom_clauses` text (nullable)
-- `sent_at` timestamptz (nullable)
-- `signed_at` timestamptz (nullable)
-- `cancelled_at` timestamptz (nullable)
-- `cancellation_reason` text (nullable)
-- `created_by` text (nullable)
-- `notes` text (nullable)
+**Aba Materiais:**
+- Falta calculos automaticos com formulas por categoria (tijolos, argamassa, reboco, etc.)
+- Falta botao "Enviar para Rastreamento"
+- Faltam status com cores no rastreamento
 
-### 1.5 RLS em todas as novas tabelas:
-- Padrao user_id = auth.uid() para CRUD
-- Excecao: `lead_form_submissions` permite INSERT anonimo
+**Aba Cronograma:**
+- Falta visao calendario (atualmente e tabela simples)
+- Falta toggle Visao Interna / Visao Cliente
+- Faltam campos: `requires_presence`, `is_client_visible`, `progress_percentage`
+- Falta visao semanal simplificada para cliente
 
----
+**Aba Financeiro:**
+- Falta sub-secao Prestacao de Contas (extrato com depositos e compras)
+- Atualmente mostra "Pagamentos" e "Notas Fiscais" — precisa virar "Pagamentos" e "Prestacao de Contas"
+- Falta logica de deposito vs compra com saldo
+- Falta upload de foto de NF
 
-## Fase 2 — Edge Function para Geracao de Proposta com IA
+**Aba Documentos:**
+- Funciona basicamente. Falta categoria "nota_fiscal" e "outro" no dropdown.
 
-Criar edge function `generate-proposal` que usa Lovable AI (google/gemini-3-flash-preview) para gerar automaticamente o texto da proposta comercial.
+### Frontend — Obra (4 paginas placeholder)
 
-**Input**: dados do lead (nome, tipo de projeto, tipo de obra), template selecionado, servicos inclusos, area estimada, valor
-**Output**: texto formatado da descricao dos servicos (project_description) personalizado para o cliente
+Todas as 4 paginas de Obra sao placeholder atualmente:
 
-A IA recebera o template (introduction, methodology, differentials) como contexto e gerara a descricao do projeto adaptada ao tipo de obra e cliente.
+**Acompanhamento (`/construction/tracking`):**
+- Precisa: tabela multi-projeto, alertas, calendario de obra, mapa de fornecedores
 
-Fluxo:
-1. Usuario seleciona lead + template + preenche servicos e valor
-2. Clica em "Gerar com IA"
-3. Edge function chama Lovable AI com prompt estruturado
-4. Texto gerado e inserido no campo `project_description`
-5. Usuario pode editar antes de salvar
+**Fornecedores (`/construction/suppliers`):**
+- Precisa: CRUD completo, alocacao em projetos, historico, avaliacao por estrelas
+
+**Documentos (`/construction/documents`):**
+- Precisa: repositorio centralizado de TODOS os documentos de TODOS os projetos
+
+**Relatorios (`/construction/reports`):**
+- Precisa: 4 tipos de relatorio (semanal, fornecedor, contador, cliente) com geracao e PDF
 
 ---
 
-## Fase 3 — Frontend: Propostas Completas
+## Plano de Implementacao (6 Fases)
 
-Reescrever `LeadsProposals.tsx` com:
+### Fase 1 — Migracao de Banco de Dados
 
-### 3.1 Lista de Propostas (rota /leads/proposals)
-- Tabela com colunas: Numero, Titulo, Cliente, Valor, Status (badge), Data, Acoes
-- Filtros por status (todos/rascunho/enviada/em_negociacao/aprovada/rejeitada)
-- Acoes: Editar, Gerar PDF, Duplicar, Marcar como Enviada, Aprovar (sugere contrato), Rejeitar (campo motivo)
+Criar todas as tabelas e colunas faltantes numa unica migracao:
 
-### 3.2 Tela de Criacao/Edicao (rota /leads/proposals/new e /leads/proposals/:id/edit)
-Layout em duas colunas:
+1. Criar `default_disciplines` com 16 disciplinas padrao
+2. Criar `calculation_parameters` com parametros padrao (tijolos, argamassa, reboco, contrapiso, pintura)
+3. Criar `supplier_allocations` (supplier_id, project_id, discipline, datas, status)
+4. Criar `site_visits` (project_id, visit_date, visit_type, is_recurring, recurrence_rule, etc.)
+5. Adicionar colunas em `projects`: `ideal_budget`, `contingency_percentage`, `real_start_date`
+6. Adicionar colunas em `scope_items`: `scope_type` (text, default 'projeto'), `activities` (text)
+7. Adicionar colunas em `schedule_tasks`: `discipline`, `supplier_name`, `is_daily_detail`, `is_client_visible`, `requires_presence`, `progress_percentage`, `color`
+8. Adicionar colunas em `invoices`: `type` (text), `date` (date), `receipt_image_url` (text)
+9. Adicionar colunas em `suppliers`: `notes`, `is_active` (default true)
+10. Adicionar colunas em `documents`: `uploaded_by`, `notes`
+11. RLS para todas as novas tabelas
+12. Triggers de updated_at
 
-**Coluna esquerda — Formulario**:
-- Secao 1: Lead vinculado (dropdown, auto-preenche dados)
-- Secao 2: Template (dropdown de proposal_templates)
-- Secao 3: Detalhes (titulo, descricao com botao "Gerar com IA", area, prazo)
-- Secao 4: Servicos inclusos (4 toggles + campo extras)
-- Secao 5: Valores (valor, desconto %, valor final calculado, condicoes, forma pagamento)
-- Secao 6: Observacoes internas
+### Fase 2 — Aba Resumo Melhorada + Cenarios com Disciplinas Padrao
 
-**Coluna direita — Preview em tempo real**:
-- Simula folha A4 com conteudo atualizado em tempo real
-- Estrutura: Logo, numero, saudacao, introducao do template, servicos, metodologia, diferenciais, investimento, termos, rodape
+**Resumo (`ProjectSummaryTab.tsx`):**
+- Secao 1: Dados do projeto com WhatsApp links
+- Secao 2: Barras visuais de comparacao orcamentaria (idealizado vs contratado vs cotado vs pago)
+- Secao 3: Indicadores dinamicos (disciplinas, cotacoes, materiais, tarefas, pagamentos)
+- Secao 4: Links rapidos para cada aba
 
-### 3.3 Geracao de PDF
-- Usar a biblioteca nativa do browser (window.print com CSS @media print) ou gerar via canvas/html2pdf
-- Baseado no preview da coluna direita
+**Cenarios (`ProjectScenariosTab.tsx`):**
+- Carregar disciplinas padrao de `default_disciplines` ao criar cenario
+- Barra visual verde/amarelo/vermelho
+- Acoes: duplicar, editar nome
+- Automacao: ao aprovar cenario, preencher `scope_items` com `scope_type`
 
-### 3.4 Numeracao automatica
-- Ao criar, gerar PROP-{ANO}-{SEQ 3 digitos} consultando o ultimo numero do ano
+**Hooks:** Criar `useDefaultDisciplines.ts`, atualizar `useScenarios.ts`
+
+### Fase 3 — Escopo com Scope Type + Orcamentos Reorganizados
+
+**Escopo (`ProjectScopeTab.tsx`):**
+- Toggle Escopo do Projeto / Escopo Contratado (filtro por `scope_type`)
+- Campo `activities` como lista editavel (cada linha uma atividade)
+- Indicador de status de cotacao por disciplina
+- Botao "Solicitar Cotacao" que cria registro em `budget_quotes`
+
+**Orcamentos (`ProjectBudgetsTab.tsx`):**
+- Reorganizar por disciplina do escopo contratado
+- Modal "Aprovar Cotacao" com geracao de parcelas (cria registros em `payments`)
+- Lista de compras embutida por disciplina
+
+**Hooks:** Atualizar `useScopeItems.ts`, `useBudgetQuotes.ts`
+
+### Fase 4 — Materiais com Formulas + Cronograma com Calendario
+
+**Materiais (`ProjectMaterialsTab.tsx`):**
+- Memoria de Calculo: 7 categorias com formulas automaticas (tijolos, revestimentos, argamassa, reboco, contrapiso, eletrica, pintura)
+- Parametros vindos de `calculation_parameters`
+- Botao "Enviar para Rastreamento"
+- Rastreamento com status coloridos
+
+**Cronograma (`ProjectScheduleTab.tsx`):**
+- Toggle Visao Interna / Visao Cliente
+- Visao interna: calendario simples (blocos por dia/semana)
+- Visao cliente: blocos semanais com barra de progresso
+- Campos: requires_presence, is_client_visible, progress_percentage
+
+**Hooks:** Criar `useCalculationParameters.ts`, atualizar `useScheduleTasks.ts`
+
+### Fase 5 — Financeiro com Prestacao de Contas + Documentos
+
+**Financeiro (`ProjectFinancialTab.tsx`):**
+- Toggle Pagamentos / Prestacao de Contas
+- Pagamentos: tabela com status, acao "Registrar Pagamento", "Gerar Mensagem de Cobranca"
+- Prestacao de Contas: extrato com depositos (+) e compras (-), saldo automatico, upload de NF
+
+**Documentos (`ProjectDocumentsTab.tsx`):**
+- Adicionar categorias "nota_fiscal" e "outro"
+- Campo de busca por nome
+
+**Hooks:** Atualizar `useInvoices.ts` para suportar tipo deposito/compra
+
+### Fase 6 — Modulo Obra (4 Paginas)
+
+**Fornecedores (`/construction/suppliers`):**
+- CRUD completo com cards
+- Avaliacao por estrelas
+- Filtros por categoria e status
+- Modal de alocacao em projeto
+- Historico de projetos
+
+**Acompanhamento (`/construction/tracking`):**
+- Cards resumo (obras ativas, visitas hoje, pagamentos semana, alertas)
+- Tabela multi-projeto com progresso, pendencias, compras abertas
+- Calendario de obra com visitas, tarefas, pagamentos
+- Mapa de fornecedores (timeline horizontal)
+
+**Documentos (`/construction/documents`):**
+- Repositorio centralizado (mesma tabela `documents`, sem filtro fixo por projeto)
+- Filtro por projeto, categoria, busca
+
+**Relatorios (`/construction/reports`):**
+- 4 cards de tipo de relatorio
+- Formulario de geracao (projeto + periodo)
+- Preview com dados reais
+- Botao exportar PDF (window.print)
+
+**Hooks:** Criar `useSupplierAllocations.ts`, `useSiteVisits.ts`
 
 ---
 
-## Fase 4 — Frontend: Contratos Completos
+## Arquivos a Criar
 
-Reescrever `LeadsContracts.tsx` com:
+- `src/hooks/useDefaultDisciplines.ts`
+- `src/hooks/useCalculationParameters.ts`
+- `src/hooks/useSupplierAllocations.ts`
+- `src/hooks/useSiteVisits.ts`
 
-### 4.1 Lista de Contratos
-- Mesma estrutura da lista de propostas
-- Acoes: Editar, Gerar PDF, Enviar, Assinar (cria projeto), Cancelar (campo motivo)
+## Arquivos a Modificar
 
-### 4.2 Tela de Criacao/Edicao (rota /leads/contracts/new e /leads/contracts/:id/edit)
-Layout duas colunas:
+- `src/components/projects/ProjectSummaryTab.tsx` (indicadores, barras, links)
+- `src/components/projects/ProjectScenariosTab.tsx` (disciplinas padrao, barra visual, duplicar)
+- `src/components/projects/ProjectScopeTab.tsx` (toggle scope_type, activities, indicadores)
+- `src/components/projects/ProjectBudgetsTab.tsx` (por disciplina, aprovar com parcelas)
+- `src/components/projects/ProjectMaterialsTab.tsx` (formulas, enviar para rastreamento)
+- `src/components/projects/ProjectScheduleTab.tsx` (calendario, toggle visoes)
+- `src/components/projects/ProjectFinancialTab.tsx` (prestacao de contas)
+- `src/components/projects/ProjectDocumentsTab.tsx` (categorias extras)
+- `src/pages/SiteTracking.tsx` (acompanhamento funcional)
+- `src/pages/Suppliers.tsx` (CRUD funcional)
+- `src/pages/Documents.tsx` (repositorio centralizado)
+- `src/pages/Reports.tsx` (geracao de relatorios)
+- `src/pages/Projects.tsx` (kanban + status novos)
+- `src/lib/projectConstants.ts` (status: adicionar briefing, estudo)
 
-**Coluna esquerda**:
-- Proposta vinculada (dropdown, auto-preenche)
-- Dados do contratante (nome, CPF/CNPJ, email, telefone, endereco)
-- Dados da obra (endereco, bairro, cidade)
-- Template de contrato (dropdown)
-- Servicos e valores (auto da proposta)
-- Clausulas especificas (textarea)
-- Observacoes internas
+## Migracao SQL
 
-**Coluna direita — Preview do contrato**:
-- Substituicao automatica de placeholders: {VALOR}, {CONDICOES_PAGAMENTO}, {PRAZO}, {DATA_INICIO}, {NOME_CLIENTE}, etc.
-- Estrutura completa de clausulas do template
-
-### 4.3 Geracao de PDF do contrato
-
----
-
-## Fase 5 — Frontend: Leads Pipeline (melhorias)
-
-Atualizar `LeadsPipeline.tsx`:
-- Adicionar campos `construction_type`, `source_detail`, `lost_reason` no modal
-- KPI cards no topo: Total leads, Novos este mes, Taxa conversao, Tempo medio
-- Modal de "Motivo da perda" ao mover para "Perdido"
-- Ao mover para "Fechado": registrar `converted_at`
-
----
-
-## Fase 6 — Gestao de Templates
-
-Criar componentes de CRUD para:
-- Templates de proposta: acessivel via link "Gerenciar Templates" na tela de propostas
-- Templates de contrato: idem na tela de contratos
-- Cada template editavel com todos os campos de texto (introducao, metodologia, clausulas, etc.)
-- Informar sobre placeholders disponiveis
-
----
-
-## Fase 7 — Rotas Novas
-
-Adicionar no App.tsx:
-- `/leads/proposals/new` — Nova proposta
-- `/leads/proposals/:id/edit` — Editar proposta
-- `/leads/contracts/new` — Novo contrato
-- `/leads/contracts/:id/edit` — Editar contrato
-
----
-
-## Hooks a criar/atualizar:
-- `src/hooks/useProposalTemplates.ts` (novo)
-- `src/hooks/useContractTemplates.ts` (novo)
-- `src/hooks/useProposals.ts` (atualizar com novos campos)
-- `src/hooks/useContracts.ts` (atualizar com novos campos)
-- `src/hooks/useLeads.ts` (atualizar com novos campos)
-
-## Componentes a criar:
-- `src/components/leads/ProposalForm.tsx` — Formulario + preview de proposta
-- `src/components/leads/ProposalPreview.tsx` — Preview em tempo real
-- `src/components/leads/ContractForm.tsx` — Formulario + preview de contrato
-- `src/components/leads/ContractPreview.tsx` — Preview em tempo real
-- `src/components/leads/TemplateManager.tsx` — CRUD de templates
-
-## Edge functions a criar:
-- `supabase/functions/generate-proposal/index.ts` — Geracao de texto via Lovable AI
-
-## Arquivos a modificar:
-- `src/pages/LeadsPipeline.tsx` (campos extras, KPIs, modal perda)
-- `src/pages/LeadsProposals.tsx` (reescrever para lista + link para form)
-- `src/pages/LeadsContracts.tsx` (reescrever para lista + link para form)
-- `src/App.tsx` (novas rotas)
+1 migracao com criacao de 4 tabelas + colunas novas em 6 tabelas existentes + dados padrao + RLS + triggers
 
 ---
 
 ## Resultado Esperado
 
-- Propostas geradas automaticamente por IA a partir dos dados do lead e template
-- Preview em tempo real de propostas e contratos (simulando folha A4)
-- Exportacao em PDF de propostas e contratos
-- Templates editaveis de proposta e contrato com placeholders
-- Numeracao automatica (PROP-2026-001, CONTR-2026-001)
-- Campos completos conforme documento de especificacao
-- Automacoes mantidas: lead->cliente, proposta aprovada->sugere contrato, contrato assinado->cria projeto
+- 8 abas do projeto totalmente funcionais com CRUD conectado ao banco
+- Fluxo completo: Cenario aprovado -> Escopo preenchido -> Cotacoes por disciplina -> Parcelas de pagamento -> Prestacao de contas
+- Materiais com formulas automaticas por categoria
+- Cronograma com visao interna e visao cliente
+- 4 paginas de Obra funcionais: Acompanhamento (multi-projeto), Fornecedores (CRUD + alocacao), Documentos (centralizado), Relatorios (4 tipos)
+- Todas as conexoes entre modulos conforme especificado no documento
