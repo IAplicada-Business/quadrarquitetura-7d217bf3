@@ -1,176 +1,132 @@
 
+# Limpar Dados Mockados dos Dashboards
 
-# Ajuste do Acompanhamento de Obra: Fluxo de Preenchimento e Automacao
+## Problema
 
-## Diagnostico: Estado Atual vs. Solicitado
+Os 3 dashboards (`Dashboard.tsx`, `DashboardEscritorio.tsx`, `DashboardObras.tsx`) usam dados hardcoded (mockados) para todas as metricas, graficos, listas e alertas. Isso impede que o sistema reflita a realidade do banco de dados.
 
-Apos analisar todo o codigo, identifiquei as seguintes lacunas entre o fluxo existente e o fluxo desejado:
+## O que sera feito
 
-### O que ja funciona
-- Cenarios com disciplinas padrao, toggle inclusao/exclusao, comparacao com orcamento do cliente
-- Aprovacao de cenario copia itens para `scope_items` com `scope_type="projeto"`
-- Escopo com filtro Projeto vs. Contratado
-- Orcamentos agrupados por disciplina do escopo contratado, com revisoes e aprovacao de cotacoes
-- Materiais com importacao do orcamento, rastreamento e compras
-- Cronograma com Gantt, lista, visao cliente e pendencias
-- Financeiro com pagamentos e notas fiscais
+Substituir todos os dados mockados por consultas reais ao banco de dados, mantendo a mesma estrutura visual dos paineis. Quando nao houver dados, os paineis continuam visiveis com estados vazios (zeros, graficos sem barras, listas com mensagem "Nenhum dado").
 
-### Lacunas identificadas (o que precisa ser ajustado)
+## Alteracoes
 
-1. **Cenarios -> Escopo**: Aprovacao insere itens com `scope_type="projeto"` mas deveria inserir como `"contratado"` (o cenario aprovado = o que foi contratado). Itens nao incluidos no cenario deveriam ir como `scope_type="projeto"` (idealizado).
-2. **Cenarios**: Faltam campos de contexto (nivel de acabamento, area, tipo de obra). Falta visao comparativa lado a lado.
-3. **Escopo**: Falta campo de status por item (planejado, em cotacao, contratado, em execucao, concluido). Falta campo `activities` no form.
-4. **Orcamento -> Cronograma**: Nao ha automacao. As disciplinas do escopo contratado deveriam gerar etapas basicas no cronograma ao serem preenchidas.
-5. **Orcamento -> Financeiro**: A aprovacao de cotacoes nao gera parcelas de pagamento automaticamente (ja ha um TODO no codigo).
-6. **Acompanhamento**: A aba esta vazia (placeholder) — precisa se tornar o diario de obra funcional.
-7. **Resumo**: Falta mostrar comparativo "idealizado vs contratado" com dados reais vindos dos cenarios.
+### 1. `src/pages/Dashboard.tsx` -- Remover
 
----
+Este arquivo nao e usado (o roteamento redireciona `/dashboard` para `/dashboard/escritorio`). Sera removido para evitar confusao.
 
-## Plano de Implementacao
+### 2. `src/pages/DashboardEscritorio.tsx` -- Reescrever com dados reais
 
-### Parte 1: Corrigir Cenarios -> Escopo (Automacao Principal)
+Substituir todos os blocos de mock data por queries reais:
 
-**Arquivo:** `src/hooks/useScenarios.ts`
+**Cards de Resumo:**
+- "Fluxo de Caixa" -- soma de `payments` com `status=pago` do mes atual
+- "Pagamentos Pendentes" -- contagem e soma de `payments` com `status=pendente` e `due_date` na semana
+- "Orcado vs Recebido" -- soma de `estimated_budget` de projetos ativos vs pagos
+- "Projetos Ativos" -- contagem de projetos com `status != concluido`
 
-Ajustar a mutation `approveScenario`:
-- Itens **incluidos** no cenario aprovado serao inseridos com `scope_type = "contratado"`
-- **Todos** os itens (incluidos + excluidos) serao inseridos com `scope_type = "projeto"` (escopo idealizado completo)
-- Antes de inserir, limpar scope_items existentes gerados por cenario anterior (para evitar duplicatas em re-aprovacoes)
-- Atualizar `ideal_budget` no projeto com soma total de todos itens do cenario e `estimated_budget` com soma dos itens incluidos
+**Alertas ("Atencao Necessaria"):**
+- Query em `payments` com `status=pendente` e `due_date < hoje` (atrasados)
+- Query em `budget_quotes` com `status=cotado` e criados ha mais de 5 dias sem resposta
 
-**Arquivo:** `src/components/projects/ProjectScenariosTab.tsx`
+**Graficos:**
+- Fluxo de Pagamentos: agrupa `payments` por mes, somando por `status`
+- Orcamentos por Status: agrupa `budget_quotes` por `status`, somando valores
+- Receitas vs Despesas: agrupa `payments` por mes com tipo (receita/despesa)
 
-Adicionar campos de contexto do projeto:
-- Nivel de acabamento (select: basico, intermediario, alto padrao) — salva em `projects.finish_level` reinterpretado (ou novo campo)
-- Area total (exibe `projects.area_sqm` ja existente)
-- Tipo de obra (exibe `projects.project_type` ja existente)
-- Visao comparativa lado a lado quando ha 2+ cenarios (grid horizontal com scroll)
+**Leads e Propostas:**
+- Query real em `leads` agrupando por `status`
+- Query real em `proposals` ordenando por `created_at` desc, limit 4
 
-### Parte 2: Status no Escopo
+**Resumo Financeiro:**
+- Total Orcado = soma `estimated_budget` dos projetos
+- Recebido = soma `payments` com `status=pago`
+- A Receber = soma `payments` com `status=pendente`
 
-**Migracao SQL:** Adicionar coluna `status` na tabela `scope_items`:
-```sql
-ALTER TABLE scope_items ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'planejado';
-```
+### 3. `src/pages/DashboardObras.tsx` -- Reescrever com dados reais
 
-**Arquivo:** `src/hooks/useScopeItems.ts` — Adicionar `status` na interface e operacoes
+**Aba Operacional:**
 
-**Arquivo:** `src/components/projects/ProjectScopeTab.tsx` — Exibir badge de status e permitir alteracao inline
+**Cards de Resumo:**
+- "Obras em Execucao" -- projetos com `status=execucao`
+- "Pendencias Abertas" -- contagem de `pending_items` com `status != concluido`
+- "Compras Pendentes" -- contagem de `material_tracking` com `status=necessario`
+- "Etapas da Semana" -- contagem de `schedule_tasks` com `start_date` na semana atual
 
-**Arquivo:** `src/components/projects/ScopeItemForm.tsx` — Adicionar campo de atividades (`activities` - textarea) e status (select)
+**Progresso dos Projetos:**
+- Query projetos ativos com join em `schedule_tasks`, calculando % de tarefas `executado`
 
-### Parte 3: Orcamento -> Financeiro (Geracao automatica de parcelas)
+**Cronograma Semanal:**
+- Query `schedule_tasks` da semana atual, agrupando por dia da semana
 
-**Arquivo:** `src/components/projects/ProjectBudgetsTab.tsx`
+**Pendencias por Obra:**
+- Query `pending_items` agrupados por `project_id`, com join no nome do projeto
 
-Ao aprovar uma cotacao (`handleApprove`):
-- Verificar `payment_terms` da cotacao (ex: "50%/50%")
-- Gerar automaticamente entradas em `project_payments` com as parcelas correspondentes
-- Vincular ao `scope_item_id` para rastreabilidade
+**Compras & Materiais:**
+- Query `material_tracking` com join em projetos, mostrando status
 
-**Arquivo:** `src/hooks/useBudgetQuotes.ts` — Nao precisa mudar, a logica fica no componente
+**Proximas Etapas:**
+- Query `schedule_tasks` com `start_date >= hoje` ordenado por data, limit 5
 
-### Parte 4: Escopo -> Cronograma (Pre-populacao)
+**Aba Financeiro das Obras:**
 
-**Arquivo:** `src/hooks/useScheduleTasks.ts`
+**Cards de resumo:**
+- Total Orcado = soma `estimated_budget`
+- Total Pago = soma `payments` com `status=pago`
+- Saldo = diferenca
 
-Adicionar mutation `importFromScope`:
-- Busca `scope_items` com `scope_type = "contratado"` e sem parent
-- Cria uma `schedule_task` por disciplina com `task_name = discipline`, `discipline` preenchido, `is_client_visible = true`
-- Verifica duplicatas (se ja existe task com mesmo `scope_item_id`)
+**Tabela por obra:**
+- Projetos ativos com orcamento, valor pago, saldo e status (calculados)
 
-**Arquivo:** `src/components/projects/ProjectScheduleTab.tsx` — Adicionar botao "Importar do Escopo"
-
-### Parte 5: Aba Acompanhamento (Diario de Obra)
-
-**Migracao SQL:** Criar tabela `site_diary_entries`:
-```sql
-CREATE TABLE public.site_diary_entries (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id),
-  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  entry_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  weather TEXT,
-  workers_count INTEGER,
-  summary TEXT,
-  observations TEXT,
-  photos TEXT[],
-  disciplines_active TEXT[],
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-ALTER TABLE site_diary_entries ENABLE ROW LEVEL SECURITY;
--- RLS: usuario ve apenas seus registros
-```
-
-**Arquivo:** `src/components/projects/ProjectTrackingTab.tsx` — Reescrever completamente:
-- Lista de entradas do diario por data (mais recente primeiro)
-- Formulario de nova entrada: data, clima, qtd trabalhadores, resumo das atividades, observacoes, disciplinas ativas (multi-select), fotos (upload ao storage)
-- Card por entrada com visual limpo
-- Filtro por data (hoje, esta semana, este mes)
-- Cards de metricas: total de registros, ultimo registro, media de trabalhadores
-
-### Parte 6: Resumo com dados reais
-
-**Arquivo:** `src/components/projects/ProjectSummaryTab.tsx`
-
-Ajustar para puxar dados reais:
-- `ideal_budget` do projeto (soma total do cenario)
-- `estimated_budget` como orcamento contratado (soma dos itens incluidos)
-- `real_budget` como soma dos pagamentos realizados (status = "pago")
-- Progresso baseado nas tasks `executado` / total
-
----
-
-## Resumo de Arquivos
-
-| Arquivo | Acao |
-|---|---|
-| Migracao SQL | Adicionar `status` em `scope_items` + criar tabela `site_diary_entries` |
-| `src/hooks/useScenarios.ts` | Corrigir: itens incluidos -> `contratado`, todos -> `projeto`. Atualizar budgets |
-| `src/components/projects/ProjectScenariosTab.tsx` | Adicionar contexto (acabamento, area) e visao comparativa |
-| `src/hooks/useScopeItems.ts` | Adicionar `status` na interface |
-| `src/components/projects/ProjectScopeTab.tsx` | Badge de status + alteracao inline |
-| `src/components/projects/ScopeItemForm.tsx` | Campos `activities` e `status` |
-| `src/components/projects/ProjectBudgetsTab.tsx` | Gerar parcelas ao aprovar cotacao |
-| `src/hooks/useScheduleTasks.ts` | Mutation `importFromScope` |
-| `src/components/projects/ProjectScheduleTab.tsx` | Botao "Importar do Escopo" |
-| `src/components/projects/ProjectTrackingTab.tsx` | Reescrever - diario de obra funcional |
-| `src/components/projects/ProjectSummaryTab.tsx` | Dados reais de orcamento/progresso |
+**Pagamentos proximos:**
+- Query `payments` com `due_date` proximos, ordenados por data
 
 ---
 
 ## Detalhes Tecnicos
 
-### Logica de aprovacao do cenario (corrigida)
+### Hooks a criar
+Nenhum hook novo. As queries serao feitas inline nos componentes usando `useQuery` do TanStack, seguindo o padrao ja existente no projeto.
+
+### Tratamento de estado vazio
+Cada secao tera um estado vazio elegante:
+- Cards de metricas: mostram "0" ou "R$ 0"
+- Graficos: mostram eixos sem barras/areas
+- Listas: mostram "Nenhum registro encontrado"
+- Alertas: secao oculta quando nao ha alertas
+
+### Queries principais (todas com `.eq("user_id", user.id)`)
 
 ```text
-1. Limpar scope_items anteriores com source = cenario (evitar duplicatas)
-2. Inserir TODOS os itens com scope_type = "projeto"
-3. Inserir itens INCLUIDOS tambem com scope_type = "contratado"
-4. Atualizar projects.ideal_budget = soma de todos
-5. Atualizar projects.estimated_budget = soma dos incluidos
-6. Atualizar projects.approved_scenario_id
+-- Projetos ativos
+supabase.from("projects").select("*").neq("status", "concluido")
+
+-- Pagamentos
+supabase.from("payments").select("*, projects(name)").eq("user_id", user.id)
+
+-- Budget quotes
+supabase.from("budget_quotes").select("*, scope_items(discipline)").eq("user_id", user.id)
+
+-- Schedule tasks (sem user_id filter, filtra por project)
+supabase.from("schedule_tasks").select("*, projects(name)")
+
+-- Pending items
+supabase.from("pending_items").select("*, projects(name)")
+
+-- Material tracking
+supabase.from("material_tracking").select("*, projects(name)")
+
+-- Leads
+supabase.from("leads").select("*")
+
+-- Proposals
+supabase.from("proposals").select("*, leads(name)")
 ```
 
-### Parsing de payment_terms para parcelas
+### Arquivos
 
-```text
-Entrada: "50%/50%" ou "30/30/40" ou "a vista"
-Logica:
-- Split por "/" ou "%" -> extrair percentuais
-- Se "a vista" -> 1 parcela de 100%
-- Para cada percentual: criar payment com value = total * (pct/100)
-- due_date: primeira parcela = hoje, demais = +30 dias cada
-```
-
-### Diario de obra - upload de fotos
-
-```text
-- Usa o bucket `project-files` ja existente
-- Path: {userId}/{projectId}/diary/{date}_{filename}
-- Salva URLs no array `photos` da entrada
-- Exibe em grid 2x2 com lightbox ao clicar
-```
-
+| Arquivo | Acao |
+|---|---|
+| `src/pages/Dashboard.tsx` | Remover (nao usado) |
+| `src/pages/DashboardEscritorio.tsx` | Reescrever -- trocar mock data por queries reais |
+| `src/pages/DashboardObras.tsx` | Reescrever -- trocar mock data por queries reais |
