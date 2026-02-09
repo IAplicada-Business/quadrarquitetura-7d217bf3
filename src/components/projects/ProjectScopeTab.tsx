@@ -1,12 +1,20 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useScopeItems, ScopeItem } from "@/hooks/useScopeItems";
 import { ScopeItemForm } from "./ScopeItemForm";
 import { cn } from "@/lib/utils";
+
+const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+  planejado: { label: "Planejado", variant: "outline" },
+  em_cotacao: { label: "Em Cotação", variant: "secondary" },
+  contratado: { label: "Contratado", variant: "default" },
+  em_execucao: { label: "Em Execução", variant: "default" },
+  concluido: { label: "Concluído", variant: "default" },
+};
 
 interface ProjectScopeTabProps {
   projectId: string;
@@ -18,8 +26,7 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
   const [editingItem, setEditingItem] = useState<Record<string, unknown> | null>(null);
   const [scopeTypeFilter, setScopeTypeFilter] = useState<"projeto" | "contratado">("contratado");
 
-  // Filter items by scope type
-  const filteredItems = items.filter(i => 
+  const filteredItems = items.filter(i =>
     scopeTypeFilter === "projeto" || i.scope_type === "contratado"
   );
 
@@ -36,7 +43,6 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
   };
 
   const handleEdit = (item: ScopeItem) => {
-    // Convert ScopeItem to Record<string, unknown> safely for the form
     const formItem: Record<string, unknown> = {
       id: item.id,
       discipline: item.discipline,
@@ -49,6 +55,7 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
       estimated_value: item.estimated_value,
       scope_type: item.scope_type,
       activities: item.activities,
+      status: item.status,
     };
     setEditingItem(formItem);
     setFormOpen(true);
@@ -59,41 +66,59 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
     setFormOpen(true);
   };
 
-  const renderRow = (item: ScopeItem, isChild = false) => (
-    <TableRow key={item.id} className="hover:bg-muted/50">
-      <TableCell className={cn("font-medium", isChild && "pl-10")}>{isChild ? "↳ " : ""}{item.discipline}</TableCell>
-      <TableCell className="max-w-[200px]">
-        <div className="text-sm text-muted-foreground truncate">{item.description || "—"}</div>
-        {item.activities && (
-          <div className="text-xs text-muted-foreground mt-1 bg-muted/50 p-1 rounded">
-            {item.activities.split('\n').length} atividades
+  const handleStatusChange = (itemId: string, newStatus: string) => {
+    update.mutate({ id: itemId, status: newStatus });
+  };
+
+  const renderRow = (item: ScopeItem, isChild = false) => {
+    const st = statusConfig[item.status || "planejado"] || statusConfig.planejado;
+    return (
+      <TableRow key={item.id} className="hover:bg-muted/50">
+        <TableCell className={cn("font-medium", isChild && "pl-10")}>{isChild ? "↳ " : ""}{item.discipline}</TableCell>
+        <TableCell className="max-w-[200px]">
+          <div className="text-sm text-muted-foreground truncate">{item.description || "—"}</div>
+          {item.activities && (
+            <div className="text-xs text-muted-foreground mt-1 bg-muted/50 p-1 rounded">
+              {item.activities.split('\n').length} atividades
+            </div>
+          )}
+        </TableCell>
+        <TableCell>
+          <Badge variant={item.scope_type === "contratado" ? "default" : "outline"}>
+            {item.scope_type === "contratado" ? "Contratado" : "Projeto"}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          <Select value={item.status || "planejado"} onValueChange={(v) => handleStatusChange(item.id, v)}>
+            <SelectTrigger className="h-7 text-xs w-[120px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(statusConfig).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </TableCell>
+        <TableCell className="text-sm">{item.suppliers_to_quote || "—"}</TableCell>
+        <TableCell className="text-right">
+          {item.estimated_value != null
+            ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(item.estimated_value)
+            : "—"}
+        </TableCell>
+        <TableCell>
+          <div className="flex gap-1">
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleEdit(item)}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => remove.mutate(item.id)}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
           </div>
-        )}
-      </TableCell>
-      <TableCell className="text-sm">
-        <Badge variant={item.scope_type === "contratado" ? "default" : "outline"}>
-          {item.scope_type === "contratado" ? "Contratado" : "Projeto"}
-        </Badge>
-      </TableCell>
-      <TableCell className="text-sm">{item.suppliers_to_quote || "—"}</TableCell>
-      <TableCell className="text-sm">{item.payment_terms || "—"}</TableCell>
-      <TableCell className="text-right">
-        {item.estimated_value != null
-          ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(item.estimated_value)
-          : "—"}
-      </TableCell>
-      <TableCell>
-        <div className="flex gap-1">
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleEdit(item)}>
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => remove.mutate(item.id)}>
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </TableCell>
-    </TableRow>
-  );
+        </TableCell>
+      </TableRow>
+    );
+  };
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -104,17 +129,17 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg">
-            <Button 
-              size="sm" 
-              variant={scopeTypeFilter === "projeto" ? "default" : "ghost"} 
+            <Button
+              size="sm"
+              variant={scopeTypeFilter === "projeto" ? "default" : "ghost"}
               onClick={() => setScopeTypeFilter("projeto")}
               className="text-xs h-7"
             >
               Todos (Projeto)
             </Button>
-            <Button 
-              size="sm" 
-              variant={scopeTypeFilter === "contratado" ? "default" : "ghost"} 
+            <Button
+              size="sm"
+              variant={scopeTypeFilter === "contratado" ? "default" : "ghost"}
               onClick={() => setScopeTypeFilter("contratado")}
               className="text-xs h-7"
             >
@@ -144,8 +169,8 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
                 <TableHead>Disciplina</TableHead>
                 <TableHead>Descrição / Atividades</TableHead>
                 <TableHead>Tipo</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Fornecedores</TableHead>
-                <TableHead>Pagamento</TableHead>
                 <TableHead className="text-right">Valor Est.</TableHead>
                 <TableHead className="w-20">Ações</TableHead>
               </TableRow>

@@ -3,7 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+const scopeStatusOptions = [
+  { value: "planejado", label: "Planejado" },
+  { value: "em_cotacao", label: "Em Cotação" },
+  { value: "contratado", label: "Contratado" },
+  { value: "em_execucao", label: "Em Execução" },
+  { value: "concluido", label: "Concluído" },
+];
 
 interface ScopeItemFormProps {
   open: boolean;
@@ -17,24 +26,28 @@ interface ScopeItemFormProps {
 export function ScopeItemForm({ open, onOpenChange, onSubmit, initialData, parentOptions, isLoading }: ScopeItemFormProps) {
   const [discipline, setDiscipline] = useState("");
   const [description, setDescription] = useState("");
+  const [activities, setActivities] = useState("");
   const [suppliersToQuote, setSuppliersToQuote] = useState("");
   const [paymentTerms, setPaymentTerms] = useState("");
   const [entryOrder, setEntryOrder] = useState("");
   const [serviceDuration, setServiceDuration] = useState("");
   const [parentId, setParentId] = useState("");
+  const [status, setStatus] = useState("planejado");
 
   useEffect(() => {
     if (initialData) {
       setDiscipline((initialData.discipline as string) || "");
       setDescription((initialData.description as string) || "");
+      setActivities((initialData.activities as string) || "");
       setSuppliersToQuote((initialData.suppliers_to_quote as string) || "");
       setPaymentTerms((initialData.payment_terms as string) || "");
       setEntryOrder(initialData.entry_order ? String(initialData.entry_order) : "");
       setServiceDuration((initialData.service_duration as string) || "");
       setParentId((initialData.parent_id as string) || "");
+      setStatus((initialData.status as string) || "planejado");
     } else {
-      setDiscipline(""); setDescription(""); setSuppliersToQuote(""); setPaymentTerms("");
-      setEntryOrder(""); setServiceDuration(""); setParentId("");
+      setDiscipline(""); setDescription(""); setActivities(""); setSuppliersToQuote(""); setPaymentTerms("");
+      setEntryOrder(""); setServiceDuration(""); setParentId(""); setStatus("planejado");
     }
   }, [initialData, open]);
 
@@ -43,11 +56,13 @@ export function ScopeItemForm({ open, onOpenChange, onSubmit, initialData, paren
     onSubmit({
       discipline,
       description: description || null,
+      activities: activities || null,
       suppliers_to_quote: suppliersToQuote || null,
       payment_terms: paymentTerms || null,
       entry_order: entryOrder ? Number(entryOrder) : null,
       service_duration: serviceDuration || null,
       parent_id: parentId || null,
+      status,
     });
     onOpenChange(false);
   };
@@ -65,7 +80,11 @@ export function ScopeItemForm({ open, onOpenChange, onSubmit, initialData, paren
           </div>
           <div>
             <Label>Descrição dos Serviços</Label>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descreva os serviços que serão executados..." rows={3} />
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descreva os serviços que serão executados..." rows={2} />
+          </div>
+          <div>
+            <Label>Atividades Detalhadas</Label>
+            <Textarea value={activities} onChange={(e) => setActivities(e.target.value)} placeholder="Liste as atividades (uma por linha)..." rows={3} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -73,17 +92,30 @@ export function ScopeItemForm({ open, onOpenChange, onSubmit, initialData, paren
               <Input type="number" value={entryOrder} onChange={(e) => setEntryOrder(e.target.value)} placeholder="1, 2, 3..." />
             </div>
             <div>
+              <Label>Status</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {scopeStatusOptions.map(o => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
               <Label>Tempo de Serviço</Label>
               <Input value={serviceDuration} onChange={(e) => setServiceDuration(e.target.value)} placeholder="Ex: 5 dias" />
+            </div>
+            <div>
+              <Label>Forma de Pagamento</Label>
+              <Input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} placeholder="Ex: 50%/50%" />
             </div>
           </div>
           <div>
             <Label>Fornecedores a Orçar</Label>
             <Input value={suppliersToQuote} onChange={(e) => setSuppliersToQuote(e.target.value)} placeholder="Nomes dos fornecedores..." />
-          </div>
-          <div>
-            <Label>Forma de Pagamento</Label>
-            <Input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} placeholder="Ex: 50% início / 50% fim" />
           </div>
           {parentOptions && parentOptions.length > 0 && (
             <div>

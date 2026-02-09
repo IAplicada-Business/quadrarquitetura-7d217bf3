@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,10 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useScheduleTasks } from "@/hooks/useScheduleTasks";
 import { useScopeItems } from "@/hooks/useScopeItems";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { ScheduleTaskForm } from "./ScheduleTaskForm";
 import { ProjectPendingTab } from "./ProjectPendingTab";
 import { GanttChart } from "./GanttChart";
 import { ClientScheduleView } from "./ClientScheduleView";
+import { useQueryClient } from "@tanstack/react-query";
 
 function formatDate(d: string | null) {
   if (!d) return "—";
@@ -28,10 +32,13 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const { items, isLoading, create, update, remove } = useScheduleTasks(projectId);
   const { items: scopeItems } = useScopeItems(projectId);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
   const [ganttView, setGanttView] = useState<"week" | "month">("week");
   const [filterDiscipline, setFilterDiscipline] = useState("all");
+  const [importing, setImporting] = useState(false);
 
   const disciplines = useMemo(() => {
     const set = new Set<string>();
@@ -63,7 +70,6 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
     })),
   [items]);
 
-  // Metrics
   const total = items.length;
   const inProgress = items.filter((t: any) => t.status === "em_execucao").length;
   const overdue = items.filter((t: any) => t.status === "atrasado").length;
@@ -72,6 +78,48 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const handleEdit = (task: any) => {
     setEditing(task as Record<string, unknown>);
     setFormOpen(true);
+  };
+
+  const handleImportFromScope = async () => {
+    if (!user) return;
+    setImporting(true);
+    try {
+      const contractedItems = scopeItems.filter(s => s.scope_type === "contratado" && !s.parent_id);
+      if (contractedItems.length === 0) {
+        toast({ title: "Nenhuma disciplina contratada encontrada no escopo." });
+        return;
+      }
+
+      // Check which disciplines already exist
+      const existingDisciplines = new Set(items.map((t: any) => t.discipline || (t.scope_items as any)?.discipline));
+      const newItems = contractedItems.filter(s => !existingDisciplines.has(s.discipline));
+
+      if (newItems.length === 0) {
+        toast({ title: "Todas as disciplinas já estão no cronograma." });
+        return;
+      }
+
+      const inserts = newItems.map((s, idx) => ({
+        project_id: projectId,
+        user_id: user.id,
+        task_name: s.discipline,
+        discipline: s.discipline,
+        scope_item_id: s.id,
+        status: "planejado",
+        order_index: items.length + idx + 1,
+        is_client_visible: true,
+      }));
+
+      const { error } = await supabase.from("schedule_tasks").insert(inserts);
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["schedule_tasks", projectId] });
+      toast({ title: `${newItems.length} etapas importadas do escopo!` });
+    } catch (e: any) {
+      toast({ title: "Erro ao importar", description: e.message, variant: "destructive" });
+    } finally {
+      setImporting(false);
+    }
   };
 
   return (
@@ -84,9 +132,7 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
           <TabsTrigger value="pendencias">Pendências</TabsTrigger>
         </TabsList>
 
-        {/* ===== GANTT ===== */}
         <TabsContent value="gantt" className="space-y-4 mt-4">
-          {/* Metrics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card><CardContent className="p-4 text-center">
               <p className="text-2xl font-bold text-display">{total}</p>
@@ -106,31 +152,31 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
             </CardContent></Card>
           </div>
 
-          {/* Filters & Actions */}
           <div className="flex flex-wrap items-center gap-2 justify-between">
             <div className="flex gap-2">
               <Select value={ganttView} onValueChange={(v) => setGanttView(v as any)}>
-                <SelectTrigger className="w-[120px] h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="week">Semana</SelectItem>
                   <SelectItem value="month">Mês</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={filterDiscipline} onValueChange={setFilterDiscipline}>
-                <SelectTrigger className="w-[160px] h-8 text-xs">
-                  <SelectValue placeholder="Disciplina" />
-                </SelectTrigger>
+                <SelectTrigger className="w-[160px] h-8 text-xs"><SelectValue placeholder="Disciplina" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
                   {disciplines.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}>
-              <Plus className="h-4 w-4 mr-1" /> Nova Etapa
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={handleImportFromScope} disabled={importing}>
+                <Download className="h-4 w-4 mr-1" /> Importar do Escopo
+              </Button>
+              <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}>
+                <Plus className="h-4 w-4 mr-1" /> Nova Etapa
+              </Button>
+            </div>
           </div>
 
           {isLoading ? (
@@ -140,17 +186,10 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
           ) : (
             <GanttChart
               tasks={filteredItems.map((t: any) => ({
-                id: t.id,
-                task_name: t.task_name,
-                start_date: t.start_date,
-                end_date: t.end_date,
-                status: t.status,
-                discipline: t.discipline || (t.scope_items as any)?.discipline || null,
-                supplier_name: t.supplier_name,
-                progress_percentage: t.progress_percentage,
-                color: t.color,
-                requires_presence: t.requires_presence,
-                is_daily_detail: t.is_daily_detail,
+                id: t.id, task_name: t.task_name, start_date: t.start_date, end_date: t.end_date,
+                status: t.status, discipline: t.discipline || (t.scope_items as any)?.discipline || null,
+                supplier_name: t.supplier_name, progress_percentage: t.progress_percentage,
+                color: t.color, requires_presence: t.requires_presence, is_daily_detail: t.is_daily_detail,
               }))}
               onEdit={handleEdit}
               viewMode={ganttView}
@@ -158,13 +197,17 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
           )}
         </TabsContent>
 
-        {/* ===== LISTA ===== */}
         <TabsContent value="lista" className="space-y-4 mt-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-display">Lista de Etapas</h3>
-            <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}>
-              <Plus className="h-4 w-4 mr-1" /> Nova Etapa
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={handleImportFromScope} disabled={importing}>
+                <Download className="h-4 w-4 mr-1" /> Importar do Escopo
+              </Button>
+              <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}>
+                <Plus className="h-4 w-4 mr-1" /> Nova Etapa
+              </Button>
+            </div>
           </div>
 
           {isLoading ? (
@@ -173,7 +216,7 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
             </div>
           ) : items.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-              Nenhuma etapa cadastrada.
+              Nenhuma etapa cadastrada. Use "Importar do Escopo" para começar.
             </div>
           ) : (
             <Table>
@@ -224,12 +267,10 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
           )}
         </TabsContent>
 
-        {/* ===== VISÃO CLIENTE ===== */}
         <TabsContent value="cliente" className="mt-4">
           <ClientScheduleView tasks={clientTasks} />
         </TabsContent>
 
-        {/* ===== PENDÊNCIAS ===== */}
         <TabsContent value="pendencias" className="mt-4">
           <ProjectPendingTab projectId={projectId} />
         </TabsContent>

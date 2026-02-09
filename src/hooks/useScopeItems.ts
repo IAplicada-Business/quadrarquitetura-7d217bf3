@@ -15,6 +15,7 @@ export interface ScopeItem {
   estimated_value: number | null;
   scope_type: string | null;
   activities: string | null;
+  status: string | null;
 }
 
 export function useScopeItems(projectId: string | undefined) {
