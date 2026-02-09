@@ -1,8 +1,7 @@
-import { Bell, ChevronLeft, ChevronRight, LogOut, Menu, Settings, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, Menu, Settings, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NotificationsPanel } from "@/components/layout/NotificationsPanel";
 import logoLight from "@/assets/logo-light.png";
 
 interface AppHeaderProps {
@@ -85,18 +85,7 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
       {/* Right side */}
       <div className="flex items-center gap-3">
         {/* Notifications */}
-        <button
-          className="relative p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-          aria-label="Notificações"
-        >
-          <Bell className="h-5 w-5" />
-          <Badge
-            variant="default"
-            className="absolute -top-0.5 -right-0.5 h-4 w-4 p-0 flex items-center justify-center text-[10px] leading-none bg-accent text-accent-foreground"
-          >
-            3
-          </Badge>
-        </button>
+        <NotificationsPanel />
 
         {/* User dropdown */}
         <DropdownMenu>
