@@ -1,61 +1,82 @@
 
 
-# Gestao de Obras na Pagina de Acompanhamento
+# Painel de Notificacoes + Submenu Tarefas por Obra
 
-## Contexto
+## 1. Tabela `notifications` (nova migracao)
 
-A pagina **Acompanhamento de Obras** (`SiteTracking.tsx`) ja puxa automaticamente projetos com status `mobilizacao` ou `execucao` do banco. Porem, ela e somente leitura -- nao permite criar, editar ou excluir obras.
+Criar tabela no banco para armazenar notificacoes do usuario:
 
-A pagina **Projetos** (`Projects.tsx`) ja possui toda a logica de CRUD (criar, editar, excluir) com formulario (`ProjectForm`), confirmacao de exclusao, e filtros.
+```sql
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT,
+  type TEXT DEFAULT 'info',        -- info, warning, success, error
+  is_read BOOLEAN DEFAULT false,
+  related_project_id UUID,
+  related_entity_type TEXT,        -- lead, project, payment, task, etc.
+  related_entity_id UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
-## Solucao
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+-- Policies: usuario so ve/cria/atualiza/deleta as proprias
+```
 
-Reutilizar os componentes existentes de CRUD (`ProjectForm`, `AlertDialog`) na pagina de Acompanhamento, adicionando:
-
-1. Botao "Nova Obra" que abre o formulario ja existente com status pre-selecionado como `execucao`
-2. Botoes de acao em cada card de obra (editar, excluir, ver detalhes)
-3. Texto explicativo de como projetos aparecem nessa tela
+Tipos de notificacao: `info`, `warning`, `success`, `error`.
+Campos `related_*` permitem linkar a notificacao a um projeto, lead, pagamento, etc.
 
 ---
 
-## Alteracoes
+## 2. Painel de Notificacoes no Header
 
-### Arquivo: `src/pages/SiteTracking.tsx`
+**Arquivo:** `src/hooks/useNotifications.ts` (novo)
+- Hook com query para buscar notificacoes do usuario ordenadas por `created_at DESC`
+- Mutations para: criar, marcar como lida, marcar todas como lidas, excluir
 
-**Adicionar imports:**
-- `useMutation`, `useQueryClient` do tanstack
-- `ProjectForm` de `@/components/projects/ProjectForm`
-- `AlertDialog` e sub-componentes
-- `toast` hook
-- `Pencil`, `Trash2`, `Plus`, `Eye` do lucide
-- `useNavigate` do react-router-dom
+**Arquivo:** `src/components/layout/NotificationsPanel.tsx` (novo)
+- Componente Popover que abre ao clicar no sino do header
+- Lista de notificacoes com icone por tipo, titulo, mensagem e horario relativo
+- Botao "Marcar todas como lidas"
+- Botao para criar notificacao manual (abre dialog com form: titulo, mensagem, tipo)
+- Cada notificacao tem botao de marcar como lida e excluir
+- Badge mostra contagem de nao-lidas
 
-**Adicionar estados:**
-- `formOpen` (boolean) - controla abertura do formulario
-- `editingProject` (object | null) - projeto em edicao
-- `deleteId` (string | null) - id do projeto a excluir
+**Arquivo:** `src/components/layout/AppHeader.tsx` (editar)
+- Substituir o botao estatico do sino pelo componente `NotificationsPanel`
+- Badge passa a mostrar contagem real de notificacoes nao-lidas
 
-**Adicionar mutations:**
-- `createMutation` - cria projeto com status padrao `execucao`
-- `updateMutation` - atualiza projeto existente
-- `deleteMutation` - exclui projeto
+---
 
-**Modificar UI:**
-- Header: adicionar botao "Nova Obra" ao lado do titulo
-- Abaixo do header: adicionar texto explicativo: "Projetos em Mobilizacao ou Execucao aparecem automaticamente aqui. Voce tambem pode criar obras diretamente."
-- Cards de obras: adicionar botoes de acao (Ver Detalhes, Editar, Excluir) no footer de cada card
-- Adicionar `ProjectForm` e `AlertDialog` no final do componente
+## 3. Submenu "Tarefas" em Obra + Pagina
 
-**Logica do formulario:**
-- Ao clicar "Nova Obra": abre formulario com `editingProject = null`, status pre-definido como `execucao`
-- Ao clicar editar: abre formulario com dados do projeto pre-preenchidos
-- Ao clicar excluir: abre dialogo de confirmacao
-- Apos qualquer mutacao: invalida query `active_projects_tracking`
+**Arquivo:** `src/components/layout/AppSidebar.tsx` (editar)
+- Adicionar `{ title: "Tarefas", url: "/construction/tasks" }` no grupo "Obra"
 
-**Botoes de acao nos cards:**
-- Substituir o botao unico "Ver Detalhes" por uma linha com 3 botoes: Ver (navega), Editar (abre form), Excluir (abre alerta)
+**Arquivo:** `src/pages/ConstructionTasks.tsx` (novo)
+- Pagina que lista tarefas agrupadas por obra (projeto)
+- Usa a tabela `schedule_tasks` existente (ja tem campos: task_name, status, start_date, end_date, project_id, etc.)
+- Seletor de projeto no topo para filtrar tarefas
+- Botao "Nova Tarefa" que abre o `ScheduleTaskForm` ja existente
+- Tabela com colunas: Tarefa, Obra, Status, Inicio, Fim, Progresso
+- Acoes: editar, excluir, marcar status
+- Cards de metricas no topo: Total de Tarefas, Em Execucao, Atrasadas, Concluidas
 
-### Nenhum outro arquivo precisa ser modificado
-- `ProjectForm` ja existe e aceita `initialData` para edicao
-- As queries do banco ja existem com os campos corretos
+**Arquivo:** `src/App.tsx` (editar)
+- Adicionar rota `/construction/tasks` apontando para `ConstructionTasks`
+
+---
+
+## Resumo dos arquivos
+
+| Arquivo | Acao |
+|---|---|
+| Migracao SQL (notifications) | Criar tabela + RLS |
+| `src/hooks/useNotifications.ts` | Novo - hook CRUD notificacoes |
+| `src/components/layout/NotificationsPanel.tsx` | Novo - popover do sino |
+| `src/components/layout/AppHeader.tsx` | Editar - integrar NotificationsPanel |
+| `src/pages/ConstructionTasks.tsx` | Novo - pagina de tarefas por obra |
+| `src/components/layout/AppSidebar.tsx` | Editar - adicionar link Tarefas |
+| `src/App.tsx` | Editar - adicionar rota |
 
