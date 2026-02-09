@@ -1,134 +1,227 @@
 
 
-# Reestruturacao Completa: Sidebar, Rotas e Paginas Placeholder
+# Conexao Completa: Banco de Dados + Frontend para o Fluxo Lead-a-Obra
 
 ## Resumo
 
-Reorganizar o menu lateral (sidebar) para a nova estrutura com 6 grupos (Dashboard, Leads, Clientes, Projetos, Obra, Administrativo), criar as paginas placeholder para os novos modulos (Leads Pipeline, Propostas, Contratos), ajustar as rotas e remover menus antigos que foram absorvidos (Compras, Financeiro, Orcamentos como paginas separadas). Nenhuma logica ou layout existente sera alterado - apenas navegacao, rotas e placeholders novos.
+Implementar as tabelas que faltam no banco de dados (leads, proposals, contracts, scenarios, scenario_items) e conectar o frontend das paginas placeholder (Pipeline, Propostas, Contratos) ao banco, alem de adicionar a aba Cenarios no projeto. Inclui as automacoes de conexao entre etapas conforme o documento.
 
 ---
 
-## O Que Ja Esta Feito (nao sera tocado)
+## Fase 1 — Banco de Dados (Migracao SQL)
 
-- Dashboard dividido em Escritorio + Obras
-- Status simplificados (7 fases)
-- Compras embutidas na aba Orcamentos do projeto
-- Pendencias integradas no Cronograma do projeto
-- Financeiro renomeado para Prestacao de Contas dentro do projeto
+### Novas tabelas a criar:
+
+**1. `leads`**
+| Coluna | Tipo | Obrigatorio | Default |
+|--------|------|-------------|---------|
+| id | uuid | Sim | gen_random_uuid() |
+| user_id | uuid | Sim | - |
+| name | text | Sim | - |
+| email | text | Nao | - |
+| phone | text | Sim | - |
+| phone_secondary | text | Nao | - |
+| project_type | client_type enum | Sim | 'residencial' |
+| origin | client_origin enum | Sim | 'outro' |
+| responsible | text | Nao | - |
+| notes | text | Nao | - |
+| status | text | Sim | 'novo' |
+| meeting_date | date | Nao | - |
+| converted_client_id | uuid (FK clients) | Nao | - |
+| created_at / updated_at | timestamptz | Sim | now() |
+
+Status do lead: novo, contato_feito, reuniao_agendada, proposta_enviada, fechado, perdido
+
+**2. `proposals`**
+| Coluna | Tipo | Obrigatorio | Default |
+|--------|------|-------------|---------|
+| id | uuid | Sim | gen_random_uuid() |
+| user_id | uuid | Sim | - |
+| lead_id | uuid (FK leads) | Sim | - |
+| project_description | text | Nao | - |
+| value | numeric | Nao | - |
+| discount_percent | numeric | Nao | - |
+| payment_conditions | text | Nao | - |
+| deadline | text | Nao | - |
+| template_name | text | Nao | - |
+| status | text | Sim | 'rascunho' |
+| created_at / updated_at | timestamptz | Sim | now() |
+
+Status: rascunho, enviada, aprovada, rejeitada
+
+**3. `contracts`**
+| Coluna | Tipo | Obrigatorio | Default |
+|--------|------|-------------|---------|
+| id | uuid | Sim | gen_random_uuid() |
+| user_id | uuid | Sim | - |
+| proposal_id | uuid (FK proposals) | Sim | - |
+| client_id | uuid (FK clients) | Nao | - |
+| template_name | text | Nao | - |
+| clauses | text | Nao | - |
+| address | text | Nao | - |
+| city | text | Nao | - |
+| value | numeric | Nao | - |
+| payment_conditions | text | Nao | - |
+| start_date | date | Nao | - |
+| status | text | Sim | 'rascunho' |
+| project_id | uuid (FK projects) | Nao | - |
+| created_at / updated_at | timestamptz | Sim | now() |
+
+Status: rascunho, enviado, assinado, cancelado
+
+**4. `scenarios`**
+| Coluna | Tipo | Obrigatorio | Default |
+|--------|------|-------------|---------|
+| id | uuid | Sim | gen_random_uuid() |
+| user_id | uuid | Sim | - |
+| project_id | uuid (FK projects) | Sim | - |
+| name | text | Sim | - |
+| total_value | numeric | Nao | 0 |
+| is_approved | boolean | Nao | false |
+| created_at / updated_at | timestamptz | Sim | now() |
+
+**5. `scenario_items`**
+| Coluna | Tipo | Obrigatorio | Default |
+|--------|------|-------------|---------|
+| id | uuid | Sim | gen_random_uuid() |
+| user_id | uuid | Sim | - |
+| scenario_id | uuid (FK scenarios) | Sim | - |
+| discipline | text | Sim | - |
+| description | text | Nao | - |
+| estimated_value | numeric | Nao | 0 |
+| is_included | boolean | Nao | true |
+| display_order | integer | Nao | - |
+| created_at / updated_at | timestamptz | Sim | now() |
+
+### Colunas novas em tabelas existentes:
+
+**`projects`** — adicionar:
+- `contract_id` uuid (FK contracts, nullable)
+- `approved_scenario_id` uuid (FK scenarios, nullable)
+- `client_budget` numeric (nullable) — orcamento do cliente
+
+**`scope_items`** — adicionar:
+- `estimated_value` numeric (nullable) — valor estimado vindo do cenario
+
+### RLS para todas as novas tabelas:
+- INSERT: auth.uid() = user_id
+- SELECT: auth.uid() = user_id
+- UPDATE: auth.uid() = user_id
+- DELETE: auth.uid() = user_id
+
+### Triggers:
+- `update_updated_at_column` em todas as novas tabelas
 
 ---
 
-## O Que Sera Feito
+## Fase 2 — Frontend: Leads Pipeline (Kanban)
 
-### 1. Reestruturar o Sidebar
+Substituir o placeholder `LeadsPipeline.tsx` por uma pagina funcional com:
 
-O menu lateral atual tem 6 grupos (Principal, Gestao, Financeiro, Operacional, Arquivos, Sistema). Sera reorganizado para a estrutura final do documento:
+- Visao kanban com 6 colunas: Novo Lead, Contato Feito, Reuniao Agendada, Proposta Enviada, Fechado, Perdido
+- Cards de lead com nome, telefone, tipo de projeto, origem
+- Dialog para criar/editar lead com os campos do documento
+- Arrastar cards entre colunas (ou botoes de avancar status)
+- Ao mover para "Fechado": criar Cliente automaticamente e preencher `converted_client_id`
+- Ao mover para "Proposta Enviada": mostrar botao "Gerar Proposta" que navega para `/leads/proposals`
 
-```text
-Dashboard
-  Escritorio (/dashboard/escritorio)
-  Obras (/dashboard/obras)
-
-Leads
-  Pipeline (/leads/pipeline)
-  Propostas (/leads/proposals)
-  Contratos (/leads/contracts)
-
-Clientes
-  Lista (/clients)
-
-Projetos
-  Lista (/projects)
-
-Obra
-  Acompanhamento (/construction/tracking)
-  Fornecedores (/construction/suppliers)
-  Documentos (/construction/documents)
-  Relatorios (/construction/reports)
-
-Administrativo
-  Configuracoes (/admin/settings)
-```
-
-### 2. Criar Paginas Placeholder para Novos Modulos
-
-Criar 3 novas paginas placeholder usando o componente `PlaceholderPage` existente:
-
-- `src/pages/LeadsPipeline.tsx` - Pipeline de Leads com kanban
-- `src/pages/LeadsProposals.tsx` - Propostas comerciais
-- `src/pages/LeadsContracts.tsx` - Contratos
-
-### 3. Atualizar Rotas no App.tsx
-
-**Adicionar novas rotas:**
-- `/leads/pipeline` -> LeadsPipeline
-- `/leads/proposals` -> LeadsProposals
-- `/leads/contracts` -> LeadsContracts
-- `/construction/tracking` -> SiteTracking (reuso da pagina existente)
-- `/construction/suppliers` -> Suppliers (reuso)
-- `/construction/documents` -> Documents (reuso)
-- `/construction/reports` -> Reports (reuso)
-- `/admin/settings` -> SettingsPage (reuso)
-
-**Remover rotas que nao sao mais menus separados:**
-- `/budgets` - Orcamentos agora e aba do projeto (remover rota)
-- `/purchases` - Compras agora esta dentro de Orcamentos do projeto (remover rota)
-- `/financial` - Financeiro agora e aba do projeto (remover rota)
-
-**Manter redirecionamentos de compatibilidade:**
-- `/site-tracking` -> redirecionar para `/construction/tracking`
-- `/suppliers` -> redirecionar para `/construction/suppliers`
-- `/documents` -> redirecionar para `/construction/documents`
-- `/reports` -> redirecionar para `/construction/reports`
-- `/settings` -> redirecionar para `/admin/settings`
-
-### 4. Remover Paginas Obsoletas (Opcional)
-
-As paginas `Budgets.tsx`, `Purchases.tsx` e `Financial.tsx` sao placeholders simples que nao serao mais acessiveis por nenhum menu. Podem ser removidas ou mantidas sem impacto.
+### Hook: `src/hooks/useLeads.ts`
+- CRUD completo com React Query
+- Funcao `convertToClient` que cria registro em `clients` e atualiza o lead
 
 ---
 
-## Detalhes Tecnicos
+## Fase 3 — Frontend: Propostas
 
-### Arquivos a criar:
-- `src/pages/LeadsPipeline.tsx` (placeholder)
-- `src/pages/LeadsProposals.tsx` (placeholder)
-- `src/pages/LeadsContracts.tsx` (placeholder)
+Substituir o placeholder `LeadsProposals.tsx` por pagina funcional:
 
-### Arquivos a modificar:
-- `src/components/layout/AppSidebar.tsx` (nova estrutura de menus)
-- `src/App.tsx` (novas rotas + redirecionamentos)
+- Lista de propostas com filtro por status
+- Dialog para criar proposta vinculada a um lead (dados do lead preenchidos automaticamente)
+- Campos: descricao dos servicos, valor, desconto, condicoes de pagamento, prazo, template
+- Botao "Aprovar" que muda status para "aprovada" e habilita "Gerar Contrato"
+- Botao "Gerar Contrato" navega para `/leads/contracts` com dados pre-preenchidos
 
-### Estrutura do novo sidebar:
+### Hook: `src/hooks/useProposals.ts`
+- CRUD completo
+- Query que faz join com leads para puxar dados do lead
 
-O array `menuGroups` sera atualizado para 6 grupos com os itens corretos. Os icones serao aplicados via emoji no label ou via icones Lucide (mantendo o padrao atual que usa apenas texto).
+---
 
-### Paginas placeholder:
+## Fase 4 — Frontend: Contratos
 
-Usarao o mesmo padrao de todas as outras paginas placeholder existentes:
+Substituir o placeholder `LeadsContracts.tsx` por pagina funcional:
 
-```typescript
-import { Target } from "lucide-react";
-import { PlaceholderPage } from "@/components/PlaceholderPage";
+- Lista de contratos com filtro por status
+- Dialog para criar contrato vinculado a proposta (dados pre-preenchidos)
+- Campos: template, clausulas, endereco, cidade, data inicio, valor, condicoes
+- Botao "Assinar" que:
+  1. Muda status para "assinado"
+  2. Cria um **Projeto** automaticamente com dados do contrato/proposta/lead
+  3. Marca o lead como "Fechado" se ainda nao estava
 
-export default function LeadsPipeline() {
-  return (
-    <PlaceholderPage
-      title="Pipeline de Leads"
-      description="Captacao e funil de leads com kanban"
-      icon={Target}
-    />
-  );
-}
-```
+### Hook: `src/hooks/useContracts.ts`
+- CRUD completo
+- Funcao `signAndCreateProject` que cria projeto e atualiza referencias
+
+---
+
+## Fase 5 — Frontend: Cenarios (Nova aba no Projeto)
+
+Adicionar aba "Cenarios" no `ProjectDetail.tsx` (entre Resumo e Escopo):
+
+- Campo "Orcamento do cliente" no topo
+- Lista de cenarios (A, B, C...) com cards
+- Dentro de cada cenario: lista de disciplinas com checkbox "incluido" e valor estimado
+- Total por cenario com comparacao visual vs orcamento do cliente
+- Botao "Aprovar Cenario" que:
+  1. Marca `is_approved = true`
+  2. Copia `scenario_items` com `is_included = true` para `scope_items`
+  3. Atualiza `projects.approved_scenario_id` e `projects.client_budget`
+
+### Componente: `src/components/projects/ProjectScenariosTab.tsx`
+### Hook: `src/hooks/useScenarios.ts`
+
+---
+
+## Fase 6 — Ajustes de Conexao
+
+### Escopo (existente):
+- Se projeto tem cenario aprovado, escopo mostra duas secoes:
+  - "Escopo Contratado" (itens do cenario aprovado)
+  - "Escopo Idealizado" (todos os itens, inclusive os nao incluidos)
+- Exibir `estimated_value` nos itens
+
+### ProjectSummaryTab:
+- Mostrar "Orcamento Idealizado" vs "Orcamento Contratado" se cenario existir
+- Mostrar link para o contrato de origem se `contract_id` existir
+
+---
+
+## Arquivos a criar:
+- `src/hooks/useLeads.ts`
+- `src/hooks/useProposals.ts`
+- `src/hooks/useContracts.ts`
+- `src/hooks/useScenarios.ts`
+- `src/components/projects/ProjectScenariosTab.tsx`
+
+## Arquivos a modificar:
+- `src/pages/LeadsPipeline.tsx` (substituir placeholder por kanban)
+- `src/pages/LeadsProposals.tsx` (substituir placeholder por lista funcional)
+- `src/pages/LeadsContracts.tsx` (substituir placeholder por lista funcional)
+- `src/pages/ProjectDetail.tsx` (adicionar aba Cenarios)
+- `src/components/projects/ProjectSummaryTab.tsx` (exibir dados do cenario/contrato)
+- `src/components/projects/ProjectScopeTab.tsx` (duas secoes: contratado vs idealizado)
+
+## Migracao SQL:
+- 1 migracao com criacao das 5 tabelas + colunas novas + RLS + triggers
 
 ---
 
 ## Resultado Esperado
 
-- Sidebar com 6 grupos organizados por contexto (Dashboard, Leads, Clientes, Projetos, Obra, Administrativo)
-- Novas rotas para Leads (Pipeline, Propostas, Contratos) com paginas placeholder
-- Rotas antigas redirecionando para os novos caminhos
-- Menus de Compras, Orcamentos e Financeiro removidos do sidebar (ja estao dentro das abas do projeto)
-- Nenhuma alteracao em logica ou layout de componentes existentes
+- Fluxo completo funcional: Lead -> Proposta -> Contrato -> Projeto (automatico) -> Cenarios -> Escopo (auto-preenchido)
+- Todas as 3 paginas de Leads funcionais com CRUD conectado ao banco
+- Aba Cenarios no projeto para simulacao com cliente
+- Automacoes: lead cria cliente, contrato cria projeto, cenario preenche escopo
+- Dados persistidos no banco com RLS adequado
 
