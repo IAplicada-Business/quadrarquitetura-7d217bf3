@@ -39,6 +39,56 @@ export default function SiteTracking() {
     enabled: !!user,
   });
 
+  const projectIds = projects.map((p) => p.id);
+
+  const { data: pendingCount = 0 } = useQuery({
+    queryKey: ["tracking_pending_count", projectIds],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("pending_items")
+        .select("*", { count: "exact", head: true })
+        .in("project_id", projectIds)
+        .neq("status", "resolvido");
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: projectIds.length > 0,
+  });
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  const weekEnd = new Date();
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  const weekEndStr = weekEnd.toISOString().split("T")[0];
+
+  const { data: deliveriesToday = 0 } = useQuery({
+    queryKey: ["tracking_deliveries_today", projectIds, todayStr],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("schedule_tasks")
+        .select("*", { count: "exact", head: true })
+        .in("project_id", projectIds)
+        .eq("end_date", todayStr);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: projectIds.length > 0,
+  });
+
+  const { data: visitsThisWeek = 0 } = useQuery({
+    queryKey: ["tracking_visits_week", projectIds, todayStr, weekEndStr],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("site_visits")
+        .select("*", { count: "exact", head: true })
+        .in("project_id", projectIds)
+        .gte("visit_date", todayStr)
+        .lte("visit_date", weekEndStr);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: projectIds.length > 0,
+  });
+
   const createMutation = useMutation({
     mutationFn: async (values: Record<string, unknown>) => {
       const { error } = await supabase.from("projects").insert({ ...values, user_id: user!.id } as any);
@@ -127,7 +177,7 @@ export default function SiteTracking() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground font-medium">Pendências</p>
-              <p className="text-2xl font-bold text-amber-700">12</p>
+              <p className="text-2xl font-bold text-amber-700">{pendingCount}</p>
             </div>
           </CardContent>
         </Card>
@@ -138,7 +188,7 @@ export default function SiteTracking() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground font-medium">Entregas Hoje</p>
-              <p className="text-2xl font-bold text-green-700">3</p>
+              <p className="text-2xl font-bold text-green-700">{deliveriesToday}</p>
             </div>
           </CardContent>
         </Card>
@@ -149,7 +199,7 @@ export default function SiteTracking() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground font-medium">Visitas Semana</p>
-              <p className="text-2xl font-bold text-purple-700">5</p>
+              <p className="text-2xl font-bold text-purple-700">{visitsThisWeek}</p>
             </div>
           </CardContent>
         </Card>
