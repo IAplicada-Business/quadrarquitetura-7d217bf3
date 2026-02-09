@@ -8,45 +8,45 @@ import logoLight from "@/assets/logo-light.png";
 
 const menuGroups = [
   {
-    label: "Principal",
+    label: "Dashboard",
     items: [
       { title: "Escritório", url: "/dashboard/escritorio" },
       { title: "Obras", url: "/dashboard/obras" },
     ],
   },
   {
-    label: "Gestão",
+    label: "Leads",
     items: [
-      { title: "Clientes", url: "/clients" },
-      { title: "Projetos", url: "/projects" },
+      { title: "Pipeline", url: "/leads/pipeline" },
+      { title: "Propostas", url: "/leads/proposals" },
+      { title: "Contratos", url: "/leads/contracts" },
     ],
   },
   {
-    label: "Financeiro",
+    label: "Clientes",
     items: [
-      { title: "Orçamentos", url: "/budgets" },
-      { title: "Compras", url: "/purchases" },
-      { title: "Pagamentos", url: "/financial" },
+      { title: "Lista", url: "/clients" },
     ],
   },
   {
-    label: "Operacional",
+    label: "Projetos",
     items: [
-      { title: "Acomp. de Obra", url: "/site-tracking" },
-      { title: "Fornecedores", url: "/suppliers" },
+      { title: "Lista", url: "/projects" },
     ],
   },
   {
-    label: "Arquivos",
+    label: "Obra",
     items: [
-      { title: "Documentos", url: "/documents" },
-      { title: "Relatórios", url: "/reports" },
+      { title: "Acompanhamento", url: "/construction/tracking" },
+      { title: "Fornecedores", url: "/construction/suppliers" },
+      { title: "Documentos", url: "/construction/documents" },
+      { title: "Relatórios", url: "/construction/reports" },
     ],
   },
   {
-    label: "Sistema",
+    label: "Administrativo",
     items: [
-      { title: "Configurações", url: "/settings" },
+      { title: "Configurações", url: "/admin/settings" },
     ],
   },
 ];

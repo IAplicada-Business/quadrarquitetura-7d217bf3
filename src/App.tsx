@@ -11,9 +11,9 @@ import DashboardObras from "./pages/DashboardObras";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
-import Budgets from "./pages/Budgets";
-import Purchases from "./pages/Purchases";
-import Financial from "./pages/Financial";
+import LeadsPipeline from "./pages/LeadsPipeline";
+import LeadsProposals from "./pages/LeadsProposals";
+import LeadsContracts from "./pages/LeadsContracts";
 import SiteTracking from "./pages/SiteTracking";
 import Suppliers from "./pages/Suppliers";
 import Documents from "./pages/Documents";
@@ -59,14 +59,26 @@ const App = () => (
               <Route path="/clients" element={<Clients />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
-              <Route path="/budgets" element={<Budgets />} />
-              <Route path="/purchases" element={<Purchases />} />
-              <Route path="/financial" element={<Financial />} />
-              <Route path="/site-tracking" element={<SiteTracking />} />
-              <Route path="/suppliers" element={<Suppliers />} />
-              <Route path="/documents" element={<Documents />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/settings" element={<SettingsPage />} />
+              {/* Leads */}
+              <Route path="/leads/pipeline" element={<LeadsPipeline />} />
+              <Route path="/leads/proposals" element={<LeadsProposals />} />
+              <Route path="/leads/contracts" element={<LeadsContracts />} />
+              {/* Obra */}
+              <Route path="/construction/tracking" element={<SiteTracking />} />
+              <Route path="/construction/suppliers" element={<Suppliers />} />
+              <Route path="/construction/documents" element={<Documents />} />
+              <Route path="/construction/reports" element={<Reports />} />
+              {/* Administrativo */}
+              <Route path="/admin/settings" element={<SettingsPage />} />
+              {/* Redirects de compatibilidade */}
+              <Route path="/site-tracking" element={<Navigate to="/construction/tracking" replace />} />
+              <Route path="/suppliers" element={<Navigate to="/construction/suppliers" replace />} />
+              <Route path="/documents" element={<Navigate to="/construction/documents" replace />} />
+              <Route path="/reports" element={<Navigate to="/construction/reports" replace />} />
+              <Route path="/settings" element={<Navigate to="/admin/settings" replace />} />
+              <Route path="/budgets" element={<Navigate to="/projects" replace />} />
+              <Route path="/purchases" element={<Navigate to="/projects" replace />} />
+              <Route path="/financial" element={<Navigate to="/projects" replace />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
