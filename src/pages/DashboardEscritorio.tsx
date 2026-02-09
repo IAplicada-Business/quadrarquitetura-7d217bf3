@@ -1,15 +1,14 @@
 import {
   CreditCard,
   TrendingUp,
-  Users,
   AlertTriangle,
   CheckCircle2,
-  Clock,
   ArrowUpRight,
   ArrowDownRight,
   Package,
-  Briefcase,
   FileText,
+  UserPlus,
+  Send,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -72,7 +71,7 @@ const stats = [
   {
     label: "Projetos Ativos",
     value: "5",
-    icon: Briefcase,
+    icon: FileText,
     trend: "+2",
     trendUp: true,
     description: "vs. mês anterior",
@@ -127,25 +126,25 @@ const urgentItems = [
   { type: "Pagamento", description: "Parcela elétrica vence amanhã", project: "Reforma Apto 142", severity: "medium" as const },
 ];
 
-const recentProjects = [
-  { name: "Reforma Apto 142", client: "João Silva", status: "execucao", value: 185000 },
-  { name: "Casa Jardins", client: "Maria Santos", status: "planejamento", value: 320000 },
-  { name: "Clínica Saúde+", client: "Dr. Carlos", status: "projeto", value: 150000 },
-  { name: "Escritório Tech", client: "TechCorp", status: "proposta", value: 95000 },
+const leadsDoMes = [
+  { status: "Novo", count: 8, color: ROSA.fill1 },
+  { status: "Contato Feito", count: 5, color: ROSA.fill2 },
+  { status: "Proposta Enviada", count: 3, color: ROSA.fill3 },
+  { status: "Fechado", count: 2, color: "hsl(152, 60%, 40%)" },
 ];
 
-const upcomingPayments = [
-  { supplier: "Eletricista Silva", project: "Reforma Apto 142", value: 4500, dueDate: "07/02", status: "pendente" },
-  { supplier: "Marmoraria ABC", project: "Casa Jardins", value: 8200, dueDate: "08/02", status: "pendente" },
-  { supplier: "Pintura & Cia", project: "Reforma Apto 142", value: 3800, dueDate: "10/02", status: "pendente" },
-  { supplier: "Gesso Total", project: "Clínica Saúde+", value: 6500, dueDate: "12/02", status: "atrasado" },
+const propostasRecentes = [
+  { title: "Reforma Completa Apto 302", client: "Ana Beatriz", status: "enviada", value: 185000 },
+  { title: "Projeto Interiores Casa", client: "Roberto Lima", status: "rascunho", value: 95000 },
+  { title: "Reforma Comercial Loja", client: "Moda & Estilo", status: "aprovada", value: 220000 },
+  { title: "Adequação Escritório", client: "StartupXYZ", status: "rejeitada", value: 45000 },
 ];
 
-const statusLabels: Record<string, string> = {
-  execucao: "Em Execução",
-  planejamento: "Planejamento",
-  projeto: "Projeto",
-  proposta: "Proposta",
+const propostaStatusConfig: Record<string, { label: string; color: string }> = {
+  rascunho: { label: "Rascunho", color: ROSA.fill3 },
+  enviada: { label: "Enviada", color: ROSA.fill2 },
+  aprovada: { label: "Aprovada", color: "hsl(152, 60%, 40%)" },
+  rejeitada: { label: "Rejeitada", color: ROSA.fill4 },
 };
 
 function fmt(value: number) {
@@ -313,73 +312,70 @@ export default function DashboardEscritorio() {
         </CardContent>
       </Card>
 
-      {/* Grid inferior — Projetos + Pagamentos */}
+      {/* Grid inferior — Leads + Propostas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pipeline / Projetos Recentes */}
+        {/* Leads do Mês */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-display">Pipeline de Projetos</CardTitle>
-            <CardDescription>Status mais recentes</CardDescription>
+            <CardTitle className="text-lg font-display">Leads do Mês</CardTitle>
+            <CardDescription>Resumo por status</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {recentProjects.map((p) => (
-                <div key={p.name} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer">
+              {leadsDoMes.map((l) => (
+                <div key={l.status} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: ROSA.fundoSuave }}>
-                      <Briefcase className="h-5 w-5" style={{ color: ROSA.destaque }} />
+                      <UserPlus className="h-5 w-5" style={{ color: l.color }} />
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">{p.name}</p>
-                      <p className="text-xs text-muted-foreground">{p.client}</p>
-                    </div>
+                    <p className="font-medium text-sm">{l.status}</p>
                   </div>
-                  <div className="text-right">
-                    <Badge variant="outline" className="text-xs mb-1">{statusLabels[p.status] ?? p.status}</Badge>
-                    <p className="text-xs text-muted-foreground">{fmt(p.value)}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold font-display" style={{ color: l.color }}>{l.count}</span>
+                    <span className="text-xs text-muted-foreground">leads</span>
                   </div>
                 </div>
               ))}
+              <div className="pt-2 border-t flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Total do mês</span>
+                <span className="text-lg font-bold font-display" style={{ color: ROSA.textoDestaque }}>
+                  {leadsDoMes.reduce((s, l) => s + l.count, 0)}
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Pagamentos da Semana */}
+        {/* Propostas Recentes */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-display">Pagamentos da Semana</CardTitle>
-            <CardDescription>Próximos vencimentos</CardDescription>
+            <CardTitle className="text-lg font-display">Propostas Recentes</CardTitle>
+            <CardDescription>Últimas propostas enviadas</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {upcomingPayments.map((p, i) => (
-                <div key={i} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="h-8 w-8 rounded-full flex items-center justify-center"
-                      style={{
-                        backgroundColor: p.status === "atrasado" ? "hsl(0,85%,95%)" : ROSA.fundoSuave,
-                      }}
-                    >
-                      {p.status === "atrasado" ? (
-                        <Clock className="h-4 w-4 text-red-500" />
-                      ) : (
-                        <CreditCard className="h-4 w-4" style={{ color: ROSA.destaque }} />
-                      )}
+              {propostasRecentes.map((p, i) => {
+                const cfg = propostaStatusConfig[p.status];
+                return (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: ROSA.fundoSuave }}>
+                        <Send className="h-5 w-5" style={{ color: ROSA.destaque }} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{p.title}</p>
+                        <p className="text-xs text-muted-foreground">{p.client}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">{p.supplier}</p>
-                      <p className="text-xs text-muted-foreground">{p.project}</p>
+                    <div className="text-right">
+                      <Badge variant="outline" className="text-xs mb-1" style={{ borderColor: cfg.color, color: cfg.color }}>
+                        {cfg.label}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground">{fmt(p.value)}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-sm">{fmt(p.value)}</p>
-                    <p className={`text-xs ${p.status === "atrasado" ? "text-red-500 font-medium" : "text-muted-foreground"}`}>
-                      {p.status === "atrasado" ? "Atrasado" : p.dueDate}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
