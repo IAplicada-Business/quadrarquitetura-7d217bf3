@@ -1,0 +1,206 @@
+import { useState } from "react";
+import { Plus, Trash2, Check, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useScenarios, Scenario } from "@/hooks/useScenarios";
+import { useProjectDetail } from "@/hooks/useProjectDetail";
+
+function formatCurrency(v: number | null | undefined) {
+  if (v == null) return "—";
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+}
+
+interface ProjectScenariosTabProps {
+  projectId: string;
+}
+
+export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
+  const { project, updateProject } = useProjectDetail(projectId);
+  const { scenarios, isLoading, createScenario, removeScenario, addItem, updateItem, removeItem, approveScenario } = useScenarios(projectId);
+
+  const [newScenarioName, setNewScenarioName] = useState("");
+  const [addItemOpen, setAddItemOpen] = useState<string | null>(null);
+  const [newItem, setNewItem] = useState({ discipline: "", description: "", estimated_value: "" });
+  const [budgetInput, setBudgetInput] = useState((project as any)?.client_budget?.toString() || "");
+
+  const handleCreateScenario = () => {
+    if (!newScenarioName.trim()) return;
+    createScenario.mutate(newScenarioName.trim());
+    setNewScenarioName("");
+  };
+
+  const handleAddItem = (scenarioId: string) => {
+    if (!newItem.discipline.trim()) return;
+    addItem.mutate({
+      scenario_id: scenarioId,
+      discipline: newItem.discipline,
+      description: newItem.description || undefined,
+      estimated_value: newItem.estimated_value ? Number(newItem.estimated_value) : 0,
+    });
+    setNewItem({ discipline: "", description: "", estimated_value: "" });
+    setAddItemOpen(null);
+  };
+
+  const handleSaveBudget = () => {
+    const val = budgetInput ? Number(budgetInput) : null;
+    updateProject.mutate({ client_budget: val });
+  };
+
+  const clientBudget = (project as any)?.client_budget as number | null;
+
+  if (isLoading) {
+    return <div className="flex justify-center py-12"><div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" /></div>;
+  }
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Budget Input */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <DollarSign className="h-4 w-4" /> Orçamento do Cliente
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3">
+            <Input
+              type="number"
+              placeholder="Ex: 250000"
+              value={budgetInput}
+              onChange={(e) => setBudgetInput(e.target.value)}
+              className="max-w-[200px]"
+            />
+            <Button size="sm" variant="outline" onClick={handleSaveBudget} disabled={updateProject.isPending}>Salvar</Button>
+            {clientBudget != null && <span className="text-sm font-semibold">{formatCurrency(clientBudget)}</span>}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Create Scenario */}
+      <div className="flex items-center gap-3">
+        <Input
+          placeholder="Nome do cenário (ex: Cenário A)"
+          value={newScenarioName}
+          onChange={(e) => setNewScenarioName(e.target.value)}
+          className="max-w-[300px]"
+          onKeyDown={(e) => e.key === "Enter" && handleCreateScenario()}
+        />
+        <Button onClick={handleCreateScenario} disabled={!newScenarioName.trim() || createScenario.isPending}>
+          <Plus className="h-4 w-4 mr-1" /> Novo Cenário
+        </Button>
+      </div>
+
+      {/* Scenarios List */}
+      {scenarios.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+          Nenhum cenário criado. Crie um cenário para começar a simulação.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {scenarios.map((scenario) => {
+            const items = scenario.scenario_items || [];
+            const totalIncluded = items.filter((i) => i.is_included).reduce((sum, i) => sum + (i.estimated_value || 0), 0);
+            const totalAll = items.reduce((sum, i) => sum + (i.estimated_value || 0), 0);
+            const overBudget = clientBudget != null && totalIncluded > clientBudget;
+
+            return (
+              <Card key={scenario.id} className={scenario.is_approved ? "border-green-500 border-2" : ""}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-base">{scenario.name}</CardTitle>
+                      {scenario.is_approved && <Badge variant="default" className="text-xs bg-green-600">Aprovado</Badge>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!scenario.is_approved && (
+                        <Button size="sm" variant="default" onClick={() => approveScenario.mutate(scenario)} disabled={approveScenario.isPending}>
+                          <Check className="h-3 w-3 mr-1" /> Aprovar
+                        </Button>
+                      )}
+                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => removeScenario.mutate(scenario.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {/* Summary */}
+                  <div className="flex gap-4 text-sm">
+                    <span>Incluído: <strong className={overBudget ? "text-destructive" : "text-green-600"}>{formatCurrency(totalIncluded)}</strong></span>
+                    <span>Total: <strong>{formatCurrency(totalAll)}</strong></span>
+                    {clientBudget != null && (
+                      <span className={overBudget ? "text-destructive" : "text-muted-foreground"}>
+                        {overBudget ? "⚠️ Acima do orçamento" : "✅ Dentro do orçamento"}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Items */}
+                  {items.length > 0 && (
+                    <div className="border rounded-lg divide-y">
+                      {items.map((item) => (
+                        <div key={item.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                          <Checkbox
+                            checked={item.is_included}
+                            onCheckedChange={(checked) => updateItem.mutate({ id: item.id, is_included: !!checked })}
+                          />
+                          <span className={`flex-1 ${!item.is_included ? "line-through text-muted-foreground" : ""}`}>
+                            {item.discipline}
+                            {item.description && <span className="text-muted-foreground ml-1">— {item.description}</span>}
+                          </span>
+                          <Input
+                            type="number"
+                            className="w-28 h-7 text-xs"
+                            value={item.estimated_value || ""}
+                            onChange={(e) => updateItem.mutate({ id: item.id, estimated_value: Number(e.target.value) || 0 })}
+                          />
+                          <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeItem.mutate(item.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <Button size="sm" variant="outline" onClick={() => { setAddItemOpen(scenario.id); setNewItem({ discipline: "", description: "", estimated_value: "" }); }}>
+                    <Plus className="h-3 w-3 mr-1" /> Adicionar Disciplina
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Add Item Dialog */}
+      <Dialog open={!!addItemOpen} onOpenChange={() => setAddItemOpen(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Nova Disciplina</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Disciplina *</Label>
+              <Input value={newItem.discipline} onChange={(e) => setNewItem({ ...newItem, discipline: e.target.value })} placeholder="Ex: Elétrica" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Descrição</Label>
+              <Input value={newItem.description} onChange={(e) => setNewItem({ ...newItem, description: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Valor Estimado (R$)</Label>
+              <Input type="number" value={newItem.estimated_value} onChange={(e) => setNewItem({ ...newItem, estimated_value: e.target.value })} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setAddItemOpen(null)}>Cancelar</Button>
+              <Button onClick={() => addItemOpen && handleAddItem(addItemOpen)} disabled={!newItem.discipline.trim()}>Adicionar</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
