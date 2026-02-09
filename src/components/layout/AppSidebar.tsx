@@ -48,6 +48,7 @@ const menuGroups = [
     label: "Administrativo",
     items: [
       { title: "Configurações", url: "/admin/settings" },
+      { title: "Usuários", url: "/admin/users" },
     ],
   },
 ];
