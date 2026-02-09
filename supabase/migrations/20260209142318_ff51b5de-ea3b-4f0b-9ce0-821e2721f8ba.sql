@@ -1,0 +1,8 @@
+
+ALTER TABLE public.material_tracking
+  ADD COLUMN IF NOT EXISTS discipline TEXT,
+  ADD COLUMN IF NOT EXISTS unit TEXT,
+  ADD COLUMN IF NOT EXISTS supplier_name TEXT,
+  ADD COLUMN IF NOT EXISTS product_link TEXT,
+  ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'manual',
+  ADD COLUMN IF NOT EXISTS budget_quote_id UUID;

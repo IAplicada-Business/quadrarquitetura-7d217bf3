@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
 
 interface ScheduleTaskFormProps {
   open: boolean;
@@ -17,11 +19,29 @@ interface ScheduleTaskFormProps {
     status?: string;
     payment_note?: string;
     order_index?: number;
+    supplier_name?: string;
+    discipline?: string;
+    is_client_visible?: boolean;
+    is_daily_detail?: boolean;
+    requires_presence?: boolean;
+    progress_percentage?: number;
+    color?: string;
   }) => void;
   initialData?: Record<string, unknown> | null;
   isLoading?: boolean;
   scopeItems?: { id: string; discipline: string }[];
 }
+
+const COLORS = [
+  { value: "#3b82f6", label: "Azul" },
+  { value: "#10b981", label: "Verde" },
+  { value: "#f59e0b", label: "Amarelo" },
+  { value: "#ef4444", label: "Vermelho" },
+  { value: "#8b5cf6", label: "Roxo" },
+  { value: "#ec4899", label: "Rosa" },
+  { value: "#06b6d4", label: "Ciano" },
+  { value: "#f97316", label: "Laranja" },
+];
 
 export function ScheduleTaskForm({ open, onOpenChange, onSubmit, initialData, isLoading, scopeItems = [] }: ScheduleTaskFormProps) {
   const [taskName, setTaskName] = useState(initialData?.task_name as string || "");
@@ -31,6 +51,13 @@ export function ScheduleTaskForm({ open, onOpenChange, onSubmit, initialData, is
   const [status, setStatus] = useState(initialData?.status as string || "planejado");
   const [paymentNote, setPaymentNote] = useState(initialData?.payment_note as string || "");
   const [orderIndex, setOrderIndex] = useState(initialData?.order_index ? String(initialData.order_index) : "");
+  const [supplierName, setSupplierName] = useState(initialData?.supplier_name as string || "");
+  const [discipline, setDiscipline] = useState(initialData?.discipline as string || "");
+  const [isClientVisible, setIsClientVisible] = useState(initialData?.is_client_visible !== false);
+  const [isDailyDetail, setIsDailyDetail] = useState(!!initialData?.is_daily_detail);
+  const [requiresPresence, setRequiresPresence] = useState(!!initialData?.requires_presence);
+  const [progress, setProgress] = useState(Number(initialData?.progress_percentage) || 0);
+  const [color, setColor] = useState(initialData?.color as string || "#3b82f6");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,15 +70,24 @@ export function ScheduleTaskForm({ open, onOpenChange, onSubmit, initialData, is
       status,
       payment_note: paymentNote || undefined,
       order_index: orderIndex ? Number(orderIndex) : undefined,
+      supplier_name: supplierName || undefined,
+      discipline: discipline || undefined,
+      is_client_visible: isClientVisible,
+      is_daily_detail: isDailyDetail,
+      requires_presence: requiresPresence,
+      progress_percentage: progress,
+      color,
     });
     onOpenChange(false);
     setTaskName(""); setScopeItemId(""); setStartDate(""); setEndDate("");
     setStatus("planejado"); setPaymentNote(""); setOrderIndex("");
+    setSupplierName(""); setDiscipline(""); setIsClientVisible(true);
+    setIsDailyDetail(false); setRequiresPresence(false); setProgress(0); setColor("#3b82f6");
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-display">
             {initialData ? "Editar Etapa" : "Nova Etapa"}
@@ -64,7 +100,7 @@ export function ScheduleTaskForm({ open, onOpenChange, onSubmit, initialData, is
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Disciplina</Label>
+              <Label>Disciplina (Escopo)</Label>
               <Select value={scopeItemId} onValueChange={setScopeItemId}>
                 <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                 <SelectContent>
@@ -73,6 +109,16 @@ export function ScheduleTaskForm({ open, onOpenChange, onSubmit, initialData, is
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label>Disciplina (texto)</Label>
+              <Input value={discipline} onChange={(e) => setDiscipline(e.target.value)} placeholder="Ex: Elétrica" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Fornecedor/Responsável</Label>
+              <Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="Nome" />
             </div>
             <div>
               <Label>Ordem</Label>
@@ -103,9 +149,48 @@ export function ScheduleTaskForm({ open, onOpenChange, onSubmit, initialData, is
               </Select>
             </div>
             <div>
-              <Label>Nota de Pagamento</Label>
-              <Input value={paymentNote} onChange={(e) => setPaymentNote(e.target.value)} placeholder="Ex: PAGAMENTO 50%" />
+              <Label>Cor</Label>
+              <Select value={color} onValueChange={setColor}>
+                <SelectTrigger>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+                    <SelectValue />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {COLORS.map(c => (
+                    <SelectItem key={c.value} value={c.value}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: c.value }} />
+                        {c.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+          </div>
+          <div>
+            <Label>Progresso ({progress}%)</Label>
+            <Slider value={[progress]} onValueChange={([v]) => setProgress(v)} min={0} max={100} step={5} className="mt-2" />
+          </div>
+          <div>
+            <Label>Nota de Pagamento</Label>
+            <Input value={paymentNote} onChange={(e) => setPaymentNote(e.target.value)} placeholder="Ex: PAGAMENTO 50%" />
+          </div>
+          <div className="flex flex-wrap gap-4 pt-1">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={isClientVisible} onCheckedChange={(v) => setIsClientVisible(!!v)} />
+              Visível para cliente
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={isDailyDetail} onCheckedChange={(v) => setIsDailyDetail(!!v)} />
+              Detalhe diário
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={requiresPresence} onCheckedChange={(v) => setRequiresPresence(!!v)} />
+              Requer presença
+            </label>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
