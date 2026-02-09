@@ -15,6 +15,7 @@ import LeadsPipeline from "./pages/LeadsPipeline";
 import LeadsProposals from "./pages/LeadsProposals";
 import LeadsContracts from "./pages/LeadsContracts";
 import SiteTracking from "./pages/SiteTracking";
+import ConstructionTasks from "./pages/ConstructionTasks";
 import Suppliers from "./pages/Suppliers";
 import Documents from "./pages/Documents";
 import Reports from "./pages/Reports";
@@ -65,6 +66,7 @@ const App = () => (
               <Route path="/leads/contracts" element={<LeadsContracts />} />
               {/* Obra */}
               <Route path="/construction/tracking" element={<SiteTracking />} />
+              <Route path="/construction/tasks" element={<ConstructionTasks />} />
               <Route path="/construction/suppliers" element={<Suppliers />} />
               <Route path="/construction/documents" element={<Documents />} />
               <Route path="/construction/reports" element={<Reports />} />

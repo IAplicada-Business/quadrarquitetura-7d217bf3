@@ -38,6 +38,7 @@ const menuGroups = [
     label: "Obra",
     items: [
       { title: "Acompanhamento", url: "/construction/tracking" },
+      { title: "Tarefas", url: "/construction/tasks" },
       { title: "Fornecedores", url: "/construction/suppliers" },
       { title: "Documentos", url: "/construction/documents" },
       { title: "Relatórios", url: "/construction/reports" },
