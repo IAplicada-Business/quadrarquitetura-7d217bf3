@@ -109,7 +109,7 @@ export default function LeadsPipeline() {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-4 animate-fade-in flex flex-col h-full">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -221,16 +221,16 @@ export default function LeadsPipeline() {
 
       {/* Kanban View */}
       {view === "kanban" && (
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="flex gap-4 overflow-x-auto pb-4 flex-1 min-h-0">
           {LEAD_STATUSES.map((status) => {
             const columnLeads = filtered.filter((l) => l.status === status);
             return (
-              <div key={status} className="min-w-[250px] flex-1 flex-shrink-0">
+              <div key={status} className="min-w-[250px] flex-1 flex-shrink-0 flex flex-col">
                 <div className={`rounded-t-lg px-3 py-2 border ${statusColors[status]} font-medium text-sm flex items-center justify-between`}>
                   <span>{leadStatusLabels[status]}</span>
                   <Badge variant="outline" className="text-xs">{columnLeads.length}</Badge>
                 </div>
-                <div className="border border-t-0 rounded-b-lg bg-muted/30 min-h-[200px] p-2 space-y-2">
+                <div className="border border-t-0 rounded-b-lg bg-muted/30 flex-1 min-h-[400px] p-2 space-y-2 overflow-y-auto">
                   {columnLeads.map((lead) => (
                     <Card key={lead.id} className="shadow-sm">
                       <CardContent className="p-3 space-y-2">
