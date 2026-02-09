@@ -242,54 +242,171 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_templates: {
+        Row: {
+          clause_confidentiality: string | null
+          clause_duration: string | null
+          clause_general: string | null
+          clause_object: string | null
+          clause_obligations_client: string | null
+          clause_obligations_contractor: string | null
+          clause_scope: string | null
+          clause_termination: string | null
+          clause_value: string | null
+          contract_type: string | null
+          created_at: string
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clause_confidentiality?: string | null
+          clause_duration?: string | null
+          clause_general?: string | null
+          clause_object?: string | null
+          clause_obligations_client?: string | null
+          clause_obligations_contractor?: string | null
+          clause_scope?: string | null
+          clause_termination?: string | null
+          clause_value?: string | null
+          contract_type?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          clause_confidentiality?: string | null
+          clause_duration?: string | null
+          clause_general?: string | null
+          clause_object?: string | null
+          clause_obligations_client?: string | null
+          clause_obligations_contractor?: string | null
+          clause_scope?: string | null
+          clause_termination?: string | null
+          clause_value?: string | null
+          contract_type?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       contracts: {
         Row: {
           address: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
           city: string | null
           clauses: string | null
+          client_address: string | null
+          client_cpf_cnpj: string | null
+          client_email: string | null
           client_id: string | null
+          client_name: string | null
+          client_phone: string | null
+          construction_neighborhood: string | null
+          contract_number: string | null
           created_at: string
+          created_by: string | null
+          custom_clauses: string | null
+          estimated_duration: string | null
           id: string
+          notes: string | null
           payment_conditions: string | null
+          payment_method: string | null
           project_id: string | null
           proposal_id: string
+          sent_at: string | null
+          service_description: string | null
+          signed_at: string | null
           start_date: string | null
           status: string
+          template_id: string | null
           template_name: string | null
+          title: string | null
           updated_at: string
           user_id: string
           value: number | null
         }
         Insert: {
           address?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           city?: string | null
           clauses?: string | null
+          client_address?: string | null
+          client_cpf_cnpj?: string | null
+          client_email?: string | null
           client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          construction_neighborhood?: string | null
+          contract_number?: string | null
           created_at?: string
+          created_by?: string | null
+          custom_clauses?: string | null
+          estimated_duration?: string | null
           id?: string
+          notes?: string | null
           payment_conditions?: string | null
+          payment_method?: string | null
           project_id?: string | null
           proposal_id: string
+          sent_at?: string | null
+          service_description?: string | null
+          signed_at?: string | null
           start_date?: string | null
           status?: string
+          template_id?: string | null
           template_name?: string | null
+          title?: string | null
           updated_at?: string
           user_id: string
           value?: number | null
         }
         Update: {
           address?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           city?: string | null
           clauses?: string | null
+          client_address?: string | null
+          client_cpf_cnpj?: string | null
+          client_email?: string | null
           client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          construction_neighborhood?: string | null
+          contract_number?: string | null
           created_at?: string
+          created_by?: string | null
+          custom_clauses?: string | null
+          estimated_duration?: string | null
           id?: string
+          notes?: string | null
           payment_conditions?: string | null
+          payment_method?: string | null
           project_id?: string | null
           proposal_id?: string
+          sent_at?: string | null
+          service_description?: string | null
+          signed_at?: string | null
           start_date?: string | null
           status?: string
+          template_id?: string | null
           template_name?: string | null
+          title?: string | null
           updated_at?: string
           user_id?: string
           value?: number | null
@@ -314,6 +431,13 @@ export type Database = {
             columns: ["proposal_id"]
             isOneToOne: false
             referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -524,13 +648,61 @@ export type Database = {
           },
         ]
       }
+      lead_form_submissions: {
+        Row: {
+          created_at: string
+          email: string | null
+          generated_lead_id: string | null
+          id: string
+          message: string | null
+          name: string
+          phone: string | null
+          processed: boolean | null
+          project_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          generated_lead_id?: string | null
+          id?: string
+          message?: string | null
+          name: string
+          phone?: string | null
+          processed?: boolean | null
+          project_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          generated_lead_id?: string | null
+          id?: string
+          message?: string | null
+          name?: string
+          phone?: string | null
+          processed?: boolean | null
+          project_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_form_submissions_generated_lead_id_fkey"
+            columns: ["generated_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
+          construction_type: string | null
+          converted_at: string | null
           converted_client_id: string | null
           created_at: string
           email: string | null
           id: string
+          lost_reason: string | null
           meeting_date: string | null
+          message: string | null
           name: string
           notes: string | null
           origin: Database["public"]["Enums"]["client_origin"]
@@ -538,16 +710,21 @@ export type Database = {
           phone_secondary: string | null
           project_type: Database["public"]["Enums"]["client_type"]
           responsible: string | null
+          source_detail: string | null
           status: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          construction_type?: string | null
+          converted_at?: string | null
           converted_client_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          lost_reason?: string | null
           meeting_date?: string | null
+          message?: string | null
           name: string
           notes?: string | null
           origin?: Database["public"]["Enums"]["client_origin"]
@@ -555,16 +732,21 @@ export type Database = {
           phone_secondary?: string | null
           project_type?: Database["public"]["Enums"]["client_type"]
           responsible?: string | null
+          source_detail?: string | null
           status?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          construction_type?: string | null
+          converted_at?: string | null
           converted_client_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          lost_reason?: string | null
           meeting_date?: string | null
+          message?: string | null
           name?: string
           notes?: string | null
           origin?: Database["public"]["Enums"]["client_origin"]
@@ -572,6 +754,7 @@ export type Database = {
           phone_secondary?: string | null
           project_type?: Database["public"]["Enums"]["client_type"]
           responsible?: string | null
+          source_detail?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -958,55 +1141,180 @@ export type Database = {
           },
         ]
       }
-      proposals: {
+      proposal_templates: {
         Row: {
           created_at: string
+          differentials: string | null
+          display_order: number | null
+          footer: string | null
+          id: string
+          introduction: string | null
+          is_active: boolean | null
+          methodology: string | null
+          name: string
+          template_type: string | null
+          terms: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          differentials?: string | null
+          display_order?: number | null
+          footer?: string | null
+          id?: string
+          introduction?: string | null
+          is_active?: boolean | null
+          methodology?: string | null
+          name: string
+          template_type?: string | null
+          terms?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          differentials?: string | null
+          display_order?: number | null
+          footer?: string | null
+          id?: string
+          introduction?: string | null
+          is_active?: boolean | null
+          methodology?: string | null
+          name?: string
+          template_type?: string | null
+          terms?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      proposals: {
+        Row: {
+          approved_at: string | null
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          custom_services: string | null
           deadline: string | null
           discount_percent: number | null
+          discount_value: number | null
+          estimated_area: number | null
+          estimated_duration: string | null
+          final_value: number | null
           id: string
+          includes_3d_visualization: boolean | null
+          includes_architectural_project: boolean | null
+          includes_construction_management: boolean | null
+          includes_interior_design: boolean | null
           lead_id: string
+          notes: string | null
           payment_conditions: string | null
+          payment_method: string | null
           project_description: string | null
+          project_type: string | null
+          proposal_number: string | null
+          rejected_at: string | null
+          rejection_reason: string | null
+          sent_at: string | null
           status: string
+          template_id: string | null
           template_name: string | null
+          title: string | null
           updated_at: string
           user_id: string
           value: number | null
         }
         Insert: {
+          approved_at?: string | null
+          client_id?: string | null
           created_at?: string
+          created_by?: string | null
+          custom_services?: string | null
           deadline?: string | null
           discount_percent?: number | null
+          discount_value?: number | null
+          estimated_area?: number | null
+          estimated_duration?: string | null
+          final_value?: number | null
           id?: string
+          includes_3d_visualization?: boolean | null
+          includes_architectural_project?: boolean | null
+          includes_construction_management?: boolean | null
+          includes_interior_design?: boolean | null
           lead_id: string
+          notes?: string | null
           payment_conditions?: string | null
+          payment_method?: string | null
           project_description?: string | null
+          project_type?: string | null
+          proposal_number?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          sent_at?: string | null
           status?: string
+          template_id?: string | null
           template_name?: string | null
+          title?: string | null
           updated_at?: string
           user_id: string
           value?: number | null
         }
         Update: {
+          approved_at?: string | null
+          client_id?: string | null
           created_at?: string
+          created_by?: string | null
+          custom_services?: string | null
           deadline?: string | null
           discount_percent?: number | null
+          discount_value?: number | null
+          estimated_area?: number | null
+          estimated_duration?: string | null
+          final_value?: number | null
           id?: string
+          includes_3d_visualization?: boolean | null
+          includes_architectural_project?: boolean | null
+          includes_construction_management?: boolean | null
+          includes_interior_design?: boolean | null
           lead_id?: string
+          notes?: string | null
           payment_conditions?: string | null
+          payment_method?: string | null
           project_description?: string | null
+          project_type?: string | null
+          proposal_number?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          sent_at?: string | null
           status?: string
+          template_id?: string | null
           template_name?: string | null
+          title?: string | null
           updated_at?: string
           user_id?: string
           value?: number | null
         }
         Relationships: [
           {
+            foreignKeyName: "proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "proposals_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_templates"
             referencedColumns: ["id"]
           },
         ]
