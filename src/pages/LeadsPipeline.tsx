@@ -2,8 +2,9 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus, Phone, Mail, ArrowRight, Trash2, Pencil, UserCheck,
-  LayoutGrid, List, Search, Filter,
+  LayoutGrid, List, Search, Filter, Users, CalendarCheck, TrendingUp, XCircle,
 } from "lucide-react";
+import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -158,6 +159,65 @@ export default function LeadsPipeline() {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Metrics Cards */}
+      {(() => {
+        const total = leads.length;
+        const novos = leads.filter((l) => l.status === "novo").length;
+        const reunioes = leads.filter((l) => l.status === "reuniao_agendada").length;
+        const fechados = leads.filter((l) => l.status === "fechado").length;
+        const perdidos = leads.filter((l) => l.status === "perdido").length;
+        const conversionRate = total > 0 ? Math.round((fechados / total) * 100) : 0;
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <Card className="bg-blue-50/50 border-blue-100">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 bg-blue-100 rounded-full text-blue-600"><Users className="h-5 w-5" /></div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Total Leads</p>
+                  <p className="text-xl font-bold text-blue-700">{total}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-amber-50/50 border-amber-100">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 bg-amber-100 rounded-full text-amber-600"><Plus className="h-5 w-5" /></div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Novos</p>
+                  <p className="text-xl font-bold text-amber-700">{novos}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-purple-50/50 border-purple-100">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 bg-purple-100 rounded-full text-purple-600"><CalendarCheck className="h-5 w-5" /></div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Reuniões</p>
+                  <p className="text-xl font-bold text-purple-700">{reunioes}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-green-50/50 border-green-100">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 bg-green-100 rounded-full text-green-600"><TrendingUp className="h-5 w-5" /></div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Conversão</p>
+                  <p className="text-xl font-bold text-green-700">{conversionRate}%</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-red-50/50 border-red-100">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 bg-red-100 rounded-full text-red-600"><XCircle className="h-5 w-5" /></div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Perdidos</p>
+                  <p className="text-xl font-bold text-red-700">{perdidos}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      })()}
 
       {/* Kanban View */}
       {view === "kanban" && (
