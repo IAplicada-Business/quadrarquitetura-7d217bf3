@@ -70,7 +70,7 @@ export function ProjectSummaryTab({ project }: ProjectSummaryTabProps) {
           <CardContent>
             <div className="flex items-end justify-between mb-2">
               <span className="text-2xl font-bold">{progress}%</span>
-              <Badge variant="outline">{statusLabels[project.status as string] || project.status}</Badge>
+              <Badge variant="outline">{statusLabels[project.status as string] || String(project.status ?? "")}</Badge>
             </div>
             <Progress value={progress} className="h-2" />
           </CardContent>
