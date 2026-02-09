@@ -1,6 +1,4 @@
-// Centralized project status configuration
-// Status simplificados: 7 fases macro
-
+// Status do projeto conforme especificação
 export const PROJECT_STATUSES = [
   "proposta",
   "contrato",
@@ -26,10 +24,10 @@ export const statusLabels: Record<string, string> = {
 export const statusColors: Record<string, string> = {
   proposta: "bg-muted text-muted-foreground",
   contrato: "bg-primary/10 text-primary",
-  projeto: "bg-accent/10 text-accent-foreground",
-  planejamento: "bg-secondary text-secondary-foreground",
+  projeto: "bg-blue-100 text-blue-700",
+  planejamento: "bg-indigo-100 text-indigo-700",
   mobilizacao: "bg-warning/10 text-warning",
-  execucao: "bg-success/10 text-success",
+  execucao: "bg-orange-100 text-orange-700",
   concluido: "bg-success/20 text-success",
 };
 

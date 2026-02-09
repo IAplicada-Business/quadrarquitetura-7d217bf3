@@ -1,12 +1,109 @@
-import { BarChart3 } from "lucide-react";
-import { PlaceholderPage } from "@/components/PlaceholderPage";
+import { useState } from "react";
+import { Download, Printer, Filter, BarChart3, PieChart, TrendingUp, Calendar } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+
+const REPORT_TYPES = [
+  { id: "semanal", name: "Relatório Semanal de Obra", icon: Calendar, desc: "Resumo de atividades, fotos e pendências" },
+  { id: "financeiro", name: "Relatório Financeiro", icon: TrendingUp, desc: "Fluxo de caixa, gastos por categoria e saldo" },
+  { id: "fornecedor", name: "Relatório de Fornecedores", icon: BarChart3, desc: "Desempenho, pagamentos e contratos" },
+  { id: "cliente", name: "Prestação de Contas (Cliente)", icon: PieChart, desc: "Relatório formatado para apresentação ao cliente" },
+];
 
 export default function Reports() {
+  const { user } = useAuth();
+  const [selectedProject, setSelectedProject] = useState<string>("all");
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects_simple"],
+    queryFn: async () => {
+      const { data } = await supabase.from("projects").select("id, name").order("name");
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
-    <PlaceholderPage
-      title="Relatórios"
-      description="Relatórios semanais de obra e exportações"
-      icon={BarChart3}
-    />
+    <div className="space-y-6 animate-fade-in print:p-0">
+      <div className="flex justify-between items-center print:hidden">
+        <div>
+          <h1 className="text-2xl font-bold text-display">Relatórios</h1>
+          <p className="text-muted-foreground">Geração e exportação de relatórios gerenciais</p>
+        </div>
+      </div>
+
+      {/* Filters - Hidden on Print */}
+      <div className="flex gap-4 p-4 bg-muted/30 rounded-lg border print:hidden">
+        <div className="w-[300px]">
+          <Select value={selectedProject} onValueChange={setSelectedProject}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o Projeto" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Projetos</SelectItem>
+              {projects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button variant="outline" onClick={handlePrint} disabled={!selectedType}>
+          <Printer className="h-4 w-4 mr-2" /> Imprimir / PDF
+        </Button>
+      </div>
+
+      {/* Report Type Selection */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 print:hidden">
+        {REPORT_TYPES.map((type) => (
+          <Card 
+            key={type.id} 
+            className={`cursor-pointer hover:border-primary/50 transition-all ${selectedType === type.id ? "border-primary bg-primary/5" : ""}`}
+            onClick={() => setSelectedType(type.id)}
+          >
+            <CardHeader className="pb-2">
+              <div className={`p-2 w-fit rounded-lg mb-2 ${selectedType === type.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                <type.icon className="h-6 w-6" />
+              </div>
+              <CardTitle className="text-base">{type.name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="text-xs">{type.desc}</CardDescription>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Preview Area */}
+      {selectedType ? (
+        <div className="border rounded-lg bg-white min-h-[600px] p-8 shadow-sm print:shadow-none print:border-none">
+          <div className="text-center mb-8 border-b pb-4">
+            <h2 className="text-2xl font-bold text-gray-800 uppercase tracking-wide">
+              {REPORT_TYPES.find(t => t.id === selectedType)?.name}
+            </h2>
+            <p className="text-gray-500 mt-1">
+              {selectedProject === "all" ? "Relatório Geral" : projects.find(p => p.id === selectedProject)?.name}
+            </p>
+            <p className="text-xs text-gray-400 mt-2">Gerado em {new Date().toLocaleDateString()}</p>
+          </div>
+
+          <div className="flex items-center justify-center h-64 text-muted-foreground italic border-2 border-dashed rounded-lg bg-gray-50 print:border-gray-200">
+            Preview do relatório com dados reais será exibido aqui.
+            <br />
+            (Implementação dos dados em breve)
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg print:hidden">
+          Selecione um tipo de relatório acima para visualizar.
+        </div>
+      )}
+    </div>
   );
 }

@@ -3,6 +3,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 
+export interface ScopeItem {
+  id: string;
+  discipline: string;
+  description: string | null;
+  suppliers_to_quote: string | null;
+  payment_terms: string | null;
+  entry_order: number | null;
+  service_duration: string | null;
+  parent_id: string | null;
+  estimated_value: number | null;
+  scope_type: string | null;
+  activities: string | null;
+}
+
 export function useScopeItems(projectId: string | undefined) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -17,26 +31,18 @@ export function useScopeItems(projectId: string | undefined) {
         .order("entry_order", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return data;
+      return data as ScopeItem[];
     },
     enabled: !!projectId,
   });
 
   const create = useMutation({
-    mutationFn: async (item: {
-      discipline: string;
-      description?: string;
-      suppliers_to_quote?: string;
-      payment_terms?: string;
-      entry_order?: number;
-      service_duration?: string;
-      parent_id?: string;
-    }) => {
+    mutationFn: async (item: Partial<ScopeItem>) => {
       const { error } = await supabase.from("scope_items").insert({
         ...item,
         project_id: projectId!,
         user_id: user!.id,
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -47,8 +53,8 @@ export function useScopeItems(projectId: string | undefined) {
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string } & Record<string, unknown>) => {
-      const { error } = await supabase.from("scope_items").update(updates).eq("id", id);
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<ScopeItem>) => {
+      const { error } = await supabase.from("scope_items").update(updates as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
