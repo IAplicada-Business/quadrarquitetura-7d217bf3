@@ -1,11 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { X } from "lucide-react";
+
+interface Project {
+  id: string;
+  name: string;
+}
 
 interface ConstructionTaskFormProps {
   open: boolean;
@@ -13,6 +20,7 @@ interface ConstructionTaskFormProps {
   onSubmit: (data: Record<string, unknown>) => void;
   initialData?: Record<string, unknown> | null;
   isLoading?: boolean;
+  projects: Project[];
 }
 
 const statusOptions = [
@@ -22,39 +30,77 @@ const statusOptions = [
   { value: "atrasado", label: "Atrasado" },
 ];
 
-export function ConstructionTaskForm({ open, onOpenChange, onSubmit, initialData, isLoading }: ConstructionTaskFormProps) {
+const taskTypeOptions = [
+  "Alvenaria",
+  "Elétrica",
+  "Hidráulica",
+  "Pintura",
+  "Acabamento",
+  "Demolição",
+  "Estrutura",
+  "Impermeabilização",
+  "Esquadrias",
+  "Outros",
+];
+
+export function ConstructionTaskForm({ open, onOpenChange, onSubmit, initialData, isLoading, projects }: ConstructionTaskFormProps) {
+  const [projectId, setProjectId] = useState("");
   const [taskName, setTaskName] = useState("");
-  const [supplierName, setSupplierName] = useState("");
+  const [responsibles, setResponsibles] = useState<string[]>([]);
+  const [responsibleInput, setResponsibleInput] = useState("");
   const [status, setStatus] = useState("planejado");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [progress, setProgress] = useState(0);
-  const [discipline, setDiscipline] = useState("");
+  const [taskType, setTaskType] = useState("");
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
     if (open) {
+      setProjectId((initialData?.project_id as string) || "");
       setTaskName((initialData?.task_name as string) || "");
-      setSupplierName((initialData?.supplier_name as string) || "");
+      const supplierStr = (initialData?.supplier_name as string) || "";
+      setResponsibles(supplierStr ? supplierStr.split(",").map((s) => s.trim()).filter(Boolean) : []);
+      setResponsibleInput("");
       setStatus((initialData?.status as string) || "planejado");
       setStartDate((initialData?.start_date as string) || "");
       setEndDate((initialData?.end_date as string) || "");
       setProgress(Number(initialData?.progress_percentage) || 0);
-      setDiscipline((initialData?.discipline as string) || "");
+      setTaskType((initialData?.discipline as string) || "");
       setNotes((initialData?.payment_note as string) || "");
     }
   }, [initialData, open]);
 
+  const addResponsible = () => {
+    const name = responsibleInput.trim();
+    if (name && !responsibles.includes(name)) {
+      setResponsibles([...responsibles, name]);
+    }
+    setResponsibleInput("");
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addResponsible();
+    }
+  };
+
+  const removeResponsible = (name: string) => {
+    setResponsibles(responsibles.filter((r) => r !== name));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
+      project_id: projectId,
       task_name: taskName,
-      supplier_name: supplierName || null,
+      supplier_name: responsibles.join(", ") || null,
       status,
       start_date: startDate || null,
       end_date: endDate || null,
       progress_percentage: progress,
-      discipline: discipline || null,
+      discipline: taskType || null,
       payment_note: notes || null,
     });
     onOpenChange(false);
@@ -68,13 +114,60 @@ export function ConstructionTaskForm({ open, onOpenChange, onSubmit, initialData
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
+            <Label>Projeto *</Label>
+            <Select value={projectId} onValueChange={setProjectId} required>
+              <SelectTrigger><SelectValue placeholder="Selecione o projeto" /></SelectTrigger>
+              <SelectContent>
+                {projects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="taskName">Nome da Tarefa *</Label>
             <Input id="taskName" value={taskName} onChange={(e) => setTaskName(e.target.value)} required placeholder="Ex: Alvenaria do pavimento térreo" />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="supplierName">Responsável / Fornecedor</Label>
-            <Input id="supplierName" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="Ex: João Silva" />
+            <Label>Tipo de Tarefa</Label>
+            <Select value={taskType} onValueChange={setTaskType}>
+              <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+              <SelectContent>
+                {taskTypeOptions.map((t) => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Responsáveis</Label>
+            <div className="flex gap-2">
+              <Input
+                value={responsibleInput}
+                onChange={(e) => setResponsibleInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Digite e pressione Enter"
+                className="flex-1"
+              />
+              <Button type="button" variant="outline" size="sm" onClick={addResponsible} className="shrink-0">
+                Adicionar
+              </Button>
+            </div>
+            {responsibles.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {responsibles.map((name) => (
+                  <Badge key={name} variant="secondary" className="gap-1 pr-1">
+                    {name}
+                    <button type="button" onClick={() => removeResponsible(name)} className="ml-1 hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -106,18 +199,13 @@ export function ConstructionTaskForm({ open, onOpenChange, onSubmit, initialData
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="discipline">Disciplina</Label>
-            <Input id="discipline" value={discipline} onChange={(e) => setDiscipline(e.target.value)} placeholder="Ex: Elétrica, Hidráulica" />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="notes">Observações</Label>
             <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observações sobre a tarefa..." rows={3} />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={isLoading}>{isLoading ? "Salvando..." : "Salvar"}</Button>
+            <Button type="submit" disabled={isLoading || !projectId}>{isLoading ? "Salvando..." : "Salvar"}</Button>
           </div>
         </form>
       </DialogContent>
