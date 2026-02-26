@@ -49,6 +49,7 @@ const menuGroups: MenuGroup[] = [
         subItems: [
           { title: "Tarefas por Obra", url: "/construction/tasks" },
           { title: "Histórico de Voz", url: "/construction/voice-tasks" },
+          { title: "Agenda", url: "/construction/agenda" },
         ],
       },
       { title: "Fornecedores", url: "/construction/suppliers" },
