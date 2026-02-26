@@ -29,7 +29,7 @@ export function useVoiceTasks(projectId?: string) {
     queryKey: ["voice_tasks", projectId],
     queryFn: async () => {
       let q = supabase
-        .from("voice_tasks" as any)
+        .from("voice_tasks")
         .select("*")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
@@ -71,13 +71,19 @@ export function useVoiceTasks(projectId?: string) {
           source_transcript: transcript,
         };
 
+        console.log("[VoiceTasks] Inserting parent task:", parentRecord);
+
         const { data: parent, error: parentError } = await supabase
-          .from("voice_tasks" as any)
+          .from("voice_tasks")
           .insert(parentRecord)
           .select()
           .single();
 
-        if (parentError) throw parentError;
+        if (parentError) {
+          console.error("[VoiceTasks] Parent insert error:", parentError);
+          throw parentError;
+        }
+        console.log("[VoiceTasks] Parent created:", parent);
         records.push(parent);
 
         if (task.subtasks?.length) {
@@ -95,13 +101,18 @@ export function useVoiceTasks(projectId?: string) {
               source_transcript: transcript,
             };
 
+            console.log("[VoiceTasks] Inserting subtask:", subRecord);
+
             const { data: child, error: childError } = await supabase
-              .from("voice_tasks" as any)
+              .from("voice_tasks")
               .insert(subRecord)
               .select()
               .single();
 
-            if (childError) throw childError;
+            if (childError) {
+              console.error("[VoiceTasks] Subtask insert error:", childError);
+              throw childError;
+            }
             records.push(child);
           }
         }
@@ -117,6 +128,7 @@ export function useVoiceTasks(projectId?: string) {
       });
     },
     onError: (error: any) => {
+      console.error("[VoiceTasks] createBatch error:", error);
       toast({
         title: "Erro ao criar tarefas",
         description: error.message,
@@ -128,7 +140,7 @@ export function useVoiceTasks(projectId?: string) {
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<VoiceTask> & { id: string }) => {
       const { error } = await supabase
-        .from("voice_tasks" as any)
+        .from("voice_tasks")
         .update(updates as any)
         .eq("id", id);
       if (error) throw error;
@@ -141,7 +153,7 @@ export function useVoiceTasks(projectId?: string) {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("voice_tasks" as any)
+        .from("voice_tasks")
         .delete()
         .eq("id", id);
       if (error) throw error;

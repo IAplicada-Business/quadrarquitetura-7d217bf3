@@ -61,14 +61,19 @@ export function VoiceAgentDialog({ open, onOpenChange }: VoiceAgentDialogProps) 
       setVoiceState("processing");
 
       try {
+        console.log("[VoiceAgent] Sending transcript:", transcript);
         const { data, error } = await supabase.functions.invoke("process-voice-command", {
           body: { transcript, projects },
         });
 
+        console.log("[VoiceAgent] Edge function response:", { data, error });
+
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
 
-        const resolvedProjectId = data.project_id || selectedProjectId;
+        // Treat string "null" or empty as actual null
+        const aiProjectId = data.project_id && data.project_id !== "null" ? data.project_id : null;
+        const resolvedProjectId = aiProjectId || selectedProjectId;
         if (!resolvedProjectId) {
           toast({
             title: "Projeto não identificado",

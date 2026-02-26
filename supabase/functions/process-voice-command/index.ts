@@ -170,6 +170,13 @@ Extraia as tarefas mencionadas e retorne no formato estruturado.`;
 
     const result = JSON.parse(toolCall.function.arguments);
 
+    // Ensure project_id is actual null, not string "null"
+    if (!result.project_id || result.project_id === "null") {
+      result.project_id = null;
+    }
+
+    console.log("Parsed result:", JSON.stringify(result));
+
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
