@@ -1,34 +1,19 @@
 
 
-## Correção: Tarefas de voz salvam em `schedule_tasks` + seleção de projeto funcional
+## Ajuste: padronizar tamanho dos botões do header
 
-### Problemas identificados
-
-1. **Tarefas só vão para `voice_tasks`** — a página "Tarefas por Obra" lê de `schedule_tasks`, então as tarefas criadas por voz nunca aparecem lá.
-2. **Select de projeto não funciona** — na screenshot o select mostra "teste" mas parece ser o projeto selecionado corretamente. O problema principal é o item 1.
+Os três botões têm tamanhos inconsistentes:
+- **Microfone**: `p-2.5` com ícone `h-4 w-4` → menor
+- **Notificações**: `p-2.5` com ícone `h-5 w-5` → maior
+- **Avatar**: `p-1` com Avatar `h-8 w-8` → diferente
 
 ### Alterações
 
-**`src/components/layout/VoiceAgentDialog.tsx`**
-- Após criar em `voice_tasks` via `createBatch`, inserir também em `schedule_tasks` para cada tarefa criada:
-  - `task_name` = task.title
-  - `payment_note` = task.description
-  - `project_id` = resolvedProjectId
-  - `user_id` = user.id
-  - `status` = "planejado"
-  - `discipline` = task.category (se aplicável)
-- Invalidar query `["all_schedule_tasks"]` após inserção para atualizar a página de Tarefas por Obra
-- Importar `useQueryClient` e invalidar ambas as queries
+**`src/components/layout/AppHeader.tsx`** (linha 96):
+- Microfone: trocar ícone de `h-4 w-4` para `h-5 w-5` (igual ao sino)
 
-### Mapeamento de campos
-```text
-voice_tasks.title       → schedule_tasks.task_name
-voice_tasks.description → schedule_tasks.payment_note
-voice_tasks.category    → schedule_tasks.discipline
-voice_tasks.status      → schedule_tasks.status ("planejado")
-voice_tasks.project_id  → schedule_tasks.project_id
-voice_tasks.user_id     → schedule_tasks.user_id
-```
+**`src/components/layout/AppHeader.tsx`** (linha 106):
+- Avatar: trocar `p-1` para `p-0.5` e Avatar de `h-8 w-8` para `h-[30px] w-[30px]` para que o botão total fique com tamanho equivalente aos outros (~40px)
 
-Mantém `voice_tasks` como histórico e adiciona `schedule_tasks` como tabela operacional.
+Resultado: todos os 3 botões ficam com ~40px de diâmetro total.
 
