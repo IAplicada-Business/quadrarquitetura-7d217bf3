@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VoiceChat } from "@/components/ui/ia-siri-chat";
 import { useVoiceTasks } from "@/hooks/useVoiceTasks";
@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, AlertCircle, X } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -37,6 +37,7 @@ const categoryLabels: Record<string, string> = {
 export function VoiceAgentDialog({ open, onOpenChange }: VoiceAgentDialogProps) {
   const { user } = useAuth();
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const selectedProjectIdRef = useRef<string>("");
   const [voiceState, setVoiceState] = useState<"idle" | "listening" | "processing" | "speaking">("idle");
   const [sessionTasks, setSessionTasks] = useState<any[]>([]);
 
@@ -54,6 +55,29 @@ export function VoiceAgentDialog({ open, onOpenChange }: VoiceAgentDialogProps) 
     enabled: !!user && open,
   });
 
+  // Auto-select first project when dialog opens and projects load
+  useEffect(() => {
+    if (open && projects.length > 0 && !selectedProjectIdRef.current) {
+      const firstId = projects[0].id;
+      setSelectedProjectId(firstId);
+      selectedProjectIdRef.current = firstId;
+    }
+  }, [open, projects]);
+
+  // Reset when dialog closes
+  useEffect(() => {
+    if (!open) {
+      selectedProjectIdRef.current = "";
+      setSelectedProjectId("");
+      setSessionTasks([]);
+    }
+  }, [open]);
+
+  const handleProjectChange = useCallback((value: string) => {
+    setSelectedProjectId(value);
+    selectedProjectIdRef.current = value;
+  }, []);
+
   const { createBatch, isCreating } = useVoiceTasks();
   const queryClient = useQueryClient();
 
@@ -62,9 +86,12 @@ export function VoiceAgentDialog({ open, onOpenChange }: VoiceAgentDialogProps) 
       setVoiceState("processing");
 
       try {
-        console.log("[VoiceAgent] Sending transcript:", transcript);
+        // Read from ref to avoid stale closure
+        const manualProjectId = selectedProjectIdRef.current;
+
+        console.log("[VoiceAgent] Sending transcript:", transcript, "manualProjectId:", manualProjectId);
         const { data, error } = await supabase.functions.invoke("process-voice-command", {
-          body: { transcript, projects },
+          body: { transcript, projects, selectedProjectId: manualProjectId },
         });
 
         console.log("[VoiceAgent] Edge function response:", { data, error });
@@ -72,10 +99,14 @@ export function VoiceAgentDialog({ open, onOpenChange }: VoiceAgentDialogProps) 
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
 
-        // Treat string "null" or empty as actual null
+        // Validate AI project_id against local projects
         const aiProjectId = data.project_id && data.project_id !== "null" ? data.project_id : null;
-        const resolvedProjectId = aiProjectId || selectedProjectId;
-        if (!resolvedProjectId) {
+        const validAiProjectId = aiProjectId && projects.some((p) => p.id === aiProjectId) ? aiProjectId : null;
+
+        // Prioritize manual selection over AI
+        const resolvedProjectId = manualProjectId || validAiProjectId;
+
+        if (!resolvedProjectId || !projects.some((p) => p.id === resolvedProjectId)) {
           toast({
             title: "Projeto não identificado",
             description: "Selecione um projeto ou mencione o nome do projeto no comando de voz.",
@@ -95,22 +126,33 @@ export function VoiceAgentDialog({ open, onOpenChange }: VoiceAgentDialogProps) 
         setVoiceState("speaking");
         const created = await createBatch({ tasks, projectId: resolvedProjectId, transcript });
 
-        // Also insert into schedule_tasks so they appear in "Tarefas por Obra"
-        for (const task of created) {
-          const t = task as any;
-          if (!t.parent_id) {
-            await supabase.from("schedule_tasks").insert({
-              task_name: t.title,
-              payment_note: t.description || null,
-              discipline: t.category || null,
-              project_id: resolvedProjectId,
-              user_id: user!.id,
-              status: "planejado",
+        // Insert into schedule_tasks with explicit error checking
+        const parentTasks = (created as any[]).filter((t: any) => !t.parent_id);
+        if (parentTasks.length > 0) {
+          const scheduleRows = parentTasks.map((t: any) => ({
+            task_name: t.title,
+            payment_note: t.description || null,
+            discipline: t.category || null,
+            project_id: resolvedProjectId,
+            user_id: user!.id,
+            status: "planejado",
+          }));
+
+          const { error: scheduleError } = await supabase.from("schedule_tasks").insert(scheduleRows);
+
+          if (scheduleError) {
+            console.error("[VoiceAgent] schedule_tasks insert error:", scheduleError);
+            toast({
+              title: "Tarefas salvas parcialmente",
+              description: "As tarefas foram registradas no histórico, mas houve erro ao salvar em Obras/Tarefas.",
+              variant: "destructive",
             });
           }
         }
+
         queryClient.invalidateQueries({ queryKey: ["schedule_tasks"] });
         queryClient.invalidateQueries({ queryKey: ["all_schedule_tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["voice_tasks"] });
 
         setSessionTasks((prev) => [...created, ...prev]);
         setVoiceState("idle");
@@ -120,7 +162,7 @@ export function VoiceAgentDialog({ open, onOpenChange }: VoiceAgentDialogProps) 
         setVoiceState("idle");
       }
     },
-    [selectedProjectId, projects, createBatch]
+    [projects, createBatch, user, queryClient]
   );
 
   return (
@@ -132,7 +174,7 @@ export function VoiceAgentDialog({ open, onOpenChange }: VoiceAgentDialogProps) 
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold text-display">Assistente de Voz</h2>
           <div className="flex items-center gap-3">
-            <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+            <Select value={selectedProjectId} onValueChange={handleProjectChange}>
               <SelectTrigger className="w-[200px] h-8 text-xs">
                 <SelectValue placeholder="Selecionar projeto" />
               </SelectTrigger>
