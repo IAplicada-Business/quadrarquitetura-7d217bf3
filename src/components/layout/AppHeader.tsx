@@ -103,8 +103,8 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
         {/* User dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-sidebar-ring focus:ring-offset-2 focus:ring-offset-sidebar">
-              <Avatar className="h-8 w-8">
+            <button className="flex items-center gap-2 p-1 rounded-full bg-secondary shadow-sm hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-sidebar-ring focus:ring-offset-2 focus:ring-offset-sidebar">
+              <Avatar className="h-8 w-8 ring-0">
                 <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-medium">
                   {initials}
                 </AvatarFallback>

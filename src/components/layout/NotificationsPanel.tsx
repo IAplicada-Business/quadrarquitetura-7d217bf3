@@ -75,7 +75,7 @@ export function NotificationsPanel() {
       <Popover>
         <PopoverTrigger asChild>
           <button
-            className="relative p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+            className="relative p-2.5 rounded-full bg-secondary text-accent shadow-sm hover:bg-secondary/80 transition-colors"
             aria-label="Notificações"
           >
             <Bell className="h-5 w-5" />
