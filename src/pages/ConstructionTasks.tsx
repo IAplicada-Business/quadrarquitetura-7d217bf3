@@ -58,16 +58,17 @@ export default function ConstructionTasks() {
 
   const createTask = useMutation({
     mutationFn: async (item: Record<string, unknown>) => {
-      const projectId = selectedProject !== "all" ? selectedProject : projects[0]?.id;
+      const projectId = item.project_id as string;
       if (!projectId) throw new Error("Selecione um projeto");
       const { error } = await supabase.from("schedule_tasks").insert({
         task_name: item.task_name as string,
-        scope_item_id: item.scope_item_id as string | undefined,
         start_date: item.start_date as string | undefined,
         end_date: item.end_date as string | undefined,
         status: (item.status as string) ?? "planejado",
         payment_note: item.payment_note as string | undefined,
-        order_index: item.order_index as number | undefined,
+        supplier_name: item.supplier_name as string | undefined,
+        discipline: item.discipline as string | undefined,
+        progress_percentage: item.progress_percentage as number | undefined,
         project_id: projectId,
         user_id: user!.id,
       });
@@ -82,7 +83,10 @@ export default function ConstructionTasks() {
 
   const updateTask = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Record<string, unknown>) => {
-      const { error } = await supabase.from("schedule_tasks").update(updates).eq("id", id);
+      const { project_id, ...rest } = updates;
+      const payload: Record<string, unknown> = { ...rest };
+      if (project_id) payload.project_id = project_id as string;
+      const { error } = await supabase.from("schedule_tasks").update(payload as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -171,6 +175,8 @@ export default function ConstructionTasks() {
               <TableRow>
                 <TableHead>Tarefa</TableHead>
                 <TableHead>Obra</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Responsáveis</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Início</TableHead>
                 <TableHead>Fim</TableHead>
@@ -180,14 +186,16 @@ export default function ConstructionTasks() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : tasks.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma tarefa encontrada</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma tarefa encontrada</TableCell></TableRow>
               ) : (
                 tasks.map((t: any) => (
                   <TableRow key={t.id}>
                     <TableCell className="font-medium">{t.task_name}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{t.projects?.name ?? "—"}</TableCell>
+                    <TableCell className="text-sm">{t.discipline ?? "—"}</TableCell>
+                    <TableCell className="text-sm">{t.supplier_name ?? "—"}</TableCell>
                     <TableCell>
                       <Badge variant="secondary" className={statusColors[t.status] ?? ""}>
                         {statusLabels[t.status] ?? t.status}
@@ -225,6 +233,7 @@ export default function ConstructionTasks() {
         onSubmit={handleSubmit}
         initialData={editingTask}
         isLoading={createTask.isPending || updateTask.isPending}
+        projects={projects}
       />
     </div>
   );
