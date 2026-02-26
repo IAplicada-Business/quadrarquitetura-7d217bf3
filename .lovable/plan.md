@@ -1,22 +1,34 @@
 
 
-## Ajuste: card redondo nos botões de notificação e avatar
+## Correção: Tarefas de voz salvam em `schedule_tasks` + seleção de projeto funcional
 
-Aplicar o mesmo estilo `bg-secondary shadow-sm rounded-full` do botão do microfone aos botões de notificação e avatar.
+### Problemas identificados
 
-### Alterações em `src/components/layout/AppHeader.tsx`
+1. **Tarefas só vão para `voice_tasks`** — a página "Tarefas por Obra" lê de `schedule_tasks`, então as tarefas criadas por voz nunca aparecem lá.
+2. **Select de projeto não funciona** — na screenshot o select mostra "teste" mas parece ser o projeto selecionado corretamente. O problema principal é o item 1.
 
-1. **Botão de notificações** (NotificationsPanel): o componente NotificationsPanel tem seu próprio botão interno, então preciso verificar esse arquivo.
+### Alterações
 
-2. **Avatar/usuário**: trocar o estilo do botão do avatar para incluir `bg-secondary shadow-sm`.
+**`src/components/layout/VoiceAgentDialog.tsx`**
+- Após criar em `voice_tasks` via `createBatch`, inserir também em `schedule_tasks` para cada tarefa criada:
+  - `task_name` = task.title
+  - `payment_note` = task.description
+  - `project_id` = resolvedProjectId
+  - `user_id` = user.id
+  - `status` = "planejado"
+  - `discipline` = task.category (se aplicável)
+- Invalidar query `["all_schedule_tasks"]` após inserção para atualizar a página de Tarefas por Obra
+- Importar `useQueryClient` e invalidar ambas as queries
 
-Preciso verificar o NotificationsPanel para ajustar o botão lá.
+### Mapeamento de campos
+```text
+voice_tasks.title       → schedule_tasks.task_name
+voice_tasks.description → schedule_tasks.payment_note
+voice_tasks.category    → schedule_tasks.discipline
+voice_tasks.status      → schedule_tasks.status ("planejado")
+voice_tasks.project_id  → schedule_tasks.project_id
+voice_tasks.user_id     → schedule_tasks.user_id
+```
 
-### Arquivos
-
-**`src/components/layout/NotificationsPanel.tsx`** (~linha 82):
-- Trocar classe do botão de `p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground` para `p-2.5 rounded-full bg-secondary text-accent shadow-sm hover:bg-secondary/80`
-
-**`src/components/layout/AppHeader.tsx`** (~linha 107):
-- Trocar classe do botão do avatar de `flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-sidebar-ring focus:ring-offset-2 focus:ring-offset-sidebar` para `flex items-center gap-2 p-1 rounded-full bg-secondary shadow-sm hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-sidebar-ring focus:ring-offset-2 focus:ring-offset-sidebar`
+Mantém `voice_tasks` como histórico e adiciona `schedule_tasks` como tabela operacional.
 
