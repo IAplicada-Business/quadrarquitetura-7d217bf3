@@ -1,19 +1,27 @@
 
 
-## Ajustes nas Tarefas de Obra
+## Adicionar Subtarefas em Tarefas por Obra
 
-### Alterações
+### 1. Migração de banco de dados
+Adicionar coluna `parent_id` (uuid, nullable, self-referencing FK) na tabela `schedule_tasks` para suportar hierarquia de subtarefas.
 
-**1. Atualizar `src/components/construction/ConstructionTaskForm.tsx`**
-- Adicionar **seleção de Projeto** (obrigatório) — recebe lista de projetos como prop
-- Renomear "Disciplina" → **"Tipo de Tarefa"** com opções predefinidas (Alvenaria, Elétrica, Hidráulica, Pintura, Acabamento, Demolição, Estrutura, Outros)
-- Substituir campo único "Responsável/Fornecedor" por **seleção múltipla de responsáveis** (input com tags — digita nome, pressiona Enter, aparece como badge removível). Armazena como texto separado por vírgula no campo `supplier_name`
-- Submeter `project_id` junto com os demais dados
+```sql
+ALTER TABLE schedule_tasks ADD COLUMN parent_id uuid REFERENCES schedule_tasks(id) ON DELETE CASCADE;
+```
 
-**2. Atualizar `src/pages/ConstructionTasks.tsx`**
-- Passar lista de `projects` como prop para o formulário
-- Usar `project_id` vindo do formulário ao criar tarefa (em vez de inferir do filtro)
-- Adicionar coluna "Tipo" e "Responsáveis" na tabela de listagem
+### 2. Atualizar `src/pages/ConstructionTasks.tsx`
+- Separar tarefas em **tarefas-pai** (`parent_id IS NULL`) e **subtarefas** agrupadas por `parent_id`
+- Adicionar linha expandível para cada tarefa-pai com toggle (chevron) para mostrar/esconder subtarefas
+- Botao "+" inline na linha da tarefa para adicionar subtarefa (abre o form com `parent_id` preenchido e `project_id` herdado)
+- Subtarefas renderizadas com indentacao visual abaixo da tarefa-pai
+- Métricas contam apenas tarefas-pai (ou todas, conforme fizer sentido)
 
-Não é necessária migração de banco — reutiliza `discipline` para tipo de tarefa e `supplier_name` para responsáveis (comma-separated).
+### 3. Atualizar `src/components/construction/ConstructionTaskForm.tsx`
+- Aceitar prop `parentTask` opcional (quando criando subtarefa)
+- Quando `parentTask` fornecido: herdar `project_id` (readonly), ocultar seleção de projeto, titulo "Nova Subtarefa"
+- Submeter `parent_id` junto com os dados
+
+### 4. Atualizar mutations em `ConstructionTasks.tsx`
+- Incluir `parent_id` no insert quando criando subtarefa
+- Ao deletar tarefa-pai, subtarefas são removidas automaticamente (CASCADE)
 
