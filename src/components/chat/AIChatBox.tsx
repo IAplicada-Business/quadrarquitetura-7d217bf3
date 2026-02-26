@@ -1,0 +1,271 @@
+import { useState, useRef, useEffect } from "react";
+import { MessageCircle, X, Send, Plus, History, Trash2, Square } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
+import { useAIChat } from "@/hooks/useAIChat";
+import { cn } from "@/lib/utils";
+
+const PREDEFINED_QUESTIONS = [
+  "Quais são meus projetos ativos?",
+  "Qual o status financeiro geral?",
+  "Quais leads estão pendentes?",
+  "Quais tarefas estão atrasadas?",
+  "Resumo das compras pendentes",
+];
+
+export function AIChatBox() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [input, setInput] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const {
+    messages,
+    isStreaming,
+    conversations,
+    currentConversationId,
+    sendMessage,
+    stopStreaming,
+    loadConversation,
+    startNewConversation,
+    deleteConversation,
+  } = useAIChat();
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isOpen]);
+
+  const handleSend = () => {
+    if (!input.trim() || isStreaming) return;
+    sendMessage(input);
+    setInput("");
+  };
+
+  const handleQuestionClick = (q: string) => {
+    sendMessage(q);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <>
+      {/* Floating button */}
+      <AnimatePresence>
+        {!isOpen && (
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            onClick={() => setIsOpen(true)}
+            className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-accent text-accent-foreground shadow-lg hover:shadow-xl transition-shadow flex items-center justify-center"
+            aria-label="Abrir assistente IA"
+          >
+            <MessageCircle className="h-6 w-6" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Chat box */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-6 right-6 z-50 w-[380px] max-h-[600px] flex flex-col rounded-2xl border border-border bg-background shadow-2xl overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-sidebar">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-accent/20 flex items-center justify-center">
+                  <MessageCircle className="h-4 w-4 text-accent" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Assistente IA</h3>
+                  <p className="text-[10px] text-muted-foreground">Quadra Arquitetura</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setShowHistory(!showHistory)}
+                  className="p-1.5 rounded-md hover:bg-sidebar-accent text-muted-foreground hover:text-foreground transition-colors"
+                  title="Histórico"
+                >
+                  <History className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => { startNewConversation(); setShowHistory(false); }}
+                  className="p-1.5 rounded-md hover:bg-sidebar-accent text-muted-foreground hover:text-foreground transition-colors"
+                  title="Nova conversa"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-1.5 rounded-md hover:bg-sidebar-accent text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* History panel */}
+            <AnimatePresence>
+              {showHistory && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="border-b border-border overflow-hidden"
+                >
+                  <div className="max-h-48 overflow-y-auto p-2 space-y-1">
+                    {conversations.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-3">Nenhuma conversa salva</p>
+                    )}
+                    {conversations.map((conv) => (
+                      <div
+                        key={conv.id}
+                        className={cn(
+                          "flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer text-xs group transition-colors",
+                          conv.id === currentConversationId
+                            ? "bg-accent/10 text-accent"
+                            : "hover:bg-muted text-foreground"
+                        )}
+                      >
+                        <span
+                          className="truncate flex-1"
+                          onClick={() => { loadConversation(conv.id); setShowHistory(false); }}
+                        >
+                          {conv.title}
+                        </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:text-destructive transition-all"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Messages */}
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[300px]">
+              {messages.length === 0 && (
+                <div className="space-y-4">
+                  <div className="text-center py-4">
+                    <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-3">
+                      <MessageCircle className="h-6 w-6 text-accent" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground">Como posso ajudar?</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Pergunte sobre seus projetos, leads, financeiro e mais
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {PREDEFINED_QUESTIONS.map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => handleQuestionClick(q)}
+                        className="w-full text-left px-3 py-2.5 rounded-xl border border-border hover:border-accent/40 hover:bg-accent/5 text-xs text-foreground transition-colors"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {messages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "flex",
+                    msg.role === "user" ? "justify-end" : "justify-start"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm",
+                      msg.role === "user"
+                        ? "bg-accent text-accent-foreground rounded-br-md"
+                        : "bg-muted text-foreground rounded-bl-md"
+                    )}
+                  >
+                    {msg.role === "assistant" ? (
+                      <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
+                <div className="flex justify-start">
+                  <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div className="border-t border-border p-3">
+              <div className="flex items-end gap-2">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Pergunte algo..."
+                  rows={1}
+                  className="flex-1 resize-none rounded-xl border border-border bg-muted/50 px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent max-h-24"
+                />
+                {isStreaming ? (
+                  <button
+                    onClick={stopStreaming}
+                    className="h-10 w-10 rounded-xl bg-destructive text-destructive-foreground flex items-center justify-center shrink-0"
+                  >
+                    <Square className="h-4 w-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSend}
+                    disabled={!input.trim()}
+                    className="h-10 w-10 rounded-xl bg-accent text-accent-foreground flex items-center justify-center shrink-0 disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
