@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AIChatBox } from "@/components/chat/AIChatBox";
 import {
   Sheet,
   SheetContent,
@@ -44,6 +45,8 @@ export function AppLayout() {
           </div>
         </main>
       </div>
+
+      <AIChatBox />
     </div>
   );
 }
