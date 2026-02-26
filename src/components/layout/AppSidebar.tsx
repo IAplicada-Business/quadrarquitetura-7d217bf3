@@ -40,6 +40,7 @@ const menuGroups = [
       { title: "Acompanhamento", url: "/construction/tracking" },
       { title: "Tarefas", url: "/construction/tasks" },
       { title: "Fornecedores", url: "/construction/suppliers" },
+      { title: "Tarefas de Voz", url: "/construction/voice-tasks" },
       { title: "Documentos", url: "/construction/documents" },
       { title: "Relatórios", url: "/construction/reports" },
     ],

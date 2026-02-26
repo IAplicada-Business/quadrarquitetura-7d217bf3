@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight, LogOut, Menu, Settings, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, Menu, Mic, Settings, User } from "lucide-react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -11,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NotificationsPanel } from "@/components/layout/NotificationsPanel";
+import { VoiceAgentDialog } from "@/components/layout/VoiceAgentDialog";
 import logoLight from "@/assets/logo-light.png";
 
 interface AppHeaderProps {
@@ -23,6 +25,7 @@ interface AppHeaderProps {
 export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onToggleSidebar }: AppHeaderProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [voiceOpen, setVoiceOpen] = useState(false);
 
   const fullName = user?.user_metadata?.full_name as string | undefined;
   const email = user?.email ?? "";
@@ -84,6 +87,16 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
 
       {/* Right side */}
       <div className="flex items-center gap-3">
+        {/* Voice Agent */}
+        <button
+          onClick={() => setVoiceOpen(true)}
+          className="p-2 rounded-full bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+          aria-label="Assistente de Voz"
+        >
+          <Mic className="h-4 w-4" />
+        </button>
+        <VoiceAgentDialog open={voiceOpen} onOpenChange={setVoiceOpen} />
+
         {/* Notifications */}
         <NotificationsPanel />
 
