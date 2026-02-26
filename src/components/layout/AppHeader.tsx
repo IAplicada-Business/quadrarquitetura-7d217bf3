@@ -90,7 +90,7 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
         {/* Voice Agent */}
         <button
           onClick={() => setVoiceOpen(true)}
-          className="p-2 rounded-full bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+          className="p-2.5 rounded-full bg-secondary text-accent shadow-sm hover:bg-secondary/80 transition-colors"
           aria-label="Assistente de Voz"
         >
           <Mic className="h-4 w-4" />
