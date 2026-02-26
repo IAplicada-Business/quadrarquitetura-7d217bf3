@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,6 +58,25 @@ export function ScheduleTaskForm({ open, onOpenChange, onSubmit, initialData, is
   const [requiresPresence, setRequiresPresence] = useState(!!initialData?.requires_presence);
   const [progress, setProgress] = useState(Number(initialData?.progress_percentage) || 0);
   const [color, setColor] = useState(initialData?.color as string || "#3b82f6");
+
+  useEffect(() => {
+    if (open) {
+      setTaskName(initialData?.task_name as string || "");
+      setScopeItemId(initialData?.scope_item_id as string || "");
+      setStartDate(initialData?.start_date as string || "");
+      setEndDate(initialData?.end_date as string || "");
+      setStatus(initialData?.status as string || "planejado");
+      setPaymentNote(initialData?.payment_note as string || "");
+      setOrderIndex(initialData?.order_index ? String(initialData.order_index) : "");
+      setSupplierName(initialData?.supplier_name as string || "");
+      setDiscipline(initialData?.discipline as string || "");
+      setIsClientVisible(initialData?.is_client_visible !== false);
+      setIsDailyDetail(!!initialData?.is_daily_detail);
+      setRequiresPresence(!!initialData?.requires_presence);
+      setProgress(Number(initialData?.progress_percentage) || 0);
+      setColor(initialData?.color as string || "#3b82f6");
+    }
+  }, [initialData, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
