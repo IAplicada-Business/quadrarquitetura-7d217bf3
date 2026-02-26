@@ -1695,6 +1695,7 @@ export type Database = {
           is_client_visible: boolean | null
           is_daily_detail: boolean | null
           order_index: number | null
+          parent_id: string | null
           payment_note: string | null
           progress_percentage: number | null
           project_id: string
@@ -1716,6 +1717,7 @@ export type Database = {
           is_client_visible?: boolean | null
           is_daily_detail?: boolean | null
           order_index?: number | null
+          parent_id?: string | null
           payment_note?: string | null
           progress_percentage?: number | null
           project_id: string
@@ -1737,6 +1739,7 @@ export type Database = {
           is_client_visible?: boolean | null
           is_daily_detail?: boolean | null
           order_index?: number | null
+          parent_id?: string | null
           payment_note?: string | null
           progress_percentage?: number | null
           project_id?: string
@@ -1750,6 +1753,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "schedule_tasks_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_tasks"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "schedule_tasks_project_id_fkey"
             columns: ["project_id"]
