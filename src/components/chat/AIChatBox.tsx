@@ -96,8 +96,8 @@ export function AIChatBox() {
                   <MessageCircle className="h-4 w-4 text-accent" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground">Assistente IA</h3>
-                  <p className="text-[10px] text-muted-foreground">Quadra Arquitetura</p>
+                  <h3 className="text-sm font-semibold text-white">Assistente IA</h3>
+                  <p className="text-[10px] text-white/70">Quadra Arquitetura</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
