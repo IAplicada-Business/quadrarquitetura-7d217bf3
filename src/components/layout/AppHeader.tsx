@@ -93,7 +93,7 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
           className="p-2.5 rounded-full bg-secondary text-accent shadow-sm hover:bg-secondary/80 transition-colors"
           aria-label="Assistente de Voz"
         >
-          <Mic className="h-4 w-4" />
+          <Mic className="h-5 w-5" />
         </button>
         <VoiceAgentDialog open={voiceOpen} onOpenChange={setVoiceOpen} />
 
@@ -103,8 +103,8 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
         {/* User dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 p-1 rounded-full bg-secondary shadow-sm hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-sidebar-ring focus:ring-offset-2 focus:ring-offset-sidebar">
-              <Avatar className="h-8 w-8 ring-0">
+            <button className="flex items-center gap-2 p-0.5 rounded-full bg-secondary shadow-sm hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-sidebar-ring focus:ring-offset-2 focus:ring-offset-sidebar">
+              <Avatar className="h-[30px] w-[30px] ring-0">
                 <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-medium">
                   {initials}
                 </AvatarFallback>
