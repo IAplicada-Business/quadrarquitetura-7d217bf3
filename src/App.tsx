@@ -21,6 +21,7 @@ import Documents from "./pages/Documents";
 import Reports from "./pages/Reports";
 import SettingsPage from "./pages/SettingsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
+import VoiceTasksPage from "./pages/VoiceTasksPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -69,6 +70,7 @@ const App = () => (
               <Route path="/construction/tracking" element={<SiteTracking />} />
               <Route path="/construction/tasks" element={<ConstructionTasks />} />
               <Route path="/construction/suppliers" element={<Suppliers />} />
+              <Route path="/construction/voice-tasks" element={<VoiceTasksPage />} />
               <Route path="/construction/documents" element={<Documents />} />
               <Route path="/construction/reports" element={<Reports />} />
               {/* Administrativo */}
