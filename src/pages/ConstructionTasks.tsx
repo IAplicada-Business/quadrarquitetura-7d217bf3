@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ConstructionTaskForm } from "@/components/construction/ConstructionTaskForm";
-import { Plus, Pencil, Trash2, ListChecks, Clock, AlertTriangle, CheckCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, ListChecks, Clock, AlertTriangle, CheckCircle, ChevronRight, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 
 const statusLabels: Record<string, string> = {
@@ -33,6 +33,8 @@ export default function ConstructionTasks() {
   const [selectedProject, setSelectedProject] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Record<string, unknown> | null>(null);
+  const [parentTaskForSub, setParentTaskForSub] = useState<{ id: string; project_id: string; task_name: string } | null>(null);
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
 
   const { data: projects = [] } = useQuery({
     queryKey: ["projects_list"],
@@ -56,6 +58,27 @@ export default function ConstructionTasks() {
     enabled: !!user,
   });
 
+  const parentTasks = useMemo(() => tasks.filter((t: any) => !t.parent_id), [tasks]);
+  const subtasksByParent = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    tasks.forEach((t: any) => {
+      if (t.parent_id) {
+        if (!map[t.parent_id]) map[t.parent_id] = [];
+        map[t.parent_id].push(t);
+      }
+    });
+    return map;
+  }, [tasks]);
+
+  const toggleExpand = (id: string) => {
+    setExpandedTasks((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const createTask = useMutation({
     mutationFn: async (item: Record<string, unknown>) => {
       const projectId = item.project_id as string;
@@ -71,7 +94,8 @@ export default function ConstructionTasks() {
         progress_percentage: item.progress_percentage as number | undefined,
         project_id: projectId,
         user_id: user!.id,
-      });
+        parent_id: (item.parent_id as string) || null,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -83,7 +107,7 @@ export default function ConstructionTasks() {
 
   const updateTask = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Record<string, unknown>) => {
-      const { project_id, ...rest } = updates;
+      const { project_id, parent_id, ...rest } = updates;
       const payload: Record<string, unknown> = { ...rest };
       if (project_id) payload.project_id = project_id as string;
       const { error } = await supabase.from("schedule_tasks").update(payload as any).eq("id", id);
@@ -109,12 +133,12 @@ export default function ConstructionTasks() {
   });
 
   const metrics = useMemo(() => {
-    const total = tasks.length;
-    const emExecucao = tasks.filter((t) => t.status === "em_execucao").length;
-    const atrasadas = tasks.filter((t) => t.status === "atrasado").length;
-    const concluidas = tasks.filter((t) => t.status === "executado").length;
+    const total = parentTasks.length;
+    const emExecucao = parentTasks.filter((t: any) => t.status === "em_execucao").length;
+    const atrasadas = parentTasks.filter((t: any) => t.status === "atrasado").length;
+    const concluidas = parentTasks.filter((t: any) => t.status === "executado").length;
     return { total, emExecucao, atrasadas, concluidas };
-  }, [tasks]);
+  }, [parentTasks]);
 
   const handleSubmit = (data: Record<string, unknown>) => {
     if (editingTask) {
@@ -123,13 +147,78 @@ export default function ConstructionTasks() {
       createTask.mutate(data);
     }
     setEditingTask(null);
+    setParentTaskForSub(null);
+  };
+
+  const openNewSubtask = (task: any) => {
+    setEditingTask(null);
+    setParentTaskForSub({ id: task.id, project_id: task.project_id, task_name: task.task_name });
+    setFormOpen(true);
+    setExpandedTasks((prev) => new Set(prev).add(task.id));
+  };
+
+  const renderTaskRow = (t: any, isSubtask = false) => {
+    const subCount = subtasksByParent[t.id]?.length || 0;
+    const isExpanded = expandedTasks.has(t.id);
+
+    return (
+      <TableRow key={t.id} className={isSubtask ? "bg-muted/30" : ""}>
+        <TableCell className="font-medium">
+          <div className="flex items-center gap-1">
+            {!isSubtask && subCount > 0 && (
+              <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => toggleExpand(t.id)}>
+                {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              </Button>
+            )}
+            {!isSubtask && subCount === 0 && <span className="w-5" />}
+            {isSubtask && <span className="w-5 ml-3 text-muted-foreground">↳</span>}
+            <span>{t.task_name}</span>
+          </div>
+        </TableCell>
+        <TableCell className="text-muted-foreground text-sm">{t.projects?.name ?? "—"}</TableCell>
+        <TableCell className="text-sm">{t.discipline ?? "—"}</TableCell>
+        <TableCell className="text-sm">{t.supplier_name ?? "—"}</TableCell>
+        <TableCell>
+          <Badge variant="secondary" className={statusColors[t.status] ?? ""}>
+            {statusLabels[t.status] ?? t.status}
+          </Badge>
+        </TableCell>
+        <TableCell className="text-sm">{t.start_date ? format(new Date(t.start_date), "dd/MM/yyyy") : "—"}</TableCell>
+        <TableCell className="text-sm">{t.end_date ? format(new Date(t.end_date), "dd/MM/yyyy") : "—"}</TableCell>
+        <TableCell>
+          <div className="flex items-center gap-2">
+            <Progress value={Number(t.progress_percentage ?? 0)} className="h-2 w-16" />
+            <span className="text-xs text-muted-foreground">{t.progress_percentage ?? 0}%</span>
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex gap-1">
+            {!isSubtask && (
+              <Button variant="ghost" size="icon" className="h-7 w-7" title="Adicionar subtarefa" onClick={() => openNewSubtask(t)}>
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+              setParentTaskForSub(isSubtask ? { id: t.parent_id, project_id: t.project_id, task_name: "" } : null);
+              setEditingTask(t);
+              setFormOpen(true);
+            }}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteTask.mutate(t.id)}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    );
   };
 
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Tarefas por Obra</h1>
-        <Button onClick={() => { setEditingTask(null); setFormOpen(true); }}>
+        <Button onClick={() => { setEditingTask(null); setParentTaskForSub(null); setFormOpen(true); }}>
           <Plus className="h-4 w-4 mr-1" /> Nova Tarefa
         </Button>
       </div>
@@ -181,45 +270,20 @@ export default function ConstructionTasks() {
                 <TableHead>Início</TableHead>
                 <TableHead>Fim</TableHead>
                 <TableHead>Progresso</TableHead>
-                <TableHead className="w-24">Ações</TableHead>
+                <TableHead className="w-28">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-              ) : tasks.length === 0 ? (
+              ) : parentTasks.length === 0 ? (
                 <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma tarefa encontrada</TableCell></TableRow>
               ) : (
-                tasks.map((t: any) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-medium">{t.task_name}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{t.projects?.name ?? "—"}</TableCell>
-                    <TableCell className="text-sm">{t.discipline ?? "—"}</TableCell>
-                    <TableCell className="text-sm">{t.supplier_name ?? "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className={statusColors[t.status] ?? ""}>
-                        {statusLabels[t.status] ?? t.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">{t.start_date ? format(new Date(t.start_date), "dd/MM/yyyy") : "—"}</TableCell>
-                    <TableCell className="text-sm">{t.end_date ? format(new Date(t.end_date), "dd/MM/yyyy") : "—"}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Progress value={Number(t.progress_percentage ?? 0)} className="h-2 w-16" />
-                        <span className="text-xs text-muted-foreground">{t.progress_percentage ?? 0}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingTask(t); setFormOpen(true); }}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteTask.mutate(t.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                parentTasks.map((t: any) => (
+                  <>
+                    {renderTaskRow(t)}
+                    {expandedTasks.has(t.id) && subtasksByParent[t.id]?.map((sub: any) => renderTaskRow(sub, true))}
+                  </>
                 ))
               )}
             </TableBody>
@@ -229,11 +293,12 @@ export default function ConstructionTasks() {
 
       <ConstructionTaskForm
         open={formOpen}
-        onOpenChange={setFormOpen}
+        onOpenChange={(open) => { setFormOpen(open); if (!open) { setParentTaskForSub(null); setEditingTask(null); } }}
         onSubmit={handleSubmit}
         initialData={editingTask}
         isLoading={createTask.isPending || updateTask.isPending}
         projects={projects}
+        parentTask={parentTaskForSub}
       />
     </div>
   );

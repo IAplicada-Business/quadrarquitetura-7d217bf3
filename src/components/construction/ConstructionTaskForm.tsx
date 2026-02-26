@@ -21,6 +21,7 @@ interface ConstructionTaskFormProps {
   initialData?: Record<string, unknown> | null;
   isLoading?: boolean;
   projects: Project[];
+  parentTask?: { id: string; project_id: string; task_name: string } | null;
 }
 
 const statusOptions = [
@@ -43,7 +44,7 @@ const taskTypeOptions = [
   "Outros",
 ];
 
-export function ConstructionTaskForm({ open, onOpenChange, onSubmit, initialData, isLoading, projects }: ConstructionTaskFormProps) {
+export function ConstructionTaskForm({ open, onOpenChange, onSubmit, initialData, isLoading, projects, parentTask }: ConstructionTaskFormProps) {
   const [projectId, setProjectId] = useState("");
   const [taskName, setTaskName] = useState("");
   const [responsibles, setResponsibles] = useState<string[]>([]);
@@ -57,7 +58,7 @@ export function ConstructionTaskForm({ open, onOpenChange, onSubmit, initialData
 
   useEffect(() => {
     if (open) {
-      setProjectId((initialData?.project_id as string) || "");
+      setProjectId(parentTask?.project_id || (initialData?.project_id as string) || "");
       setTaskName((initialData?.task_name as string) || "");
       const supplierStr = (initialData?.supplier_name as string) || "";
       setResponsibles(supplierStr ? supplierStr.split(",").map((s) => s.trim()).filter(Boolean) : []);
@@ -69,7 +70,7 @@ export function ConstructionTaskForm({ open, onOpenChange, onSubmit, initialData
       setTaskType((initialData?.discipline as string) || "");
       setNotes((initialData?.payment_note as string) || "");
     }
-  }, [initialData, open]);
+  }, [initialData, open, parentTask]);
 
   const addResponsible = () => {
     const name = responsibleInput.trim();
@@ -92,8 +93,8 @@ export function ConstructionTaskForm({ open, onOpenChange, onSubmit, initialData
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
-      project_id: projectId,
+    const data: Record<string, unknown> = {
+      project_id: parentTask?.project_id || projectId,
       task_name: taskName,
       supplier_name: responsibles.join(", ") || null,
       status,
@@ -102,32 +103,48 @@ export function ConstructionTaskForm({ open, onOpenChange, onSubmit, initialData
       progress_percentage: progress,
       discipline: taskType || null,
       payment_note: notes || null,
-    });
+    };
+    if (parentTask && !initialData) {
+      data.parent_id = parentTask.id;
+    }
+    onSubmit(data);
     onOpenChange(false);
   };
+
+  const isSubtask = !!parentTask;
+  const dialogTitle = initialData
+    ? (isSubtask ? "Editar Subtarefa" : "Editar Tarefa")
+    : (isSubtask ? "Nova Subtarefa" : "Nova Tarefa");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{initialData ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          {isSubtask && !initialData && (
+            <p className="text-sm text-muted-foreground">
+              Subtarefa de: <span className="font-medium">{parentTask.task_name}</span>
+            </p>
+          )}
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Projeto *</Label>
-            <Select value={projectId} onValueChange={setProjectId} required>
-              <SelectTrigger><SelectValue placeholder="Selecione o projeto" /></SelectTrigger>
-              <SelectContent>
-                {projects.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!isSubtask && (
+            <div className="space-y-2">
+              <Label>Projeto *</Label>
+              <Select value={projectId} onValueChange={setProjectId} required>
+                <SelectTrigger><SelectValue placeholder="Selecione o projeto" /></SelectTrigger>
+                <SelectContent>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
-            <Label htmlFor="taskName">Nome da Tarefa *</Label>
-            <Input id="taskName" value={taskName} onChange={(e) => setTaskName(e.target.value)} required placeholder="Ex: Alvenaria do pavimento térreo" />
+            <Label htmlFor="taskName">Nome da {isSubtask ? "Subtarefa" : "Tarefa"} *</Label>
+            <Input id="taskName" value={taskName} onChange={(e) => setTaskName(e.target.value)} required placeholder={isSubtask ? "Ex: Levantar parede sala" : "Ex: Alvenaria do pavimento térreo"} />
           </div>
 
           <div className="space-y-2">
@@ -205,7 +222,7 @@ export function ConstructionTaskForm({ open, onOpenChange, onSubmit, initialData
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={isLoading || !projectId}>{isLoading ? "Salvando..." : "Salvar"}</Button>
+            <Button type="submit" disabled={isLoading || (!isSubtask && !projectId)}>{isLoading ? "Salvando..." : "Salvar"}</Button>
           </div>
         </form>
       </DialogContent>

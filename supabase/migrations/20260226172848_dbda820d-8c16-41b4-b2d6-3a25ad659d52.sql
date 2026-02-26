@@ -1,0 +1,1 @@
+ALTER TABLE public.schedule_tasks ADD COLUMN parent_id uuid REFERENCES public.schedule_tasks(id) ON DELETE CASCADE;
