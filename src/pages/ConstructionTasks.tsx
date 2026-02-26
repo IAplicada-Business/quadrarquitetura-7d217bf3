@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ScheduleTaskForm } from "@/components/projects/ScheduleTaskForm";
+import { ConstructionTaskForm } from "@/components/construction/ConstructionTaskForm";
 import { Plus, Pencil, Trash2, ListChecks, Clock, AlertTriangle, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 
@@ -219,7 +219,7 @@ export default function ConstructionTasks() {
         </CardContent>
       </Card>
 
-      <ScheduleTaskForm
+      <ConstructionTaskForm
         open={formOpen}
         onOpenChange={setFormOpen}
         onSubmit={handleSubmit}
