@@ -1,21 +1,19 @@
 
 
-## Adicionar "Agenda" como submenu em Tarefas
+## Ajustes nas Tarefas de Obra
 
 ### Alterações
 
-**1. Criar `src/pages/ConstructionAgenda.tsx`**
-- Página de agenda/calendário que consolida todas as tarefas (`schedule_tasks`), visitas (`site_visits`) e reuniões por data
-- Visualização em lista agrupada por data (hoje, próximos dias, semana)
-- Cada item mostra tipo (tarefa/visita), nome, projeto, status e data prazo
-- Filtro por projeto e por tipo de evento
+**1. Atualizar `src/components/construction/ConstructionTaskForm.tsx`**
+- Adicionar **seleção de Projeto** (obrigatório) — recebe lista de projetos como prop
+- Renomear "Disciplina" → **"Tipo de Tarefa"** com opções predefinidas (Alvenaria, Elétrica, Hidráulica, Pintura, Acabamento, Demolição, Estrutura, Outros)
+- Substituir campo único "Responsável/Fornecedor" por **seleção múltipla de responsáveis** (input com tags — digita nome, pressiona Enter, aparece como badge removível). Armazena como texto separado por vírgula no campo `supplier_name`
+- Submeter `project_id` junto com os demais dados
 
-**2. Atualizar `src/components/layout/AppSidebar.tsx`**
-- Adicionar "Agenda" como terceiro subitem em Tarefas:
-  - "Tarefas por Obra" → `/construction/tasks`
-  - "Histórico de Voz" → `/construction/voice-tasks`
-  - **"Agenda"** → `/construction/agenda`
+**2. Atualizar `src/pages/ConstructionTasks.tsx`**
+- Passar lista de `projects` como prop para o formulário
+- Usar `project_id` vindo do formulário ao criar tarefa (em vez de inferir do filtro)
+- Adicionar coluna "Tipo" e "Responsáveis" na tabela de listagem
 
-**3. Atualizar `src/App.tsx`**
-- Adicionar rota `/construction/agenda` apontando para `ConstructionAgenda`
+Não é necessária migração de banco — reutiliza `discipline` para tipo de tarefa e `supplier_name` para responsáveis (comma-separated).
 
