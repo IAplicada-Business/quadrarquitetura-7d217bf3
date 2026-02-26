@@ -4,7 +4,7 @@ import { VoiceChat } from "@/components/ui/ia-siri-chat";
 import { useVoiceTasks } from "@/hooks/useVoiceTasks";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock, AlertCircle, X } from "lucide-react";
@@ -55,6 +55,7 @@ export function VoiceAgentDialog({ open, onOpenChange }: VoiceAgentDialogProps) 
   });
 
   const { createBatch, isCreating } = useVoiceTasks();
+  const queryClient = useQueryClient();
 
   const handleTranscript = useCallback(
     async (transcript: string) => {
@@ -93,6 +94,24 @@ export function VoiceAgentDialog({ open, onOpenChange }: VoiceAgentDialogProps) 
 
         setVoiceState("speaking");
         const created = await createBatch({ tasks, projectId: resolvedProjectId, transcript });
+
+        // Also insert into schedule_tasks so they appear in "Tarefas por Obra"
+        for (const task of created) {
+          const t = task as any;
+          if (!t.parent_id) {
+            await supabase.from("schedule_tasks").insert({
+              task_name: t.title,
+              payment_note: t.description || null,
+              discipline: t.category || null,
+              project_id: resolvedProjectId,
+              user_id: user!.id,
+              status: "planejado",
+            });
+          }
+        }
+        queryClient.invalidateQueries({ queryKey: ["schedule_tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["all_schedule_tasks"] });
+
         setSessionTasks((prev) => [...created, ...prev]);
         setVoiceState("idle");
       } catch (err: any) {
