@@ -101,16 +101,27 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
           </Badge>
         </TableCell>
         <TableCell>
-          <Select value={item.status || "planejado"} onValueChange={(v) => handleStatusChange(item.id, v)}>
-            <SelectTrigger className="h-7 text-xs w-[120px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(statusConfig).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {(() => {
+            const currentStatus = item.status || "rascunho";
+            const currentIdx = STATUS_HIERARCHY.indexOf(currentStatus);
+            const isLocked = currentIdx >= LOCK_THRESHOLD;
+            const allowedStatuses = STATUS_HIERARCHY.filter((_, i) => i >= currentIdx);
+            return (
+              <div className="flex items-center gap-1">
+                <Select value={currentStatus} onValueChange={(v) => handleStatusChange(item.id, v, currentStatus)}>
+                  <SelectTrigger className="h-7 text-xs w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allowedStatuses.map((k) => (
+                      <SelectItem key={k} value={k}>{statusConfig[k]?.label || k}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isLocked && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+              </div>
+            );
+          })()}
         </TableCell>
         <TableCell className="text-sm">{item.suppliers_to_quote || "—"}</TableCell>
         <TableCell className="text-right">

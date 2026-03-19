@@ -97,14 +97,21 @@ export function ScopeItemForm({ open, onOpenChange, onSubmit, initialData, paren
             </div>
             <div>
               <Label>Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {scopeStatusOptions.map(o => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {(() => {
+                const originalStatus = initialData ? ((initialData.status as string) || "rascunho") : "rascunho";
+                const originalIdx = STATUS_HIERARCHY.indexOf(originalStatus);
+                const filtered = scopeStatusOptions.filter((o) => STATUS_HIERARCHY.indexOf(o.value) >= originalIdx);
+                return (
+                  <Select value={status} onValueChange={setStatus}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {filtered.map(o => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              })()}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
