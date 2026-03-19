@@ -375,6 +375,17 @@ export function ConstructionTaskForm({
                     onChange={(e) => updateMaterial(i, "quantity", e.target.value)} className="w-20" />
                   <Input placeholder="Un." value={mat.unit}
                     onChange={(e) => updateMaterial(i, "unit", e.target.value)} className="w-20" />
+                  <Select value={mat.status || "necessario"} onValueChange={(v) => updateMaterial(i, "status", v)}>
+                    <SelectTrigger className="w-28 h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="necessario">Necessário</SelectItem>
+                      <SelectItem value="comprado">Comprado</SelectItem>
+                      <SelectItem value="entregue">Entregue</SelectItem>
+                      <SelectItem value="usado">Usado</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0 text-destructive"
                     onClick={() => removeMaterial(i)}>
                     <Trash2 className="h-3.5 w-3.5" />
