@@ -1689,11 +1689,16 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string
+          dependencies: string[] | null
+          description: string | null
           discipline: string | null
           end_date: string | null
+          environment: string | null
+          estimated_days: number | null
           id: string
           is_client_visible: boolean | null
           is_daily_detail: boolean | null
+          materials: Json | null
           order_index: number | null
           parent_id: string | null
           payment_note: string | null
@@ -1711,11 +1716,16 @@ export type Database = {
         Insert: {
           color?: string | null
           created_at?: string
+          dependencies?: string[] | null
+          description?: string | null
           discipline?: string | null
           end_date?: string | null
+          environment?: string | null
+          estimated_days?: number | null
           id?: string
           is_client_visible?: boolean | null
           is_daily_detail?: boolean | null
+          materials?: Json | null
           order_index?: number | null
           parent_id?: string | null
           payment_note?: string | null
@@ -1733,11 +1743,16 @@ export type Database = {
         Update: {
           color?: string | null
           created_at?: string
+          dependencies?: string[] | null
+          description?: string | null
           discipline?: string | null
           end_date?: string | null
+          environment?: string | null
+          estimated_days?: number | null
           id?: string
           is_client_visible?: boolean | null
           is_daily_detail?: boolean | null
+          materials?: Json | null
           order_index?: number | null
           parent_id?: string | null
           payment_note?: string | null
