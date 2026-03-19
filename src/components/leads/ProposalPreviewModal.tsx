@@ -42,7 +42,7 @@ export function ProposalPreviewModal({ open, onOpenChange, pages }: Props) {
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={prev} disabled={current === 0}><ChevronLeft className="h-4 w-4" /></Button>
                 <Button size="sm" variant="outline" onClick={next} disabled={current === pages.length - 1}><ChevronRight className="h-4 w-4" /></Button>
-                <Button size="sm" variant="ghost" onClick={() => onOpenChange(false)}><X className="h-4 w-4" /></Button>
+                
               </div>
             </div>
             <div className="flex-1 overflow-auto flex items-center justify-center bg-muted/50 p-4">
