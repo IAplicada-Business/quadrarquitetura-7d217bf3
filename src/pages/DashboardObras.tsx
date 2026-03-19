@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import {
   HardHat,
   AlertCircle,
@@ -13,14 +14,18 @@ import {
   CreditCard,
   TrendingUp,
   MapPin,
+  Users,
+  BarChart3,
+  Bell,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, startOfWeek, endOfWeek, isAfter, parseISO, getDay } from "date-fns";
+import { format, startOfWeek, endOfWeek, isAfter, parseISO, getDay, differenceInDays, getISOWeek, eachWeekOfInterval, min as dateMin, max as dateMax, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 /* ── paleta azul obras ──────────────────────────── */
@@ -94,7 +99,7 @@ export default function DashboardObras() {
   const { data: materials = [] } = useQuery({
     queryKey: ["dash-obras-materials"],
     queryFn: async () => {
-      const { data } = await supabase.from("material_tracking").select("id, material_name, quantity_needed, quantity_purchased, quantity_delivered, unit, project_id, supplier_name, projects(name)").eq("user_id", user!.id);
+      const { data } = await supabase.from("material_tracking").select("id, material_name, quantity_needed, quantity_purchased, quantity_delivered, unit, project_id, supplier_name, purchase_date, delivery_date, projects(name)").eq("user_id", user!.id);
       return data ?? [];
     },
     enabled: !!user,
@@ -103,7 +108,7 @@ export default function DashboardObras() {
   const { data: scheduleTasks = [] } = useQuery({
     queryKey: ["dash-obras-schedule"],
     queryFn: async () => {
-      const { data } = await supabase.from("schedule_tasks").select("id, task_name, start_date, end_date, status, discipline, project_id, projects(name)").eq("user_id", user!.id);
+      const { data } = await supabase.from("schedule_tasks").select("id, task_name, start_date, end_date, status, discipline, project_id, supplier_name, projects(name)").eq("user_id", user!.id);
       return data ?? [];
     },
     enabled: !!user,
@@ -206,6 +211,144 @@ export default function DashboardObras() {
       proximasEtapas,
     };
   }, [projects, pendingItems, materials, scheduleTasks, weekStart, weekEnd, todayStr]);
+
+  // ── Computed Multi-Obras ──
+  const multiObras = useMemo(() => {
+    const activeProjects = projects.filter((p) => p.status === "execucao" || p.status === "mobilizacao" || p.status === "planejamento");
+    const activeProjectIds = new Set(activeProjects.map((p) => p.id));
+    const activeProjectMap = new Map(activeProjects.map((p) => [p.id, p]));
+
+    // ── Seção 1: Supplier Matrix ──
+    const relevantTasks = scheduleTasks.filter(
+      (t) => activeProjectIds.has(t.project_id) && t.supplier_name && t.start_date && t.end_date
+    );
+
+    // Build supplier → project → weeks map
+    const supplierWeeks: Record<string, Record<string, Set<number>>> = {};
+    // Also track supplier → week → project ids for conflict detection
+    const supplierWeekProjects: Record<string, Record<number, Set<string>>> = {};
+
+    relevantTasks.forEach((t) => {
+      const supplier = t.supplier_name!;
+      if (!supplierWeeks[supplier]) {
+        supplierWeeks[supplier] = {};
+        supplierWeekProjects[supplier] = {};
+      }
+      if (!supplierWeeks[supplier][t.project_id]) {
+        supplierWeeks[supplier][t.project_id] = new Set();
+      }
+      const start = parseISO(t.start_date!);
+      const end = parseISO(t.end_date!);
+      // Get weeks in range
+      let current = start;
+      while (current <= end) {
+        const week = getISOWeek(current);
+        supplierWeeks[supplier][t.project_id].add(week);
+        if (!supplierWeekProjects[supplier][week]) supplierWeekProjects[supplier][week] = new Set();
+        supplierWeekProjects[supplier][week].add(t.project_id);
+        current = addDays(current, 7);
+      }
+    });
+
+    const suppliers = Object.keys(supplierWeeks).sort();
+    const matrix: Record<string, Record<string, { weeks: number[]; conflict: boolean }>> = {};
+    suppliers.forEach((supplier) => {
+      matrix[supplier] = {};
+      activeProjects.forEach((proj) => {
+        const weeks = Array.from(supplierWeeks[supplier]?.[proj.id] ?? []).sort((a, b) => a - b);
+        const hasConflict = weeks.some((w) => (supplierWeekProjects[supplier]?.[w]?.size ?? 0) > 1);
+        matrix[supplier][proj.id] = { weeks, conflict: hasConflict };
+      });
+    });
+
+    // ── Seção 2: Timeline ──
+    const projectDates = activeProjects.map((proj) => {
+      const projTasks = scheduleTasks.filter((t) => t.project_id === proj.id);
+      const starts = projTasks.filter((t) => t.start_date).map((t) => parseISO(t.start_date!));
+      const ends = projTasks.filter((t) => t.end_date).map((t) => parseISO(t.end_date!));
+      const minDate = starts.length > 0 ? dateMin(starts) : null;
+      const maxDate = ends.length > 0 ? dateMax(ends) : null;
+      const total = projTasks.length;
+      const done = projTasks.filter((t) => t.status === "executado" || t.status === "concluido").length;
+      const progress = total > 0 ? Math.round((done / total) * 100) : 0;
+      const nextTask = projTasks
+        .filter((t) => t.start_date && t.start_date >= todayStr && t.status !== "executado" && t.status !== "concluido")
+        .sort((a, b) => (a.start_date ?? "").localeCompare(b.start_date ?? ""))[0];
+
+      // Determine expected progress by date
+      let expectedProgress = 0;
+      if (minDate && maxDate) {
+        const totalDays = differenceInDays(maxDate, minDate) || 1;
+        const elapsed = differenceInDays(today, minDate);
+        expectedProgress = Math.min(100, Math.max(0, Math.round((elapsed / totalDays) * 100)));
+      }
+
+      let barColor = "hsl(152, 60%, 40%)"; // green
+      if (progress < expectedProgress - 20) barColor = "hsl(0, 70%, 50%)"; // red
+      else if (progress < expectedProgress - 5) barColor = "hsl(38, 92%, 50%)"; // yellow
+
+      return {
+        projectId: proj.id,
+        name: proj.name,
+        minDate,
+        maxDate,
+        progress,
+        barColor,
+        nextDelivery: nextTask?.task_name ?? null,
+      };
+    }).filter((p) => p.minDate && p.maxDate);
+
+    const allDates = projectDates.flatMap((p) => [p.minDate!, p.maxDate!]);
+    const globalStart = allDates.length > 0 ? dateMin(allDates) : null;
+    const globalEnd = allDates.length > 0 ? dateMax(allDates) : null;
+    const globalRange = globalStart && globalEnd ? differenceInDays(globalEnd, globalStart) || 1 : 1;
+
+    const timelineItems = projectDates.map((p) => ({
+      ...p,
+      leftPct: globalStart ? (differenceInDays(p.minDate!, globalStart) / globalRange) * 100 : 0,
+      widthPct: globalStart ? (differenceInDays(p.maxDate!, p.minDate!) / globalRange) * 100 : 100,
+    }));
+
+    // ── Seção 3: Alerts ──
+    const overdueTasks = scheduleTasks
+      .filter((t) => t.end_date && t.end_date < todayStr && t.status !== "executado" && t.status !== "concluido")
+      .map((t) => ({
+        taskName: t.task_name,
+        projectId: t.project_id,
+        projectName: (t as any).projects?.name ?? "",
+        daysOverdue: differenceInDays(today, parseISO(t.end_date!)),
+      }))
+      .sort((a, b) => b.daysOverdue - a.daysOverdue)
+      .slice(0, 10);
+
+    const sevenDaysAgo = format(addDays(today, -7), "yyyy-MM-dd");
+    const overduePayments = payments
+      .filter((p) => p.due_date && p.due_date < todayStr && (p.status === "pendente" || p.status === "atrasado"))
+      .map((p) => ({
+        description: p.supplier_name ?? p.description ?? "Pagamento",
+        projectId: p.project_id ?? "",
+        projectName: (p as any).projects?.name ?? "",
+        value: p.value,
+        daysOverdue: differenceInDays(today, parseISO(p.due_date!)),
+      }))
+      .sort((a, b) => b.daysOverdue - a.daysOverdue);
+
+    const delayedMaterials = materials
+      .filter((m) => (m as any).purchase_date && !(m as any).delivery_date && (m as any).purchase_date <= sevenDaysAgo)
+      .map((m) => ({
+        materialName: m.material_name,
+        projectId: m.project_id,
+        projectName: (m as any).projects?.name ?? "",
+        daysSincePurchase: differenceInDays(today, parseISO((m as any).purchase_date)),
+      }))
+      .sort((a, b) => b.daysSincePurchase - a.daysSincePurchase);
+
+    return {
+      supplierMatrix: { suppliers, projects: activeProjects, matrix },
+      timeline: { items: timelineItems, globalStart, globalEnd },
+      alerts: { overdueTasks, overduePayments, delayedMaterials },
+    };
+  }, [projects, scheduleTasks, payments, materials, todayStr, today]);
 
   // ── Computed Financeiro ──
   const fin = useMemo(() => {
@@ -441,6 +584,224 @@ export default function DashboardObras() {
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-8">Nenhuma etapa futura registrada</p>
               )}
+            </CardContent>
+          </Card>
+
+          {/* ═══ VISÃO MULTI-OBRAS ═══ */}
+          <div className="pt-2">
+            <h2 className="text-xl font-bold font-display mb-1" style={{ color: AZUL.textoDestaque }}>Visão Multi-Obras</h2>
+            <p className="text-sm text-muted-foreground mb-4">Panorama consolidado de todas as obras ativas</p>
+          </div>
+
+          {/* Seção 1 — Mapa de Fornecedores por Obra */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5" style={{ color: AZUL.destaque }} />
+                <CardTitle className="text-lg font-display">Mapa de Fornecedores por Obra</CardTitle>
+              </div>
+              <CardDescription>Alocação semanal de fornecedores nas obras ativas</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {multiObras.supplierMatrix.suppliers.length > 0 ? (
+                <div className="overflow-auto max-h-[400px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="sticky left-0 bg-background z-10 min-w-[140px]">Fornecedor</TableHead>
+                        {multiObras.supplierMatrix.projects.map((p) => (
+                          <TableHead key={p.id} className="text-center min-w-[100px] text-xs">{p.name}</TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {multiObras.supplierMatrix.suppliers.map((supplier) => (
+                        <TableRow key={supplier}>
+                          <TableCell className="sticky left-0 bg-background z-10 font-medium text-sm">{supplier}</TableCell>
+                          {multiObras.supplierMatrix.projects.map((proj) => {
+                            const cell = multiObras.supplierMatrix.matrix[supplier]?.[proj.id];
+                            if (!cell || cell.weeks.length === 0) {
+                              return <TableCell key={proj.id} className="text-center"><div className="h-6 w-full rounded" style={{ backgroundColor: "hsl(0,0%,92%)" }} /></TableCell>;
+                            }
+                            const bgColor = cell.conflict ? "hsl(38, 92%, 85%)" : "hsl(152, 50%, 85%)";
+                            const textColor = cell.conflict ? "hsl(38, 80%, 30%)" : "hsl(152, 50%, 25%)";
+                            return (
+                              <TableCell key={proj.id} className="text-center">
+                                <div className="rounded px-1 py-0.5 text-xs font-medium" style={{ backgroundColor: bgColor, color: textColor }}>
+                                  S{cell.weeks.join(", S")}
+                                  {cell.conflict && " ⚠"}
+                                </div>
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhum fornecedor alocado nas obras ativas</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Seção 2 — Timeline Comparativa */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" style={{ color: AZUL.destaque }} />
+                <CardTitle className="text-lg font-display">Timeline Comparativa</CardTitle>
+              </div>
+              <CardDescription>Gantt simplificado das obras ativas</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {multiObras.timeline.items.length > 0 ? (
+                <TooltipProvider>
+                  <div className="space-y-3">
+                    {/* Axis labels */}
+                    {multiObras.timeline.globalStart && (
+                      <div className="flex justify-between text-xs text-muted-foreground px-[140px]">
+                        <span>{format(multiObras.timeline.globalStart, "dd/MM/yy")}</span>
+                        <span>{format(multiObras.timeline.globalEnd!, "dd/MM/yy")}</span>
+                      </div>
+                    )}
+                    {multiObras.timeline.items.map((item) => (
+                      <div key={item.projectId} className="flex items-center gap-3">
+                        <Link to={`/projects/${item.projectId}`} className="w-[130px] text-sm font-medium truncate hover:underline" style={{ color: AZUL.textoDestaque }}>
+                          {item.name}
+                        </Link>
+                        <div className="flex-1 relative h-7 rounded" style={{ backgroundColor: AZUL.fundoSuave }}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div
+                                className="absolute h-full rounded cursor-pointer transition-all"
+                                style={{
+                                  left: `${item.leftPct}%`,
+                                  width: `${Math.max(item.widthPct, 2)}%`,
+                                  backgroundColor: item.barColor,
+                                  opacity: 0.85,
+                                }}
+                              >
+                                <div
+                                  className="h-full rounded-l"
+                                  style={{
+                                    width: `${item.progress}%`,
+                                    backgroundColor: item.barColor,
+                                    opacity: 1,
+                                    filter: "brightness(0.8)",
+                                  }}
+                                />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="font-medium">{item.name}</p>
+                              <p className="text-xs">Progresso: {item.progress}%</p>
+                              {item.nextDelivery && <p className="text-xs">Próx: {item.nextDelivery}</p>}
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <span className="text-xs font-semibold w-10 text-right" style={{ color: item.barColor }}>{item.progress}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </TooltipProvider>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhuma obra com cronograma definido</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Seção 3 — Alertas Consolidados */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Bell className="h-5 w-5" style={{ color: "hsl(0,70%,50%)" }} />
+                <CardTitle className="text-lg font-display">Alertas Consolidados</CardTitle>
+              </div>
+              <CardDescription>Itens que precisam de atenção em todas as obras</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Tarefas atrasadas */}
+              <div>
+                <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5" style={{ color: "hsl(0,70%,45%)" }}>
+                  <Clock className="h-4 w-4" /> Tarefas Atrasadas
+                  {multiObras.alerts.overdueTasks.length > 0 && (
+                    <Badge variant="destructive" className="ml-1 text-xs">{multiObras.alerts.overdueTasks.length}</Badge>
+                  )}
+                </h4>
+                {multiObras.alerts.overdueTasks.length > 0 ? (
+                  <div className="space-y-1">
+                    {multiObras.alerts.overdueTasks.map((t, i) => (
+                      <Link key={i} to={`/projects/${t.projectId}`} className="flex items-center justify-between p-2 rounded-lg border hover:bg-muted/50 transition-colors">
+                        <div>
+                          <p className="text-sm font-medium">{t.taskName}</p>
+                          <p className="text-xs text-muted-foreground">{t.projectName}</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs" style={{ borderColor: "hsl(0,70%,50%)", color: "hsl(0,70%,50%)" }}>
+                          {t.daysOverdue}d atraso
+                        </Badge>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhuma tarefa atrasada 🎉</p>
+                )}
+              </div>
+
+              {/* Pagamentos vencidos */}
+              <div>
+                <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5" style={{ color: "hsl(38,80%,40%)" }}>
+                  <CreditCard className="h-4 w-4" /> Pagamentos Vencidos
+                  {multiObras.alerts.overduePayments.length > 0 && (
+                    <Badge className="ml-1 text-xs" style={{ backgroundColor: "hsl(38,80%,50%)", color: "white" }}>{multiObras.alerts.overduePayments.length}</Badge>
+                  )}
+                </h4>
+                {multiObras.alerts.overduePayments.length > 0 ? (
+                  <div className="space-y-1">
+                    {multiObras.alerts.overduePayments.map((p, i) => (
+                      <Link key={i} to={`/projects/${p.projectId}`} className="flex items-center justify-between p-2 rounded-lg border hover:bg-muted/50 transition-colors">
+                        <div>
+                          <p className="text-sm font-medium">{p.description}</p>
+                          <p className="text-xs text-muted-foreground">{p.projectName}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold">{fmt(p.value)}</p>
+                          <p className="text-xs" style={{ color: "hsl(38,80%,40%)" }}>{p.daysOverdue}d vencido</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhum pagamento vencido 🎉</p>
+                )}
+              </div>
+
+              {/* Materiais aguardando */}
+              <div>
+                <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5" style={{ color: AZUL.destaque }}>
+                  <Truck className="h-4 w-4" /> Materiais Aguardando Entrega (+7 dias)
+                  {multiObras.alerts.delayedMaterials.length > 0 && (
+                    <Badge variant="outline" className="ml-1 text-xs">{multiObras.alerts.delayedMaterials.length}</Badge>
+                  )}
+                </h4>
+                {multiObras.alerts.delayedMaterials.length > 0 ? (
+                  <div className="space-y-1">
+                    {multiObras.alerts.delayedMaterials.map((m, i) => (
+                      <Link key={i} to={`/projects/${m.projectId}`} className="flex items-center justify-between p-2 rounded-lg border hover:bg-muted/50 transition-colors">
+                        <div>
+                          <p className="text-sm font-medium">{m.materialName}</p>
+                          <p className="text-xs text-muted-foreground">{m.projectName}</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {m.daysSincePurchase}d aguardando
+                        </Badge>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhum material com entrega atrasada 🎉</p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
