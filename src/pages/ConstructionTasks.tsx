@@ -12,7 +12,8 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConstructionTaskForm } from "@/components/construction/ConstructionTaskForm";
 import { MultiSelectFilter } from "@/components/construction/MultiSelectFilter";
-import { Plus, Pencil, Trash2, ListChecks, Clock, AlertTriangle, CheckCircle, ChevronRight, ChevronDown, PauseCircle, List, LayoutGrid, Filter } from "lucide-react";
+import { Plus, Pencil, Trash2, ListChecks, Clock, AlertTriangle, CheckCircle, ChevronRight, ChevronDown, PauseCircle, List, LayoutGrid, Filter, Upload, Sparkles } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { format, isBefore, startOfDay } from "date-fns";
 
 const statusLabels: Record<string, string> = {
