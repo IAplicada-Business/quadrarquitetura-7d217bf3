@@ -33,6 +33,7 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
   const { user } = useAuth();
   const { items, isLoading, create, update, remove } = useScopeItems(projectId);
   const { quotes } = useBudgetQuotes(projectId);
+  const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Record<string, unknown> | null>(null);
   const [scopeTypeFilter, setScopeTypeFilter] = useState<"projeto" | "contratado">("contratado");
