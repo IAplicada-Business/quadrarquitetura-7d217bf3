@@ -1,84 +1,53 @@
 
 
-## Portal do Cliente — Sistema Público via Link
+## Visão Multi-Obras — Dashboard de Obras
 
 ### Contexto
-Criar portal read-only acessível sem autenticação via token único. Uma edge function intermediária garante segurança, evitando queries diretas do frontend público.
+Adicionar 3 novas seções ao `DashboardObras.tsx` na aba Operacional, abaixo do conteúdo existente. Sem alterações de banco, rotas ou abas.
 
-### 1. Migration SQL — tabela `client_portal_tokens`
+### Alterações — único arquivo: `src/pages/DashboardObras.tsx`
 
-```sql
-CREATE TABLE public.client_portal_tokens (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id uuid NOT NULL,
-  token uuid NOT NULL DEFAULT gen_random_uuid() UNIQUE,
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  expires_at timestamptz
-);
-ALTER TABLE public.client_portal_tokens ENABLE ROW LEVEL SECURITY;
+**Seção 1 — Mapa de Fornecedores por Obra (Tabela Cruzada)**
 
--- Authenticated users can manage their tokens (via project ownership)
-CREATE POLICY "Authenticated can insert tokens" ON client_portal_tokens
-  FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "Authenticated can view tokens" ON client_portal_tokens
-  FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Authenticated can update tokens" ON client_portal_tokens
-  FOR UPDATE TO authenticated USING (true);
-```
+- Computed via `useMemo` from existing `scheduleTasks` and `projects` data (already fetched with `supplier_name`)
+- Need to add `supplier_name` to the schedule tasks query (currently not selected)
+- Build matrix: rows = unique `supplier_name` from tasks with status `em_execucao`/`executado`/`planejado`; columns = active projects
+- For each supplier × project cell, compute which ISO weeks they're allocated (from `start_date`/`end_date`)
+- Cell color: green (allocated, no conflict), yellow (same supplier allocated in another project same week), gray (not allocated)
+- Render as `<Table>` with sticky first column
 
-### 2. Edge Function `get-client-portal-data`
+**Seção 2 — Timeline Comparativa (Mini-Gantt)**
 
-- Receives `{ token: string }` via POST
-- Validates token exists, `is_active = true`, and not expired
-- Uses service role key to fetch all portal data for the project:
-  - Project info (name, address, city, estimated_budget)
-  - `schedule_tasks` where `is_client_visible = true` (for ClientScheduleView)
-  - `payments` (date, value, status, description)
-  - `invoices` (date, value, store_name, description)
-  - `site_diary_entries` photos (last 12 entries with photos)
-- Returns consolidated JSON response
-- No auth required (`verify_jwt = false` in config.toml)
-- CORS headers included
+- Computed from `projects` (active) + `scheduleTasks` (min start_date, max end_date per project)
+- Each row = project name + horizontal bar showing date range
+- Bar color: green (on track — progress ≥ expected by date), yellow (slightly behind), red (significantly behind)
+- Progress calculated from done tasks / total tasks per project
+- Tooltip on hover: name, progress %, next delivery
+- Rendered as styled divs with relative positioning against a shared timeline axis
 
-### 3. Nova página `src/pages/ClientPortal.tsx`
+**Seção 3 — Alertas Consolidados**
 
-- Standalone page, no sidebar/header
-- Calls edge function with token from URL params
-- States: loading, error (invalid/expired token), success
-- Layout (mobile-first):
-  - **Header**: Logo Quadra + project name + address
-  - **Seção 1 — Cronograma**: Reuses `ClientScheduleView` component with fetched tasks
-  - **Seção 2 — Prestação de Contas**: Cards with contracted value, paid, balance + payment list + invoice list
-  - **Seção 3 — Fotos**: Grid of last 12 photos from diary, lightbox on click
-  - **Seção 4 — Contato**: Fixed message + WhatsApp link (from settings or hardcoded)
-- Design: Quadra brand colors (rosa/primary), clean, no navigation chrome
+- Card with 3 sub-sections:
+  1. **Tarefas atrasadas**: `scheduleTasks` where `end_date < today` and status not `executado`/`concluido`, sorted by days overdue, top 10
+  2. **Pagamentos vencidos**: `payments` where `due_date < today` and status `pendente`, all
+  3. **Materiais aguardando entrega**: `material_tracking` where `purchase_date` exists, `delivery_date` is null, and `purchase_date < today - 7 days`
+- Each item shows project name + detail + days overdue
+- Each item is a `<Link>` to `/projects/:projectId`
 
-### 4. Editar `src/App.tsx`
+**Data changes to existing queries:**
+- Add `supplier_name` to the `dash-obras-schedule` query select (line 106)
+- Add `purchase_date, delivery_date` to the `dash-obras-materials` query select (line 97) — already have these? Check: yes `purchase_date` and `delivery_date` are not in the current select, need to add them
 
-- Add public route `<Route path="/client/:token" element={<ClientPortal />} />` OUTSIDE the ProtectedRoute wrapper (before `<Route path="*">`)
+**UI placement:** After the "Próximas Etapas" card (line 445), before `</TabsContent>` for "operacional"
 
-### 5. Editar `src/components/projects/ProjectSummaryTab.tsx`
+### Technical details
 
-- Add "Gerar Link do Cliente" button in the quick links area or as a new section
-- On click: check if active token exists for project (query `client_portal_tokens`)
-- If none: insert new token, show link
-- If exists: show existing link
-- UI: Dialog/Card showing the link with "Copiar link" and "Desativar link" buttons
-- "Regenerar" option if user wants a new token
+- All 3 sections use existing data — no new queries needed, just expand select fields
+- `useNavigate` or `<Link>` for clickable alerts
+- Week calculation: `getISOWeek` from date-fns for supplier matrix
+- Timeline bar positioning: compute global min/max dates across all active projects, then position bars proportionally
+- No new files, no new dependencies
 
-### 6. Hook `src/hooks/useClientPortalToken.ts`
-
-- Queries `client_portal_tokens` for the project
-- Mutations: create token, deactivate token (set `is_active = false`)
-- Returns active token if exists
-
-### Arquivos criados/editados
-- 1 migration SQL (table `client_portal_tokens` + RLS)
-- 1 edge function: `supabase/functions/get-client-portal-data/index.ts`
-- 1 página criada: `src/pages/ClientPortal.tsx`
-- 1 hook criado: `src/hooks/useClientPortalToken.ts`
-- 2 arquivos editados: `src/App.tsx` (public route), `src/components/projects/ProjectSummaryTab.tsx` (button + dialog)
-- Config: add `[functions.get-client-portal-data]` to `supabase/config.toml`
-- Nenhuma aba, sub-aba ou rota existente alterada
+### Arquivos editados
+- `src/pages/DashboardObras.tsx` — add supplier_name/purchase_date/delivery_date to queries, add 3 new sections in operacional tab
 
