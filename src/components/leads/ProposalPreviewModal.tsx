@@ -26,7 +26,7 @@ export function ProposalPreviewModal({ open, onOpenChange, pages }: Props) {
               <button
                 key={i}
                 onClick={() => setCurrent(i)}
-                className={`w-full aspect-video rounded border-2 text-xs font-medium flex items-center justify-center transition-colors ${
+                className={`w-full rounded border-2 text-xs font-medium flex items-center justify-center transition-colors ${
                   i === current ? "border-primary bg-primary/10" : "border-transparent hover:border-muted-foreground/30"
                 }`}
               >
