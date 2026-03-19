@@ -21,6 +21,35 @@ export function useBudgetQuotes(projectId: string | undefined) {
     enabled: !!projectId,
   });
 
+  const autoCreateMaterialTracking = async (budgetQuoteId: string, materialEstimate: number, scopeItemId?: string | null) => {
+    if (materialEstimate <= 0) return;
+    // Check if material_tracking already exists for this budget_quote
+    const { data: existing } = await supabase
+      .from("material_tracking")
+      .select("id")
+      .eq("budget_quote_id", budgetQuoteId)
+      .limit(1);
+    if (existing && existing.length > 0) return;
+
+    // Get discipline from scope item if available
+    let discipline: string | null = null;
+    if (scopeItemId) {
+      const { data: si } = await supabase.from("scope_items").select("discipline").eq("id", scopeItemId).single();
+      discipline = si?.discipline || null;
+    }
+
+    await supabase.from("material_tracking").insert({
+      project_id: projectId!,
+      user_id: user!.id,
+      material_name: discipline ? `${discipline} (orçamento)` : "Material (orçamento)",
+      quantity_needed: materialEstimate,
+      discipline,
+      source: "orcamento",
+      budget_quote_id: budgetQuoteId,
+    });
+    queryClient.invalidateQueries({ queryKey: ["material_tracking", projectId] });
+  };
+
   const create = useMutation({
     mutationFn: async (item: {
       scope_item_id?: string | null;
@@ -36,7 +65,7 @@ export function useBudgetQuotes(projectId: string | undefined) {
       revision_number?: number;
       is_current_revision?: boolean;
     }) => {
-      const { error } = await supabase.from("budget_quotes").insert({
+      const { data, error } = await supabase.from("budget_quotes").insert({
         scope_item_id: item.scope_item_id ?? null,
         supplier_id: item.supplier_id ?? null,
         supplier_name: item.supplier_name ?? null,
@@ -51,12 +80,17 @@ export function useBudgetQuotes(projectId: string | undefined) {
         is_current_revision: item.is_current_revision ?? true,
         project_id: projectId!,
         user_id: user!.id,
-      });
+      }).select().single();
       if (error) throw error;
+      return { data, item };
     },
-    onSuccess: () => {
+    onSuccess: async ({ data, item }) => {
       queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] });
       toast({ title: "Cotação adicionada" });
+      // Auto-create material tracking if material_estimate > 0
+      if (data && (item.material_estimate ?? 0) > 0) {
+        await autoCreateMaterialTracking(data.id, item.material_estimate!, item.scope_item_id);
+      }
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
