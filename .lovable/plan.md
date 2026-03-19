@@ -1,22 +1,20 @@
 
 
-## Ajuste de layout na página LeadsPipeline
+## Ajuste na aprovação de cenários e status do escopo
 
-### Alterações no arquivo `src/pages/LeadsPipeline.tsx`
+### Alterações
 
-**1. Linha 112** — Trocar `h-[calc(100vh-12rem)]` por `min-h-[calc(100vh-12rem)]`:
-```
-h-[calc(100vh-12rem)]  →  min-h-[calc(100vh-12rem)]
-```
+**1. `src/hooks/useScenarios.ts` (linha 142)**
+- Mudar `status: "planejado"` para `status: "contratado"` nos itens inseridos como `scope_type: "contratado"` dentro do `approveScenario` mutation.
 
-**2. Linha 224** — Adicionar `max-h-[calc(100vh-16rem)]` ao container Kanban para que as colunas tenham scroll interno sem que o container todo cresça indefinidamente:
-```
-className="flex gap-4 overflow-x-auto pb-4 flex-1 min-h-0"
-→
-className="flex gap-4 overflow-x-auto pb-4 flex-1 min-h-0 max-h-[calc(100vh-16rem)]"
-```
+**2. `src/components/projects/ProjectScenariosTab.tsx`**
+- Adicionar estado `confirmApproveScenario` para armazenar o cenário pendente de confirmação.
+- No botão "Aprovar", antes de chamar `approveScenario.mutate()`, verificar se já existe algum `scenario.is_approved === true` na lista. Se sim, abrir um `AlertDialog` com a mensagem: "Já existe um cenário aprovado. Aprovar este novo cenário substituirá o escopo atual. Deseja continuar?"
+- Se não existir cenário aprovado, aprovar diretamente.
+- Importar `AlertDialog` components do shadcn.
 
-A linha 233 já tem `overflow-y-auto` e `flex-1` nas colunas individuais, garantindo scroll vertical interno em cada coluna.
-
-Nenhuma aba, sub-aba ou rota será alterada.
+### Resumo das mudanças
+- 2 arquivos editados
+- Nenhuma aba, sub-aba ou rota alterada
+- O Resumo do projeto já exibe o comparativo "Idealizado vs Contratado vs Realizado" — nenhuma alteração necessária lá
 
