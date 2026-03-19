@@ -6,10 +6,6 @@ const DEFAULT_ABOUT = "A Quadra √© uma empresa que nasceu em 2022 pela inquieta√
 export function ProposalAboutPage({ aboutText, logoUrl }: ProposalPageProps) {
   return (
     <PageContainer bg={COLORS.begeClaro}>
-      {/* Watermark */}
-      <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%) rotate(-15deg)", fontSize: 60, fontWeight: 800, color: COLORS.textoTituloVinho, opacity: 0.05, whiteSpace: "nowrap", pointerEvents: "none" }}>
-        QUADRA ARQUITETURA
-      </div>
 
       <div style={{ padding: "60px 60px", display: "flex", flexDirection: "column", height: "100%", position: "relative", zIndex: 1, justifyContent: "center", alignItems: "center" }}>
         {/* Title */}
