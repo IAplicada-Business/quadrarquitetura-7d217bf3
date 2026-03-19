@@ -176,7 +176,7 @@ export function ImportPlantDialog({ open, onOpenChange, projects }: Props) {
   const selectedCount = activities.filter((a) => a.selected).length;
 
   const handleCreateTasks = async () => {
-    const selected = activities.filter((a) => a.selected && a.task_name.trim());
+    const selected = activities.filter((a) => a.selected && a.activity_name.trim());
     if (selected.length === 0) {
       toast({ title: "Selecione ao menos uma atividade", variant: "destructive" });
       return;
@@ -187,7 +187,7 @@ export function ImportPlantDialog({ open, onOpenChange, projects }: Props) {
       const rows = selected.map((a) => ({
         project_id: projectId,
         user_id: user!.id,
-        task_name: a.task_name,
+        task_name: a.activity_name,
         environment: a.environment || null,
         discipline: a.discipline || null,
         estimated_days: a.estimated_days,
