@@ -31,7 +31,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
 
 interface Activity {
-  task_name: string;
+  activity_name: string;
   environment: string;
   discipline: string;
   quantity: number;
@@ -123,7 +123,7 @@ export function ImportPlantDialog({ open, onOpenChange, projects }: Props) {
       }
 
       const acts: Activity[] = (data.activities || []).map((a: any) => ({
-        task_name: a.task_name || "",
+        activity_name: a.activity_name || a.task_name || "",
         environment: a.environment || "",
         discipline: a.discipline || focus,
         quantity: Number(a.quantity) || 1,
@@ -169,14 +169,14 @@ export function ImportPlantDialog({ open, onOpenChange, projects }: Props) {
   const addBlankActivity = () => {
     setActivities((prev) => [
       ...prev,
-      { task_name: "", environment: "", discipline: focus, quantity: 1, unit: "un", estimated_days: 1, selected: true },
+      { activity_name: "", environment: "", discipline: focus, quantity: 1, unit: "un", estimated_days: 1, selected: true },
     ]);
   };
 
   const selectedCount = activities.filter((a) => a.selected).length;
 
   const handleCreateTasks = async () => {
-    const selected = activities.filter((a) => a.selected && a.task_name.trim());
+    const selected = activities.filter((a) => a.selected && a.activity_name.trim());
     if (selected.length === 0) {
       toast({ title: "Selecione ao menos uma atividade", variant: "destructive" });
       return;
@@ -187,7 +187,7 @@ export function ImportPlantDialog({ open, onOpenChange, projects }: Props) {
       const rows = selected.map((a) => ({
         project_id: projectId,
         user_id: user!.id,
-        task_name: a.task_name,
+        task_name: a.activity_name,
         environment: a.environment || null,
         discipline: a.discipline || null,
         estimated_days: a.estimated_days,
@@ -331,8 +331,8 @@ export function ImportPlantDialog({ open, onOpenChange, projects }: Props) {
                     </TableCell>
                     <TableCell>
                       <Input
-                        value={a.task_name}
-                        onChange={(e) => updateActivity(idx, "task_name", e.target.value)}
+                        value={a.activity_name}
+                        onChange={(e) => updateActivity(idx, "activity_name", e.target.value)}
                         className="h-8 text-sm"
                       />
                     </TableCell>

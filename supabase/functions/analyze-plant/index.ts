@@ -42,22 +42,23 @@ serve(async (req) => {
     const base64 = btoa(String.fromCharCode(...new Uint8Array(fileBytes)));
     const contentType = fileResponse.headers.get("content-type") || "image/jpeg";
 
-    const systemPrompt = `Você é um assistente especializado em análise de plantas de construção civil e arquitetura.
-Seu trabalho é analisar a planta fornecida e extrair uma lista detalhada de atividades/tarefas de obra com base no foco solicitado.
+    const systemPrompt = `Você é um assistente especializado em análise de plantas de projetos de arquitetura e construção civil.
 
-Para cada atividade, forneça:
-- task_name: nome descritivo da atividade
-- environment: ambiente onde será executada (ex: Suíte Master, Cozinha, Hall, Geral)
-- discipline: disciplina da atividade (ex: Elétrica, Hidráulica, Alvenaria, etc.)
-- quantity: quantidade estimada (número)
-- unit: unidade de medida (un, m, m², m³, vb)
-- estimated_days: prazo estimado em dias úteis
+Analise a planta anexa e, para cada elemento que você identificar, retorne uma lista estruturada com os seguintes campos:
 
+- activity_name: nome descritivo da atividade (ex: "Instalação de tomadas baixas")
+- environment: ambiente onde a atividade ocorre (ex: "Suíte Master", "Cozinha", "Geral")
+- discipline: disciplina da atividade (ex: "Elétrica", "Hidráulica")
+- quantity: quantidade identificada (número)
+- unit: unidade (un, m, m², ponto)
+- estimated_days: prazo estimado em dias para execução
+
+Se não conseguir identificar a quantidade exata, estime com base no que é visível e indique como estimativa.
 Seja detalhista e prático. Considere todas as atividades necessárias para o foco solicitado.`;
 
-    const userPrompt = `Analise esta planta com foco em: **${focus}**
+    const userPrompt = `Analise esta planta com foco em: **${focus}**.
 
-${instructions ? `Instruções adicionais: ${instructions}` : ""}
+${instructions ? `Instruções adicionais do usuário: ${instructions}` : ""}
 
 Extraia todas as atividades necessárias usando a ferramenta fornecida.`;
 
@@ -98,14 +99,14 @@ Extraia todas as atividades necessárias usando a ferramenta fornecida.`;
                     items: {
                       type: "object",
                       properties: {
-                        task_name: { type: "string", description: "Nome da atividade" },
-                        environment: { type: "string", description: "Ambiente (ex: Cozinha, Suíte, Geral)" },
+                        activity_name: { type: "string", description: "Nome descritivo da atividade (ex: Instalação de tomadas baixas)" },
+                        environment: { type: "string", description: "Ambiente (ex: Suíte Master, Cozinha, Geral)" },
                         discipline: { type: "string", description: "Disciplina (ex: Elétrica, Hidráulica)" },
                         quantity: { type: "number", description: "Quantidade estimada" },
-                        unit: { type: "string", description: "Unidade (un, m, m², m³, vb)" },
-                        estimated_days: { type: "number", description: "Prazo estimado em dias úteis" },
+                        unit: { type: "string", description: "Unidade (un, m, m², ponto)" },
+                        estimated_days: { type: "number", description: "Prazo estimado em dias para execução" },
                       },
-                      required: ["task_name", "environment", "discipline", "quantity", "unit", "estimated_days"],
+                      required: ["activity_name", "environment", "discipline", "quantity", "unit", "estimated_days"],
                       additionalProperties: false,
                     },
                   },
