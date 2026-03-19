@@ -113,7 +113,7 @@ export default function LeadsProposals() {
 
   const handleSave = (formData: ProposalFormData, status: string) => {
     const payload: Record<string, unknown> = {
-      lead_id: formData.lead_id,
+      lead_id: formData.lead_id || null,
       client_name: formData.client_name,
       project_name: formData.project_name,
       project_type: formData.project_type,
