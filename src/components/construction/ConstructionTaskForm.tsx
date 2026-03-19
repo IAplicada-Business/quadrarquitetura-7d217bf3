@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { X, Plus, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { X, Plus, ChevronDown, ChevronRight, Trash2, Settings } from "lucide-react";
 import { addDays, format, parseISO } from "date-fns";
 
 interface Project {
