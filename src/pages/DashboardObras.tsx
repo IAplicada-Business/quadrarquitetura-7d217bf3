@@ -448,6 +448,224 @@ export default function DashboardObras() {
               )}
             </CardContent>
           </Card>
+
+          {/* ═══ VISÃO MULTI-OBRAS ═══ */}
+          <div className="pt-2">
+            <h2 className="text-xl font-bold font-display mb-1" style={{ color: AZUL.textoDestaque }}>Visão Multi-Obras</h2>
+            <p className="text-sm text-muted-foreground mb-4">Panorama consolidado de todas as obras ativas</p>
+          </div>
+
+          {/* Seção 1 — Mapa de Fornecedores por Obra */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5" style={{ color: AZUL.destaque }} />
+                <CardTitle className="text-lg font-display">Mapa de Fornecedores por Obra</CardTitle>
+              </div>
+              <CardDescription>Alocação semanal de fornecedores nas obras ativas</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {multiObras.supplierMatrix.suppliers.length > 0 ? (
+                <div className="overflow-auto max-h-[400px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="sticky left-0 bg-background z-10 min-w-[140px]">Fornecedor</TableHead>
+                        {multiObras.supplierMatrix.projects.map((p) => (
+                          <TableHead key={p.id} className="text-center min-w-[100px] text-xs">{p.name}</TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {multiObras.supplierMatrix.suppliers.map((supplier) => (
+                        <TableRow key={supplier}>
+                          <TableCell className="sticky left-0 bg-background z-10 font-medium text-sm">{supplier}</TableCell>
+                          {multiObras.supplierMatrix.projects.map((proj) => {
+                            const cell = multiObras.supplierMatrix.matrix[supplier]?.[proj.id];
+                            if (!cell || cell.weeks.length === 0) {
+                              return <TableCell key={proj.id} className="text-center"><div className="h-6 w-full rounded" style={{ backgroundColor: "hsl(0,0%,92%)" }} /></TableCell>;
+                            }
+                            const bgColor = cell.conflict ? "hsl(38, 92%, 85%)" : "hsl(152, 50%, 85%)";
+                            const textColor = cell.conflict ? "hsl(38, 80%, 30%)" : "hsl(152, 50%, 25%)";
+                            return (
+                              <TableCell key={proj.id} className="text-center">
+                                <div className="rounded px-1 py-0.5 text-xs font-medium" style={{ backgroundColor: bgColor, color: textColor }}>
+                                  S{cell.weeks.join(", S")}
+                                  {cell.conflict && " ⚠"}
+                                </div>
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhum fornecedor alocado nas obras ativas</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Seção 2 — Timeline Comparativa */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" style={{ color: AZUL.destaque }} />
+                <CardTitle className="text-lg font-display">Timeline Comparativa</CardTitle>
+              </div>
+              <CardDescription>Gantt simplificado das obras ativas</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {multiObras.timeline.items.length > 0 ? (
+                <TooltipProvider>
+                  <div className="space-y-3">
+                    {/* Axis labels */}
+                    {multiObras.timeline.globalStart && (
+                      <div className="flex justify-between text-xs text-muted-foreground px-[140px]">
+                        <span>{format(multiObras.timeline.globalStart, "dd/MM/yy")}</span>
+                        <span>{format(multiObras.timeline.globalEnd!, "dd/MM/yy")}</span>
+                      </div>
+                    )}
+                    {multiObras.timeline.items.map((item) => (
+                      <div key={item.projectId} className="flex items-center gap-3">
+                        <Link to={`/projects/${item.projectId}`} className="w-[130px] text-sm font-medium truncate hover:underline" style={{ color: AZUL.textoDestaque }}>
+                          {item.name}
+                        </Link>
+                        <div className="flex-1 relative h-7 rounded" style={{ backgroundColor: AZUL.fundoSuave }}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div
+                                className="absolute h-full rounded cursor-pointer transition-all"
+                                style={{
+                                  left: `${item.leftPct}%`,
+                                  width: `${Math.max(item.widthPct, 2)}%`,
+                                  backgroundColor: item.barColor,
+                                  opacity: 0.85,
+                                }}
+                              >
+                                <div
+                                  className="h-full rounded-l"
+                                  style={{
+                                    width: `${item.progress}%`,
+                                    backgroundColor: item.barColor,
+                                    opacity: 1,
+                                    filter: "brightness(0.8)",
+                                  }}
+                                />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="font-medium">{item.name}</p>
+                              <p className="text-xs">Progresso: {item.progress}%</p>
+                              {item.nextDelivery && <p className="text-xs">Próx: {item.nextDelivery}</p>}
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <span className="text-xs font-semibold w-10 text-right" style={{ color: item.barColor }}>{item.progress}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </TooltipProvider>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhuma obra com cronograma definido</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Seção 3 — Alertas Consolidados */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Bell className="h-5 w-5" style={{ color: "hsl(0,70%,50%)" }} />
+                <CardTitle className="text-lg font-display">Alertas Consolidados</CardTitle>
+              </div>
+              <CardDescription>Itens que precisam de atenção em todas as obras</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Tarefas atrasadas */}
+              <div>
+                <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5" style={{ color: "hsl(0,70%,45%)" }}>
+                  <Clock className="h-4 w-4" /> Tarefas Atrasadas
+                  {multiObras.alerts.overdueTasks.length > 0 && (
+                    <Badge variant="destructive" className="ml-1 text-xs">{multiObras.alerts.overdueTasks.length}</Badge>
+                  )}
+                </h4>
+                {multiObras.alerts.overdueTasks.length > 0 ? (
+                  <div className="space-y-1">
+                    {multiObras.alerts.overdueTasks.map((t, i) => (
+                      <Link key={i} to={`/projects/${t.projectId}`} className="flex items-center justify-between p-2 rounded-lg border hover:bg-muted/50 transition-colors">
+                        <div>
+                          <p className="text-sm font-medium">{t.taskName}</p>
+                          <p className="text-xs text-muted-foreground">{t.projectName}</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs" style={{ borderColor: "hsl(0,70%,50%)", color: "hsl(0,70%,50%)" }}>
+                          {t.daysOverdue}d atraso
+                        </Badge>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhuma tarefa atrasada 🎉</p>
+                )}
+              </div>
+
+              {/* Pagamentos vencidos */}
+              <div>
+                <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5" style={{ color: "hsl(38,80%,40%)" }}>
+                  <CreditCard className="h-4 w-4" /> Pagamentos Vencidos
+                  {multiObras.alerts.overduePayments.length > 0 && (
+                    <Badge className="ml-1 text-xs" style={{ backgroundColor: "hsl(38,80%,50%)", color: "white" }}>{multiObras.alerts.overduePayments.length}</Badge>
+                  )}
+                </h4>
+                {multiObras.alerts.overduePayments.length > 0 ? (
+                  <div className="space-y-1">
+                    {multiObras.alerts.overduePayments.map((p, i) => (
+                      <Link key={i} to={`/projects/${p.projectId}`} className="flex items-center justify-between p-2 rounded-lg border hover:bg-muted/50 transition-colors">
+                        <div>
+                          <p className="text-sm font-medium">{p.description}</p>
+                          <p className="text-xs text-muted-foreground">{p.projectName}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold">{fmt(p.value)}</p>
+                          <p className="text-xs" style={{ color: "hsl(38,80%,40%)" }}>{p.daysOverdue}d vencido</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhum pagamento vencido 🎉</p>
+                )}
+              </div>
+
+              {/* Materiais aguardando */}
+              <div>
+                <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5" style={{ color: AZUL.destaque }}>
+                  <Truck className="h-4 w-4" /> Materiais Aguardando Entrega (+7 dias)
+                  {multiObras.alerts.delayedMaterials.length > 0 && (
+                    <Badge variant="outline" className="ml-1 text-xs">{multiObras.alerts.delayedMaterials.length}</Badge>
+                  )}
+                </h4>
+                {multiObras.alerts.delayedMaterials.length > 0 ? (
+                  <div className="space-y-1">
+                    {multiObras.alerts.delayedMaterials.map((m, i) => (
+                      <Link key={i} to={`/projects/${m.projectId}`} className="flex items-center justify-between p-2 rounded-lg border hover:bg-muted/50 transition-colors">
+                        <div>
+                          <p className="text-sm font-medium">{m.materialName}</p>
+                          <p className="text-xs text-muted-foreground">{m.projectName}</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {m.daysSincePurchase}d aguardando
+                        </Badge>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhum material com entrega atrasada 🎉</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ═══ ABA FINANCEIRO DAS OBRAS ═══ */}
