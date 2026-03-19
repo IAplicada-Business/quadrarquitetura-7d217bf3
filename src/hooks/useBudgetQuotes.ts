@@ -138,6 +138,16 @@ export function useBudgetQuotes(projectId: string | undefined) {
 
   const createRevision = useMutation({
     mutationFn: async (currentRevision: number) => {
+      // Get current quotes before marking them
+      const { data: currentQuotes, error: fetchError } = await supabase
+        .from("budget_quotes")
+        .select("*")
+        .eq("project_id", projectId!)
+        .eq("revision_number", currentRevision);
+      if (fetchError) throw fetchError;
+
+      const oldQuoteIds = (currentQuotes ?? []).map((q) => q.id);
+
       // Mark all current quotes as not current
       const { error: updateError } = await supabase
         .from("budget_quotes")
@@ -146,30 +156,41 @@ export function useBudgetQuotes(projectId: string | undefined) {
         .eq("is_current_revision", true);
       if (updateError) throw updateError;
 
-      // Get current quotes to duplicate
-      const { data: currentQuotes, error: fetchError } = await supabase
-        .from("budget_quotes")
-        .select("*")
-        .eq("project_id", projectId!)
-        .eq("revision_number", currentRevision);
-      if (fetchError) throw fetchError;
+      // Deactivate material_tracking linked to old revision quotes
+      if (oldQuoteIds.length > 0) {
+        const { error: mtError } = await supabase
+          .from("material_tracking")
+          .update({ is_active: false })
+          .in("budget_quote_id", oldQuoteIds);
+        if (mtError) throw mtError;
+      }
 
       if (currentQuotes && currentQuotes.length > 0) {
         const newRevNumber = currentRevision + 1;
-        const newQuotes = currentQuotes.map(({ id, created_at, updated_at, ...q }) => ({
-          ...q,
-          revision: `Rev ${newRevNumber}`,
-          revision_number: newRevNumber,
-          is_current_revision: true,
-        }));
-        for (const nq of newQuotes) {
-          const { error: insertError } = await supabase.from("budget_quotes").insert(nq);
+        for (const quote of currentQuotes) {
+          const { id, created_at, updated_at, ...q } = quote;
+          const { data: newQuote, error: insertError } = await supabase
+            .from("budget_quotes")
+            .insert({
+              ...q,
+              revision: `Rev ${newRevNumber}`,
+              revision_number: newRevNumber,
+              is_current_revision: true,
+            })
+            .select()
+            .single();
           if (insertError) throw insertError;
+
+          // Create new active material_tracking for the new revision quote
+          if (newQuote && (newQuote.material_estimate ?? 0) > 0) {
+            await autoCreateMaterialTracking(newQuote.id, newQuote.material_estimate!, newQuote.scope_item_id);
+          }
         }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["material_tracking", projectId] });
       toast({ title: "Nova revisão criada" });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
