@@ -23,6 +23,7 @@ import SettingsPage from "./pages/SettingsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import VoiceTasksPage from "./pages/VoiceTasksPage";
 import ConstructionAgenda from "./pages/ConstructionAgenda";
+import NotificationsPage from "./pages/NotificationsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -78,6 +79,7 @@ const App = () => (
               {/* Administrativo */}
               <Route path="/admin/settings" element={<SettingsPage />} />
               <Route path="/admin/users" element={<AdminUsersPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
               {/* Redirects de compatibilidade */}
               <Route path="/site-tracking" element={<Navigate to="/construction/tracking" replace />} />
               <Route path="/suppliers" element={<Navigate to="/construction/suppliers" replace />} />
