@@ -303,7 +303,12 @@ export default function ConstructionTasks() {
             {!isSubtask && subCount === 0 && <span className="w-5" />}
             {isSubtask && <span className="w-5 ml-3 text-muted-foreground">↳</span>}
             <span>{t.task_name}</span>
-          </div>
+            {t.source === "planta_ia" && (
+              <Badge variant="outline" className="ml-1 text-[10px] px-1 py-0 gap-0.5">
+                <Sparkles className="h-2.5 w-2.5" />
+                via planta
+              </Badge>
+            )}
         </TableCell>
         <TableCell className="text-sm">{t.environment ?? "—"}</TableCell>
         <TableCell className="text-sm">{t.discipline ?? "—"}</TableCell>
