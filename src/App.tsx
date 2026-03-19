@@ -91,6 +91,7 @@ const App = () => (
               <Route path="/purchases" element={<Navigate to="/projects" replace />} />
               <Route path="/financial" element={<Navigate to="/projects" replace />} />
             </Route>
+            <Route path="/client/:token" element={<ClientPortal />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
