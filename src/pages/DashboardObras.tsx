@@ -212,6 +212,144 @@ export default function DashboardObras() {
     };
   }, [projects, pendingItems, materials, scheduleTasks, weekStart, weekEnd, todayStr]);
 
+  // ── Computed Multi-Obras ──
+  const multiObras = useMemo(() => {
+    const activeProjects = projects.filter((p) => p.status === "execucao" || p.status === "mobilizacao" || p.status === "planejamento");
+    const activeProjectIds = new Set(activeProjects.map((p) => p.id));
+    const activeProjectMap = new Map(activeProjects.map((p) => [p.id, p]));
+
+    // ── Seção 1: Supplier Matrix ──
+    const relevantTasks = scheduleTasks.filter(
+      (t) => activeProjectIds.has(t.project_id) && t.supplier_name && t.start_date && t.end_date
+    );
+
+    // Build supplier → project → weeks map
+    const supplierWeeks: Record<string, Record<string, Set<number>>> = {};
+    // Also track supplier → week → project ids for conflict detection
+    const supplierWeekProjects: Record<string, Record<number, Set<string>>> = {};
+
+    relevantTasks.forEach((t) => {
+      const supplier = t.supplier_name!;
+      if (!supplierWeeks[supplier]) {
+        supplierWeeks[supplier] = {};
+        supplierWeekProjects[supplier] = {};
+      }
+      if (!supplierWeeks[supplier][t.project_id]) {
+        supplierWeeks[supplier][t.project_id] = new Set();
+      }
+      const start = parseISO(t.start_date!);
+      const end = parseISO(t.end_date!);
+      // Get weeks in range
+      let current = start;
+      while (current <= end) {
+        const week = getISOWeek(current);
+        supplierWeeks[supplier][t.project_id].add(week);
+        if (!supplierWeekProjects[supplier][week]) supplierWeekProjects[supplier][week] = new Set();
+        supplierWeekProjects[supplier][week].add(t.project_id);
+        current = addDays(current, 7);
+      }
+    });
+
+    const suppliers = Object.keys(supplierWeeks).sort();
+    const matrix: Record<string, Record<string, { weeks: number[]; conflict: boolean }>> = {};
+    suppliers.forEach((supplier) => {
+      matrix[supplier] = {};
+      activeProjects.forEach((proj) => {
+        const weeks = Array.from(supplierWeeks[supplier]?.[proj.id] ?? []).sort((a, b) => a - b);
+        const hasConflict = weeks.some((w) => (supplierWeekProjects[supplier]?.[w]?.size ?? 0) > 1);
+        matrix[supplier][proj.id] = { weeks, conflict: hasConflict };
+      });
+    });
+
+    // ── Seção 2: Timeline ──
+    const projectDates = activeProjects.map((proj) => {
+      const projTasks = scheduleTasks.filter((t) => t.project_id === proj.id);
+      const starts = projTasks.filter((t) => t.start_date).map((t) => parseISO(t.start_date!));
+      const ends = projTasks.filter((t) => t.end_date).map((t) => parseISO(t.end_date!));
+      const minDate = starts.length > 0 ? dateMin(starts) : null;
+      const maxDate = ends.length > 0 ? dateMax(ends) : null;
+      const total = projTasks.length;
+      const done = projTasks.filter((t) => t.status === "executado" || t.status === "concluido").length;
+      const progress = total > 0 ? Math.round((done / total) * 100) : 0;
+      const nextTask = projTasks
+        .filter((t) => t.start_date && t.start_date >= todayStr && t.status !== "executado" && t.status !== "concluido")
+        .sort((a, b) => (a.start_date ?? "").localeCompare(b.start_date ?? ""))[0];
+
+      // Determine expected progress by date
+      let expectedProgress = 0;
+      if (minDate && maxDate) {
+        const totalDays = differenceInDays(maxDate, minDate) || 1;
+        const elapsed = differenceInDays(today, minDate);
+        expectedProgress = Math.min(100, Math.max(0, Math.round((elapsed / totalDays) * 100)));
+      }
+
+      let barColor = "hsl(152, 60%, 40%)"; // green
+      if (progress < expectedProgress - 20) barColor = "hsl(0, 70%, 50%)"; // red
+      else if (progress < expectedProgress - 5) barColor = "hsl(38, 92%, 50%)"; // yellow
+
+      return {
+        projectId: proj.id,
+        name: proj.name,
+        minDate,
+        maxDate,
+        progress,
+        barColor,
+        nextDelivery: nextTask?.task_name ?? null,
+      };
+    }).filter((p) => p.minDate && p.maxDate);
+
+    const allDates = projectDates.flatMap((p) => [p.minDate!, p.maxDate!]);
+    const globalStart = allDates.length > 0 ? dateMin(allDates) : null;
+    const globalEnd = allDates.length > 0 ? dateMax(allDates) : null;
+    const globalRange = globalStart && globalEnd ? differenceInDays(globalEnd, globalStart) || 1 : 1;
+
+    const timelineItems = projectDates.map((p) => ({
+      ...p,
+      leftPct: globalStart ? (differenceInDays(p.minDate!, globalStart) / globalRange) * 100 : 0,
+      widthPct: globalStart ? (differenceInDays(p.maxDate!, p.minDate!) / globalRange) * 100 : 100,
+    }));
+
+    // ── Seção 3: Alerts ──
+    const overdueTasks = scheduleTasks
+      .filter((t) => t.end_date && t.end_date < todayStr && t.status !== "executado" && t.status !== "concluido")
+      .map((t) => ({
+        taskName: t.task_name,
+        projectId: t.project_id,
+        projectName: (t as any).projects?.name ?? "",
+        daysOverdue: differenceInDays(today, parseISO(t.end_date!)),
+      }))
+      .sort((a, b) => b.daysOverdue - a.daysOverdue)
+      .slice(0, 10);
+
+    const sevenDaysAgo = format(addDays(today, -7), "yyyy-MM-dd");
+    const overduePayments = payments
+      .filter((p) => p.due_date && p.due_date < todayStr && (p.status === "pendente" || p.status === "atrasado"))
+      .map((p) => ({
+        description: p.supplier_name ?? p.description ?? "Pagamento",
+        projectId: p.project_id ?? "",
+        projectName: (p as any).projects?.name ?? "",
+        value: p.value,
+        daysOverdue: differenceInDays(today, parseISO(p.due_date!)),
+      }))
+      .sort((a, b) => b.daysOverdue - a.daysOverdue);
+
+    const delayedMaterials = materials
+      .filter((m) => (m as any).purchase_date && !(m as any).delivery_date && (m as any).purchase_date <= sevenDaysAgo)
+      .map((m) => ({
+        materialName: m.material_name,
+        projectId: m.project_id,
+        projectName: (m as any).projects?.name ?? "",
+        daysSincePurchase: differenceInDays(today, parseISO((m as any).purchase_date)),
+      }))
+      .sort((a, b) => b.daysSincePurchase - a.daysSincePurchase);
+
+    return {
+      supplierMatrix: { suppliers, projects: activeProjects, matrix },
+      timeline: { items: timelineItems, globalStart, globalEnd },
+      alerts: { overdueTasks, overduePayments, delayedMaterials },
+    };
+  }, [projects, scheduleTasks, payments, materials, todayStr, today]);
+
   // ── Computed Financeiro ──
   const fin = useMemo(() => {
     const activeProjects = projects.filter((p) => p.status !== "concluido");
