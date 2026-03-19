@@ -1,34 +1,36 @@
 
 
-## Cascata de deleção: Scope → Budget Quotes → Material Tracking
+## Atualizar material_tracking existente quando quantity_needed diverge
 
-### Situação atual
-As colunas `budget_quotes.scope_item_id` e `material_tracking.budget_quote_id` existem mas **não possuem foreign key constraints**. A deleção de um scope_item deixa budget_quotes e material_tracking órfãos.
+### Alteração
 
-### Solução: Migration SQL
+**`src/hooks/useBudgetQuotes.ts`** — linhas 27-32
 
-Adicionar foreign keys com `ON DELETE CASCADE` em ambas as tabelas:
+Substituir a verificação que retorna silenciosamente por uma lógica que:
+1. Busca `id` e `quantity_needed` do tracking existente
+2. Se existe e `quantity_needed` difere de `materialEstimate`, faz `update` no registro
+3. Se existe e valores são iguais, retorna sem fazer nada
+4. Se não existe, continua com a criação (lógica atual preservada)
 
-**Migration SQL:**
-```sql
-ALTER TABLE budget_quotes
-  ADD CONSTRAINT fk_budget_quotes_scope_item
-  FOREIGN KEY (scope_item_id) REFERENCES scope_items(id) ON DELETE CASCADE;
+```typescript
+const { data: existing } = await supabase
+  .from("material_tracking")
+  .select("id, quantity_needed")
+  .eq("budget_quote_id", budgetQuoteId)
+  .limit(1);
 
-ALTER TABLE material_tracking
-  ADD CONSTRAINT fk_material_tracking_budget_quote
-  FOREIGN KEY (budget_quote_id) REFERENCES budget_quotes(id) ON DELETE CASCADE;
+if (existing && existing.length > 0) {
+  if (existing[0].quantity_needed !== materialEstimate) {
+    await supabase.from("material_tracking")
+      .update({ quantity_needed: materialEstimate })
+      .eq("id", existing[0].id);
+    queryClient.invalidateQueries({ queryKey: ["material_tracking", projectId] });
+  }
+  return;
+}
 ```
 
-### Resultado
-- Ao deletar um `scope_item`, todos os `budget_quotes` vinculados são deletados automaticamente pelo banco
-- Ao deletar um `budget_quote`, todos os `material_tracking` vinculados são deletados automaticamente
-- O hook `useScopeItems.ts` continua com o `remove` simples — o cascade acontece no banco
-- Invalidação de queries de `budget_quotes` e `material_tracking` será adicionada no `onSuccess` do `remove` em `useScopeItems.ts` para atualizar o cache
-
-### Alterações
-1. **1 migration SQL** — adicionar 2 foreign keys com CASCADE
-2. **`src/hooks/useScopeItems.ts`** — no `onSuccess` do `remove`, invalidar também `["budget_quotes", projectId]` e `["material_tracking", projectId]`
-
-Nenhuma aba, sub-aba ou rota alterada.
+### Resumo
+- 1 arquivo editado, ~5 linhas alteradas
+- Nenhuma aba, sub-aba ou rota alterada
 
