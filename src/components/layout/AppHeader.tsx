@@ -39,13 +39,13 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
     : email.charAt(0).toUpperCase();
 
   return (
-    <header className="flex items-center justify-between h-14 px-4 lg:px-6 border-b border-sidebar-border bg-sidebar shrink-0">
+    <header className="flex items-center justify-between h-14 px-4 lg:px-6 border-b border-primary/20 bg-primary shrink-0">
       {/* Left side - Logo + toggle */}
       <div className="flex items-center gap-2">
         {showMenuButton ? (
           <button
             onClick={onMenuClick}
-            className="p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+            className="p-2 rounded-md text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
             aria-label="Abrir menu"
           >
             <Menu className="h-5 w-5" />
@@ -54,7 +54,7 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
           onToggleSidebar && (
             <button
               onClick={onToggleSidebar}
-              className="p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+              className="p-2 rounded-md text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
               aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
             >
               {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -103,7 +103,7 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
         {/* User dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 p-0.5 rounded-full bg-secondary shadow-sm hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-sidebar-ring focus:ring-offset-2 focus:ring-offset-sidebar">
+            <button className="flex items-center gap-2 p-0.5 rounded-full bg-secondary shadow-sm hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-primary">
               <Avatar className="h-[30px] w-[30px] ring-0">
                 <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-medium">
                   {initials}
