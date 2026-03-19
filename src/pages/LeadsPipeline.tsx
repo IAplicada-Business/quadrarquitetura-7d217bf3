@@ -109,7 +109,7 @@ export default function LeadsPipeline() {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in flex flex-col h-full">
+    <div className="space-y-4 animate-fade-in flex flex-col h-[calc(100vh-12rem)]">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -230,7 +230,7 @@ export default function LeadsPipeline() {
                   <span>{leadStatusLabels[status]}</span>
                   <Badge variant="outline" className="text-xs">{columnLeads.length}</Badge>
                 </div>
-                <div className="border border-t-0 rounded-b-lg bg-muted/30 flex-1 min-h-[400px] p-2 space-y-2 overflow-y-auto">
+                <div className="border border-t-0 rounded-b-lg bg-muted/30 flex-1 p-2 space-y-2 overflow-y-auto">
                   {columnLeads.map((lead) => (
                     <Card key={lead.id} className="shadow-sm">
                       <CardContent className="p-3 space-y-2">
