@@ -192,6 +192,10 @@ export default function SettingsPage() {
         <TabsContent value="regras">
           <CalculationRulesTab />
         </TabsContent>
+
+        <TabsContent value="proposta">
+          <ProposalBrandingTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
