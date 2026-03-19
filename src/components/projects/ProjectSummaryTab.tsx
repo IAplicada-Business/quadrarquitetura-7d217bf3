@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -5,11 +6,14 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { statusLabels } from "@/lib/projectConstants";
 import { Button } from "@/components/ui/button";
-import { Wallet, Hammer, FileText, HardHat } from "lucide-react";
+import { Wallet, Hammer, FileText, HardHat, Link2, Copy, Check, XCircle, RefreshCw, ExternalLink } from "lucide-react";
 import { useScheduleTasks } from "@/hooks/useScheduleTasks";
 import { useProjectPayments } from "@/hooks/useProjectPayments";
 import { useProjectDetail } from "@/hooks/useProjectDetail";
+import { useClientPortalToken } from "@/hooks/useClientPortalToken";
 import { BudgetEstimator } from "./BudgetEstimator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
 function formatCurrency(value: number | null | undefined) {
   if (value == null) return "—";
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
