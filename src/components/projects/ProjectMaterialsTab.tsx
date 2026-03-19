@@ -37,6 +37,21 @@ export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
   const [filterDiscipline, setFilterDiscipline] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
 
+  // Query schedule_tasks with materials
+  const { data: taskMaterials = [] } = useQuery({
+    queryKey: ["task-materials", projectId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("schedule_tasks")
+        .select("id, task_name, materials, discipline, environment")
+        .eq("project_id", projectId)
+        .not("materials", "is", null);
+      return (data || []).filter((t: any) => {
+        const mats = t.materials as any[];
+        return Array.isArray(mats) && mats.length > 0 && mats.some((m: any) => m.name?.trim());
+      });
+    },
+  });
   const disciplines = useMemo(() => {
     const set = new Set<string>();
     scopeItems.filter(s => !s.parent_id).forEach(s => set.add(s.discipline));
