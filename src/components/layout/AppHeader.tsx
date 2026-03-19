@@ -54,7 +54,7 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
           onToggleSidebar && (
             <button
               onClick={onToggleSidebar}
-              className="p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+              className="p-2 rounded-md text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
               aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
             >
               {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
