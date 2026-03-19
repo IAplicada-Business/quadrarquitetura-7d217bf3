@@ -50,6 +50,7 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
   const [formOpen, setFormOpen] = useState(false);
   const [editingQuote, setEditingQuote] = useState<Record<string, unknown> | null>(null);
   const [activeScopeId, setActiveScopeId] = useState<string | null>(null);
+  const [shoppingListOpen, setShoppingListOpen] = useState(false);
 
   const revisions = useMemo(() => {
     const revNums = [...new Set(quotes.map((q) => q.revision_number))].sort((a, b) => (a ?? 0) - (b ?? 0));
