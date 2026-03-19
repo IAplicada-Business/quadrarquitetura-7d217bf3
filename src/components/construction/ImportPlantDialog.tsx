@@ -331,8 +331,8 @@ export function ImportPlantDialog({ open, onOpenChange, projects }: Props) {
                     </TableCell>
                     <TableCell>
                       <Input
-                        value={a.task_name}
-                        onChange={(e) => updateActivity(idx, "task_name", e.target.value)}
+                        value={a.activity_name}
+                        onChange={(e) => updateActivity(idx, "activity_name", e.target.value)}
                         className="h-8 text-sm"
                       />
                     </TableCell>
