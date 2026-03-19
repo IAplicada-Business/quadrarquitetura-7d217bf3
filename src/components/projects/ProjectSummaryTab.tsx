@@ -175,6 +175,9 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
           </div>
         </CardContent>
       </Card>
+
+      {/* Budget Estimator */}
+      <BudgetEstimator project={project} updateProject={updateProject} onTabChange={onTabChange} />
     </div>
   );
 }
