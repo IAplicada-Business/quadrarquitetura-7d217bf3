@@ -45,6 +45,9 @@ export function buildProposalPages({ data, portfolioImages, feedbackImages, sele
     pages.push(<ProposalPillarPage key={`pillar-${key}`} pillarKey={key} {...data} />);
   });
 
+  // Why hire
+  pages.push(<ProposalWhyHirePage key="whyhire" {...data} />);
+
   // Portfolio section
   const portfolioGrouped = new Map<string, ProposalAsset[]>();
   portfolioImages.forEach(img => {
@@ -56,25 +59,12 @@ export function buildProposalPages({ data, portfolioImages, feedbackImages, sele
   });
 
   if (portfolioGrouped.size > 0) {
+    pages.push(<ProposalSeparatorPage key="works-sep" title="Nossos Trabalhos:" />);
     portfolioGrouped.forEach((images, projName) => {
-      // Split into pages of 4 images each
       for (let i = 0; i < images.length; i += 4) {
         pages.push(<ProposalPortfolioPage key={`portfolio-${projName}-${i}`} projectName={projName} images={images.slice(i, i + 4)} logoUrl={data.logoUrl} />);
       }
     });
-  }
-
-  // Why hire
-  pages.push(<ProposalWhyHirePage key="whyhire" {...data} />);
-
-  // Works separator + pages (reuse portfolio)
-  if (portfolioGrouped.size > 0) {
-    pages.push(<ProposalSeparatorPage key="works-sep" title="Nossos Trabalhos:" />);
-    // Show first 4 images across all portfolios
-    const allPortfolio = Array.from(portfolioGrouped.values()).flat();
-    for (let i = 0; i < Math.min(allPortfolio.length, 16); i += 4) {
-      pages.push(<ProposalPortfolioPage key={`works-${i}`} projectName="" images={allPortfolio.slice(i, i + 4)} logoUrl={data.logoUrl} />);
-    }
   }
 
   // Feedback section
