@@ -29,10 +29,10 @@ export async function generateProposalPdf(
       logging: false,
     });
 
-    const imgData = canvas.toDataURL("image/png");
+    const imgData = canvas.toDataURL("image/jpeg", 0.92);
 
     if (i > 0) pdf.addPage("a4", "portrait");
-    pdf.addImage(imgData, "PNG", 0, 0, A4_W_PT, A4_H_PT);
+    pdf.addImage(imgData, "JPEG", 0, 0, A4_W_PT, A4_H_PT);
   }
 
   return pdf.output("blob");
