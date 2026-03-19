@@ -538,6 +538,12 @@ export default function ConstructionTasks() {
         parentTask={parentTaskForSub}
         allTasks={allTasksForForm}
       />
+
+      <ImportPlantDialog
+        open={importPlantOpen}
+        onOpenChange={setImportPlantOpen}
+        projects={projects}
+      />
     </div>
   );
 }
