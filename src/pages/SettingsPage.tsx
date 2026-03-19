@@ -5,7 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Settings, User, Palette, Calculator, Tag, MessageSquare, Save } from "lucide-react";
+import CalculationRulesTab from "@/components/settings/CalculationRulesTab";
 import {
   useCostReferenceTable,
   CONSTRUCTION_TYPE_LABELS,
@@ -66,7 +68,15 @@ export default function SettingsPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold font-display mb-1">Configurações</h1>
-      <p className="text-muted-foreground mb-8">Personalize o sistema</p>
+      <p className="text-muted-foreground mb-4">Personalize o sistema</p>
+
+      <Tabs defaultValue="geral" className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="geral">Geral</TabsTrigger>
+          <TabsTrigger value="regras">Regras de Cálculo</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="geral">
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Profile */}
@@ -175,6 +185,12 @@ export default function SettingsPage() {
           </Card>
         ))}
       </div>
+        </TabsContent>
+
+        <TabsContent value="regras">
+          <CalculationRulesTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
