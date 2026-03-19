@@ -164,6 +164,7 @@ export function ScheduleTaskForm({ open, onOpenChange, onSubmit, initialData, is
                   <SelectItem value="em_execucao">Em Execução</SelectItem>
                   <SelectItem value="executado">Executado</SelectItem>
                   <SelectItem value="atrasado">Atrasado</SelectItem>
+                  <SelectItem value="pendencia">Pendência</SelectItem>
                 </SelectContent>
               </Select>
             </div>
