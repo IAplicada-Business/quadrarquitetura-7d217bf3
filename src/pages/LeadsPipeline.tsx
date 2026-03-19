@@ -109,7 +109,7 @@ export default function LeadsPipeline() {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in flex flex-col h-[calc(100vh-12rem)]">
+    <div className="space-y-4 animate-fade-in flex flex-col min-h-[calc(100vh-12rem)]">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -221,7 +221,7 @@ export default function LeadsPipeline() {
 
       {/* Kanban View */}
       {view === "kanban" && (
-        <div className="flex gap-4 overflow-x-auto pb-4 flex-1 min-h-0">
+        <div className="flex gap-4 overflow-x-auto pb-4 flex-1 min-h-0 max-h-[calc(100vh-16rem)]">
           {LEAD_STATUSES.map((status) => {
             const columnLeads = filtered.filter((l) => l.status === status);
             return (
