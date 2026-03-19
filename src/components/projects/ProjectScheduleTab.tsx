@@ -94,7 +94,7 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   [filteredItems]);
 
   const clientTasks = useMemo(() =>
-    items.filter((t: any) => t.is_client_visible !== false).map((t: any) => ({
+    items.filter((t: any) => t.is_client_visible === true).map((t: any) => ({
       id: t.id, task_name: t.task_name, start_date: t.start_date, end_date: t.end_date,
       status: t.status, discipline: t.discipline || (t.scope_items as any)?.discipline || null,
       color: t.color, progress_percentage: t.progress_percentage,
