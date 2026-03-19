@@ -1693,6 +1693,47 @@ export type Database = {
           },
         ]
       }
+      reports: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          period_end: string
+          period_start: string
+          project_id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          id?: string
+          period_end: string
+          period_start: string
+          project_id: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          project_id?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scenario_items: {
         Row: {
           created_at: string

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import WeeklyReportView from "@/components/reports/WeeklyReportView";
 
 const REPORT_TYPES = [
   { id: "semanal", name: "Relatório Semanal de Obra", icon: Calendar, desc: "Resumo de atividades, fotos e pendências" },
@@ -20,23 +21,64 @@ export default function Reports() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
 
   const { data: projects = [] } = useQuery({
-    queryKey: ["projects_simple"],
+    queryKey: ["projects_simple_reports"],
     queryFn: async () => {
-      const { data } = await supabase.from("projects").select("id, name").order("name");
+      const { data } = await supabase.from("projects").select("id, name, address").order("name");
       return data || [];
     },
     enabled: !!user,
   });
 
+  const selectedProjectData = projects.find(p => p.id === selectedProject);
+
   const handlePrint = () => {
     window.print();
+  };
+
+  const renderReportContent = () => {
+    if (selectedType === "semanal") {
+      if (selectedProject === "all") {
+        return (
+          <div className="flex items-center justify-center h-64 text-muted-foreground italic border-2 border-dashed rounded-lg">
+            Selecione uma obra específica para gerar o relatório semanal.
+          </div>
+        );
+      }
+      return (
+        <WeeklyReportView
+          projectId={selectedProject}
+          projectName={selectedProjectData?.name || ""}
+          projectAddress={selectedProjectData?.address || undefined}
+        />
+      );
+    }
+
+    // Placeholder for other report types
+    return (
+      <div className="border rounded-lg bg-card min-h-[600px] p-8 shadow-sm print:shadow-none print:border-none">
+        <div className="text-center mb-8 border-b pb-4">
+          <h2 className="text-2xl font-bold uppercase tracking-wide">
+            {REPORT_TYPES.find(t => t.id === selectedType)?.name}
+          </h2>
+          <p className="text-muted-foreground mt-1">
+            {selectedProject === "all" ? "Relatório Geral" : selectedProjectData?.name}
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">Gerado em {new Date().toLocaleDateString()}</p>
+        </div>
+        <div className="flex items-center justify-center h-64 text-muted-foreground italic border-2 border-dashed rounded-lg">
+          Preview do relatório com dados reais será exibido aqui.
+          <br />
+          (Implementação dos dados em breve)
+        </div>
+      </div>
+    );
   };
 
   return (
     <div className="space-y-6 animate-fade-in print:p-0">
       <div className="flex justify-between items-center print:hidden">
         <div>
-          <h1 className="text-2xl font-bold text-display">Relatórios</h1>
+          <h1 className="text-2xl font-bold">Relatórios</h1>
           <p className="text-muted-foreground">Geração e exportação de relatórios gerenciais</p>
         </div>
       </div>
@@ -82,23 +124,7 @@ export default function Reports() {
 
       {/* Preview Area */}
       {selectedType ? (
-        <div className="border rounded-lg bg-white min-h-[600px] p-8 shadow-sm print:shadow-none print:border-none">
-          <div className="text-center mb-8 border-b pb-4">
-            <h2 className="text-2xl font-bold text-gray-800 uppercase tracking-wide">
-              {REPORT_TYPES.find(t => t.id === selectedType)?.name}
-            </h2>
-            <p className="text-gray-500 mt-1">
-              {selectedProject === "all" ? "Relatório Geral" : projects.find(p => p.id === selectedProject)?.name}
-            </p>
-            <p className="text-xs text-gray-400 mt-2">Gerado em {new Date().toLocaleDateString()}</p>
-          </div>
-
-          <div className="flex items-center justify-center h-64 text-muted-foreground italic border-2 border-dashed rounded-lg bg-gray-50 print:border-gray-200">
-            Preview do relatório com dados reais será exibido aqui.
-            <br />
-            (Implementação dos dados em breve)
-          </div>
-        </div>
+        renderReportContent()
       ) : (
         <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg print:hidden">
           Selecione um tipo de relatório acima para visualizar.
