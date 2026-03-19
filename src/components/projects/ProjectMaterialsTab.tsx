@@ -37,6 +37,7 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
   const [supplierListOpen, setSupplierListOpen] = useState(false);
   const [filterDiscipline, setFilterDiscipline] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [shoppingListOpen, setShoppingListOpen] = useState(false);
 
   // Query schedule_tasks with materials
   const { data: taskMaterials = [] } = useQuery({
