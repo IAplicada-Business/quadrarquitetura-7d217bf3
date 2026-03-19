@@ -1,35 +1,21 @@
 
 
-## Correção — Geração de Proposta (4 bugs)
+## Corrigir imagem desfocada/alargada no PDF — Página "Quem Somos"
 
-### Diagnóstico
+### Problema
 
-**BUG 1 — Pilares sem bullets**: O `PillarPage.tsx` lê `pillarTexts?.[config.textKey]`, mas esses textos vêm de `proposal_assets` (categoria "text", metadata key "pilar_planejamento" etc). Se nenhum asset foi cadastrado no banco, `pillarTexts` fica vazio e nenhum bullet aparece. **Solução**: Hardcodar os textos default de cada pilar diretamente no `PillarPage.tsx` como fallback.
+O `html2canvas` não respeita `object-fit: cover` nem `object-position` ao capturar imagens. Ele renderiza a imagem esticada para preencher o container (width/height 100%), ignorando essas propriedades CSS. Resultado: foto alargada e desfocada no PDF.
 
-**BUG 2 — Valores incompletos**: O componente `ValuesPage.tsx` já tem a lógica correta para mostrar valor cheio riscado, desconto, parcelas e nota. O problema é que o valor cheio só aparece riscado quando `priceCash < priceFull` — se o usuário preencheu apenas `price_full`, aparece só um valor. Quando ambos são iguais ou `priceCash` não existe, o layout fica incompleto. **Solução**: Ajustar a lógica para sempre mostrar `priceFull` em destaque, e mostrar `priceCash` separado quando diferente.
+### Solução
 
-**BUG 3 — Portfólio e Feedbacks**: O `ProposalPageRenderer.tsx` já tem toda a lógica de portfólio e feedbacks implementada. O formulário já tem checkboxes. Se não aparecem no PDF, é porque o usuário não cadastrou assets ou não selecionou nenhum. O código está correto. **Verificação**: Garantir que a ordem das seções está correta (separador "Nossos Trabalhos" antes do portfólio, não depois do "Why Hire").
+Na `AboutPage.tsx`, trocar o approach de `object-fit: cover` por dimensões explícitas que mantêm a proporção natural da foto. Em vez de forçar a imagem em um container 500x400 com `object-fit`, usar um container que se adapta à proporção da imagem, ou usar `object-fit: contain` que o html2canvas lida melhor.
 
-**BUG 4 — Formulário**: O formulário `ProposalFormNew.tsx` já tem TODOS os campos (price_full, price_cash, installments_count, installment_entry, installment_value auto-calculado, price_note). Está completo.
+A abordagem mais confiável para html2canvas: usar a imagem com largura fixa e deixar a altura ser automática (sem forçar height: 100%), evitando distorção.
 
----
+### Edições
 
-### Edições necessárias
-
-#### 1. `src/components/leads/proposal-pages/PillarPage.tsx`
-- Adicionar constante `DEFAULT_PILLAR_TEXTS` com todos os 6 textos de pilares hardcoded (os textos fornecidos pelo usuário)
-- Na linha 22, usar fallback: `pillarTexts?.[config.textKey] || DEFAULT_PILLAR_TEXTS[config.textKey] || ""`
-
-#### 2. `src/components/leads/proposal-pages/ValuesPage.tsx`
-- Refatorar layout para sempre exibir `priceFull` quando disponível
-- Mostrar `priceFull` riscado APENAS quando `priceCash` existe e é menor
-- Sempre mostrar a seção "Formas de Pagamento" quando `installmentsCount` ou `priceCash` existir
-- Garantir que `priceNote` sempre aparece
-
-#### 3. `src/components/leads/ProposalPageRenderer.tsx`
-- Reordenar seções: mover separador "Nossos Trabalhos:" + portfólio para ANTES de "Why Hire"
-- Remover duplicação de portfólio (atualmente aparece 2x: uma antes e outra depois de Why Hire)
-- Manter feedbacks após Why Hire
-
-Nenhuma mudança no banco de dados é necessária.
+**`src/components/leads/proposal-pages/AboutPage.tsx`**
+- Container da foto: remover `height: 400` fixo, usar `maxHeight: 400` com `overflow: hidden`
+- Imagem: trocar `width: "100%", height: "100%", objectFit: "cover"` por `width: "100%", height: "auto"` — isso garante que a imagem mantém proporção natural e html2canvas a captura sem distorção
+- Manter `objectPosition` para ajuste vertical via margem negativa se necessário
 
