@@ -963,6 +963,7 @@ export type Database = {
           delivery_date: string | null
           discipline: string | null
           id: string
+          is_active: boolean
           material_name: string
           notes: string | null
           product_link: string | null
@@ -984,6 +985,7 @@ export type Database = {
           delivery_date?: string | null
           discipline?: string | null
           id?: string
+          is_active?: boolean
           material_name: string
           notes?: string | null
           product_link?: string | null
@@ -1005,6 +1007,7 @@ export type Database = {
           delivery_date?: string | null
           discipline?: string | null
           id?: string
+          is_active?: boolean
           material_name?: string
           notes?: string | null
           product_link?: string | null
