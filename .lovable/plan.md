@@ -1,52 +1,69 @@
 
 
-## Estimativa Rápida de Orçamento — Aba Resumo
+## Importar Planta com IA — Tarefas por Obra
 
 ### Contexto
-Adicionar calculadora de orçamento rápido na aba Resumo do projeto, abaixo dos dados gerais. Usa `area_sqm` (já existe), e precisa de `construction_type_estimate` (novo) e reutiliza `finish_level` com mapeamento para labels textuais.
+Ativar o botão "Importar Planta" na página ConstructionTasks, implementando upload de planta, análise por IA via edge function, revisão editável dos resultados e criação em lote de `schedule_tasks`. Histórico salvo em nova tabela `plant_analyses`.
 
 ### Alterações
 
-**1. Migration SQL** — adicionar coluna `construction_type_estimate` na tabela `projects`:
+**1. Migration SQL** — 2 alterações:
 
 ```sql
-ALTER TABLE projects ADD COLUMN IF NOT EXISTS construction_type_estimate text;
+-- Nova tabela para histórico de análises
+CREATE TABLE plant_analyses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  file_url text NOT NULL,
+  focus text NOT NULL,
+  instructions text,
+  ai_result jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE plant_analyses ENABLE ROW LEVEL SECURITY;
+-- RLS: CRUD own records
+CREATE POLICY "Users can insert own plant_analyses" ON plant_analyses FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can view own plant_analyses" ON plant_analyses FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own plant_analyses" ON plant_analyses FOR DELETE USING (auth.uid() = user_id);
+
+-- Coluna source na schedule_tasks para marcar origem
+ALTER TABLE schedule_tasks ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';
 ```
 
-O campo `area_sqm` já existe. O campo `finish_level` (integer 1-5) já existe — será mapeado para os 4 níveis (1=Básico, 2=Intermediário, 3=Alto Padrão, 4=Luxo).
+**2. Edge Function `supabase/functions/analyze-plant/index.ts`**:
+- Recebe: `file_url`, `focus`, `instructions`
+- Faz fetch da imagem/PDF do Storage
+- Chama Lovable AI (`google/gemini-2.5-pro` — melhor para imagem+texto+raciocínio complexo) com prompt estruturado pedindo lista de atividades
+- Usa tool calling para extrair JSON estruturado: `{ activities: [{ task_name, environment, discipline, quantity, unit, estimated_days }] }`
+- Retorna o array de atividades
+- Trata 429/402
 
-**2. Tabela de referência de valores** — armazenada no campo `calculation_params` da tabela `settings` do usuário, sob a chave `cost_per_sqm_table`. Valores padrão iniciais:
+**3. Novo componente `src/components/construction/ImportPlantDialog.tsx`**:
+- Dialog modal com 3 steps internos (upload → loading → revisão)
+- **Step 1**: Select de projeto, dropzone para upload (PDF/PNG/JPG, max 10MB), Select "Foco da análise" (11 opções), Textarea instruções adicionais, botão "Analisar com IA"
+- Upload vai para bucket `project-files` via Supabase Storage
+- **Step 2**: Spinner com "Analisando planta..."
+- **Step 3**: Tabela editável com checkbox por linha, campos inline editáveis (task_name, environment, discipline, quantity, unit, estimated_days), botão "+ Adicionar atividade", rodapé "X selecionadas", botão "Criar atividades selecionadas"
+- Ao criar: insere em `schedule_tasks` com `source = 'planta_ia'` e `status = 'planejado'`, salva registro em `plant_analyses`
 
-```json
-{
-  "reforma_completa": { "basico": 1200, "intermediario": 2000, "alto_padrao": 3500, "luxo": 5500 },
-  "reforma_parcial": { "basico": 800, "intermediario": 1400, "alto_padrao": 2500, "luxo": 4000 },
-  "construcao": { "basico": 1500, "intermediario": 2500, "alto_padrao": 4000, "luxo": 6500 },
-  "ampliacao": { "basico": 1000, "intermediario": 1800, "alto_padrao": 3000, "luxo": 5000 }
-}
+**4. `src/pages/ConstructionTasks.tsx`**:
+- Remover `disabled` e `opacity-50 cursor-not-allowed` do botão "Importar Planta"
+- Alterar texto para "Importar Planta" (sem "em breve")
+- Adicionar state `importPlantOpen` e renderizar `<ImportPlantDialog>`
+- Na renderização de linhas da tabela: se `t.source === 'planta_ia'`, exibir Badge "via planta" com ícone Sparkles ao lado do nome da atividade
+
+**5. `supabase/config.toml`** — adicionar:
+```toml
+[functions.analyze-plant]
+verify_jwt = false
 ```
-
-**3. Novo componente `src/components/projects/BudgetEstimator.tsx`**:
-- Card com ícone Calculator no header, título "Estimativa Rápida de Orçamento"
-- Campos: Área (m², pré-preenchido de `project.area_sqm`), Tipo de obra (Select), Nível de acabamento (Select), Valor por m² (auto-preenchido, editável)
-- Resultado em destaque: valor estimado + faixa (±15%)
-- Botão "Salvar como orçamento estimado" → `updateProject({ estimated_budget: valor })`
-- Botão "Criar cenário a partir desta estimativa" → `onTabChange("cenarios")` (com valor no state)
-- Collapsible "Detalhamento": nº ambientes, metragens por ambiente (campos opcionais, não persistidos por ora)
-- Ao alterar área/tipo/nível, persiste no projeto via `updateProject`
-
-**4. Hook `src/hooks/useCostReferenceTable.ts`**:
-- Busca `settings` do usuário e extrai `calculation_params.cost_per_sqm_table`
-- Se não existir, retorna os valores padrão hardcoded
-- Mutation para salvar/atualizar a tabela
-
-**5. `src/components/projects/ProjectSummaryTab.tsx`** — importar e renderizar `<BudgetEstimator>` após o card "Informações Gerais"
-
-**6. `src/pages/SettingsPage.tsx`** — substituir o placeholder "Parâmetros de Cálculo" por editor funcional da tabela de custo por m². Grid editável 4×4 com inputs numéricos formatados em R$.
 
 ### Arquivos criados/editados
-- 1 migration SQL (1 coluna)
-- 2 arquivos criados: `BudgetEstimator.tsx`, `useCostReferenceTable.ts`
-- 2 arquivos editados: `ProjectSummaryTab.tsx`, `SettingsPage.tsx`
+- 1 migration SQL (1 tabela + 1 coluna)
+- 1 edge function criada: `analyze-plant/index.ts`
+- 1 componente criado: `ImportPlantDialog.tsx`
+- 1 arquivo editado: `ConstructionTasks.tsx`
+- `config.toml` atualizado automaticamente
 - Nenhuma aba, sub-aba ou rota alterada
 
