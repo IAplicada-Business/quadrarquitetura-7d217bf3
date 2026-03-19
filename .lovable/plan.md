@@ -1,55 +1,46 @@
 
 
-## Relatório Semanal de Obra — Implementação
+## Caminho Crítico no Gantt — Plano de Implementação
 
 ### Contexto
-A página Reports.tsx já existe com 4 cards de tipo de relatório (semanal, financeiro, fornecedor, cliente) mas todos com placeholder. Implementar o tipo "semanal" com dados reais, preview, export PDF, copiar WhatsApp e persistência.
+Adicionar cálculo e visualização do caminho crítico (CPM) ao GanttChart existente. Sem alterações de banco, rotas ou abas.
 
 ### Alterações
 
-**1. Migration SQL** — criar tabela `reports`
+**1. Editar `src/components/projects/GanttChart.tsx`**
 
-```sql
-CREATE TABLE public.reports (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id uuid NOT NULL,
-  user_id uuid NOT NULL,
-  type text NOT NULL,
-  period_start date NOT NULL,
-  period_end date NOT NULL,
-  content jsonb NOT NULL DEFAULT '{}',
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view own reports" ON reports FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own reports" ON reports FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can delete own reports" ON reports FOR DELETE USING (auth.uid() = user_id);
+- Add `estimated_days` to `GanttTask` interface
+- New `useMemo` implementing simplified CPM:
+  - Build adjacency (dependencies → dependents)
+  - Forward pass: ES/EF for each task (ES = max EF of deps, EF = ES + estimated_days; fallback to actual start/end dates if no estimated_days)
+  - Backward pass: LF/LS (LF = min LS of dependents, LS = LF - estimated_days)
+  - Float = LS - ES; critical if float === 0
+  - Returns `Set<string>` of critical task IDs + summary stats (total critical days, estimated end date, count)
+- New state: `showCriticalPath` toggle (default: true)
+- UI additions:
+  - Toggle switch + legend in navigation bar: "Destacar caminho crítico" + "🔴 Caminho crítico" / "⚪ Com folga"
+  - When enabled: critical task bars get red border (3px, `border: 3px solid #ef4444`), non-critical bars unchanged
+  - Critical dependency arrows: red stroke instead of muted
+  - Enhanced tooltip: add "Folga: X dias" and "Caminho crítico: Sim/Não"
+  - Summary card below the Gantt grid: critical path duration, estimated completion date, critical vs total count
+
+**2. Editar `src/components/projects/ProjectScheduleTab.tsx`**
+
+- Add `estimated_days` to the ganttTasks and allGanttTasks mapping (field already exists on schedule_tasks)
+
+### CPM Logic (pseudocode)
+
+```text
+For each task without dependencies: ES = task.start_date, EF = ES + estimated_days
+Forward pass (topological): ES = max(EF of all deps), EF = ES + estimated_days
+Backward pass (reverse): LF = min(LS of all dependents), LS = LF - estimated_days
+Float = LS - ES
+Critical = float === 0
 ```
 
-**2. Novo componente `src/components/reports/WeeklyReportView.tsx`**
+Tasks without `estimated_days` or `start_date` are excluded from CPM calculation.
 
-- Props: `projectId`, `projectName`
-- State: `weekStart` / `weekEnd` (default: current week Mon-Sun), date pickers to change
-- On render / week change, fetches all data for the period:
-  - `schedule_tasks` where `project_id = X` — filter by status for concluded/in-progress/overdue/pending + next week
-  - `site_diary_entries` where `entry_date BETWEEN weekStart AND weekEnd`
-  - `material_tracking` where `purchase_date` or `delivery_date` in period
-  - `payments` where `paid_date` in period and status = 'pago'
-- Renders the full report layout as specified (header, summary, sections, photos, financial)
-- "Exportar PDF" button: uses `window.print()` with print-specific CSS (the preview area is print-friendly)
-- "Copiar para WhatsApp" button: generates plain text version without photos, copies to clipboard
-- "Salvar Relatório" button: inserts into `reports` table with all fetched data as JSON content
-- Photos section: shows up to 6 photos from diary entries with thumbnails
-
-**3. Edit `src/pages/Reports.tsx`**
-
-- When `selectedType === "semanal"` and a project is selected (`selectedProject !== "all"`), render `<WeeklyReportView>` instead of the placeholder
-- If "semanal" selected but no project, show message asking to select a project
-- Keep all existing report type cards and other UI intact
-
-### Arquivos criados/editados
-- 1 migration SQL (table `reports` + RLS)
-- 1 componente criado: `WeeklyReportView.tsx`
-- 1 arquivo editado: `Reports.tsx` (replace placeholder with real component for "semanal")
-- Nenhuma aba, sub-aba ou rota existente alterada
+### Arquivos editados
+- `GanttChart.tsx` — CPM logic, toggle, legend, styled bars/arrows, tooltip, summary card
+- `ProjectScheduleTab.tsx` — pass `estimated_days` in task mapping
 
