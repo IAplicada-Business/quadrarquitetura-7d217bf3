@@ -1,18 +1,16 @@
 
 
-## Ajuste da Capa — Foto das Sócias como Background
+## Ajuste da Capa — Reenquadrar foto + Logo
 
-### O que fazer
-1. Copiar a imagem `user-uploads://output_scene6.jpg` para `src/assets/socias-cover.jpg`
-2. Editar `CoverPage.tsx` para incluir a foto como imagem de fundo atrás do texto, com overlay escuro semitransparente (azul-marinho ~70-75% opacity) para manter legibilidade do texto
+### Problemas
+1. A foto das sócias está sendo cortada nos rostos porque `objectFit: cover` em container landscape (1456x816) corta o centro vertical de uma foto vertical/quadrada
+2. A logo já está condicionada a `logoUrl` mas precisa aparecer sempre (usar logo dos assets ou fallback)
 
-### Implementação em `CoverPage.tsx`
-- Adicionar `import sociasCover from "@/assets/socias-cover.jpg"`
-- Estrutura: imagem full-cover com `objectFit: cover` + overlay div com `background: rgba(27,42,74, 0.72)` cobrindo tudo + texto por cima
-- O background sólido `COLORS.azulMarinho` do `PageContainer` serve como fallback
-- Logo e shape decorativo permanecem inalterados
+### Correções em `CoverPage.tsx`
 
-### Arquivos
-- Copiar: `user-uploads://output_scene6.jpg` → `src/assets/socias-cover.jpg`
-- Editar: `src/components/leads/proposal-pages/CoverPage.tsx`
+1. **Reenquadrar foto**: Adicionar `objectPosition: "top center"` (ou `"50% 25%"`) ao `<img>` para priorizar a parte superior da imagem onde estão os rostos, em vez do centro padrão
+2. **Logo sempre visível**: A logo já renderiza quando `logoUrl` existe — o componente está correto. Garantir que no formulário/preview a `logoUrl` seja passada. Caso não haja logo cadastrada, usar um fallback textual "QUADRA" no canto inferior direito
+
+### Arquivo editado
+- `src/components/leads/proposal-pages/CoverPage.tsx` — ajustar `objectPosition` e adicionar fallback de logo
 
