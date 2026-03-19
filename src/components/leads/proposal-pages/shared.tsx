@@ -12,8 +12,9 @@ export const COLORS = {
   shapeBege: "#D4B8A0",
 } as const;
 
-export const PAGE_W = 1456;
-export const PAGE_H = 816;
+// A4 portrait ratio (210x297mm) — pixel dimensions for rendering
+export const PAGE_W = 794;
+export const PAGE_H = 1123;
 
 export interface ProposalPageProps {
   clientName?: string;
@@ -64,9 +65,9 @@ export function LogoSmall({ url, position = "br" }: { url?: string; position?: "
   const style: React.CSSProperties = {
     position: "absolute",
     bottom: 24,
-    height: 40,
+    height: 36,
     opacity: 0.9,
-    ...(position === "br" ? { right: 40 } : { left: 40 }),
+    ...(position === "br" ? { right: 36 } : { left: 36 }),
   };
   return <img src={url} alt="Quadra" style={style} />;
 }
@@ -79,8 +80,8 @@ export function DecorativeShape({ position = "bl", color = COLORS.shapeBege }: {
         position: "absolute",
         bottom: 0,
         [isLeft ? "left" : "right"]: 0,
-        width: 200,
-        height: 200,
+        width: 120,
+        height: 120,
         background: "transparent",
         borderLeft: isLeft ? `3px solid ${color}` : "none",
         borderRight: !isLeft ? `3px solid ${color}` : "none",
