@@ -100,6 +100,7 @@ export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
       <Tabs defaultValue="rastreamento">
         <TabsList>
           <TabsTrigger value="rastreamento">Rastreamento</TabsTrigger>
+          <TabsTrigger value="atividades">Por Atividade</TabsTrigger>
           <TabsTrigger value="calculo">Memória de Cálculo</TabsTrigger>
           <TabsTrigger value="compras">Compras</TabsTrigger>
         </TabsList>
