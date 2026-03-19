@@ -42,7 +42,7 @@ interface ProjectBudgetsTabProps {
   projectName?: string;
 }
 
-export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
+export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudgetsTabProps) {
   const { items: scopeItems } = useScopeItems(projectId);
   const { quotes, isLoading, create, update, remove, createRevision } = useBudgetQuotes(projectId);
   const { user } = useAuth();
