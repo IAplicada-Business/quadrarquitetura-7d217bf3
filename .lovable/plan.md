@@ -1,70 +1,47 @@
 
 
-## Regras de Cálculo — Nova subaba em Configurações
+## Gerar Lista de Compras — Botão nas abas Orçamentos e Materiais
 
 ### Contexto
-Adicionar subaba "Regras de Cálculo" na página de Configurações, com CRUD completo e seeds de regras padrão. A página atual não tem sistema de abas — será convertida para usar Tabs, com "Geral" contendo o conteúdo existente.
+Criar um componente `ShoppingListDialog` que busca `budget_quotes` aprovados com `material_estimate > 0`, cruza com `material_tracking` ativos, agrupa por fornecedor, e permite copiar texto formatado para WhatsApp. Reutilizar o mesmo componente nas abas Orçamentos e Materiais.
 
 ### Alterações
 
-**1. Migration SQL** — criar tabela + seeds
+**1. Novo componente `src/components/projects/ShoppingListDialog.tsx`**
 
-```sql
-CREATE TABLE calculation_rules (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  discipline text NOT NULL,
-  variable_name text NOT NULL,
-  formula text NOT NULL,
-  result_name text NOT NULL,
-  unit text NOT NULL,
-  notes text,
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-ALTER TABLE calculation_rules ENABLE ROW LEVEL SECURITY;
--- RLS: user owns their rules
-CREATE POLICY "Users can view own rules" ON calculation_rules FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own rules" ON calculation_rules FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own rules" ON calculation_rules FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can delete own rules" ON calculation_rules FOR DELETE USING (auth.uid() = user_id);
--- updated_at trigger
-CREATE TRIGGER update_calculation_rules_updated_at
-  BEFORE UPDATE ON calculation_rules
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-```
+- Props: `open`, `onOpenChange`, `projectId`, `projectName`
+- Ao abrir, busca:
+  - `budget_quotes` do projeto com `status IN ('aprovado')` e `material_estimate > 0`, incluindo `scope_items(discipline)`
+  - `material_tracking` do projeto com `is_active = true` (materiais com `quantity_purchased < quantity_needed` ou sem compra)
+- Agrupa por `supplier_name`
+- Para cada fornecedor, exibe Card com:
+  - Header: nome + total estimado (soma `material_estimate` dos quotes + valores)
+  - Lista de materiais: nome, quantidade necessária, unidade
+- Botão "Copiar para WhatsApp" por fornecedor — gera texto com formato especificado (`*Lista de Compras — [Obra]*`, `*Fornecedor: [Nome]*`, bullets, total, assinatura)
+- Botão "Copiar tudo" — texto consolidado de todos os fornecedores
+- Toast "Lista copiada para a área de transferência"
 
-Seeds (9 regras padrão) will be inserted via the seed mechanism on first load in the hook — if user has 0 rules, auto-insert the defaults. This avoids needing a global seed that doesn't know user_id.
+**2. Editar `src/components/projects/ProjectBudgetsTab.tsx`**
 
-**2. New hook `src/hooks/useCalculationRules.ts`**
-- CRUD operations via react-query + supabase
-- `useQuery` to fetch rules ordered by discipline
-- `useMutation` for create, update, delete
-- Auto-seed: if query returns empty, insert 9 default rules for current user
+- Importar `ShoppingListDialog`
+- Adicionar state `shoppingListOpen`
+- Adicionar botão "Gerar Lista de Compras" no header da sub-aba "cotacoes" (ao lado do botão "Nova Revisão")
+- Renderizar `<ShoppingListDialog>` com `projectId`
+- Precisa do `projectName` — receber como prop ou buscar
 
-**3. New component `src/components/settings/CalculationRulesTab.tsx`**
-- Table grouped by discipline showing: Disciplina, Variavel, Formula, Resultado, Unidade, Ativo (Switch), Acoes (edit/delete)
-- "Nova Regra" button opens Dialog with form:
-  - Discipline Select (same 16 options from ConstructionTaskForm)
-  - Variable name (Input)
-  - Formula (Input)
-  - Result name (Input)
-  - Unit Select (un, m, m², m³, kg, litro, pacote, rolo, saco)
-  - Notes (Textarea)
-  - Active toggle (Switch)
-- Edit reuses same dialog
-- Delete with confirmation
+**3. Editar `src/components/projects/ProjectMaterialsTab.tsx`**
 
-**4. Edit `src/pages/SettingsPage.tsx`**
-- Wrap existing content in a `Tabs` component with two tabs: "Geral" and "Regras de Cálculo"
-- "Geral" tab contains all current cards (Profile, Theme, Cost table, placeholders)
-- "Regras de Cálculo" tab renders `<CalculationRulesTab />`
+- Importar `ShoppingListDialog`
+- Adicionar state `shoppingListOpen`
+- Adicionar botão "Gerar Lista de Compras" na área de ações do rastreamento (ao lado de "Importar do Orçamento")
+- Renderizar `<ShoppingListDialog>`
+
+**4. Editar `src/pages/ProjectDetail.tsx`**
+
+- Passar `project.name` para `ProjectBudgetsTab` e `ProjectMaterialsTab` como prop `projectName`
 
 ### Arquivos criados/editados
-- 1 migration SQL (table + RLS + trigger)
-- 1 hook criado: `useCalculationRules.ts`
-- 1 componente criado: `CalculationRulesTab.tsx`
-- 1 arquivo editado: `SettingsPage.tsx` (add Tabs wrapper)
+- 1 componente criado: `ShoppingListDialog.tsx`
+- 3 arquivos editados: `ProjectBudgetsTab.tsx`, `ProjectMaterialsTab.tsx`, `ProjectDetail.tsx`
 - Nenhuma aba, sub-aba ou rota existente alterada
 
