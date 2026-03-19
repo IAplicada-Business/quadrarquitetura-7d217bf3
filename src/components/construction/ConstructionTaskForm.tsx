@@ -28,6 +28,7 @@ interface MaterialItem {
   name: string;
   quantity: number | string;
   unit: string;
+  status: string;
 }
 
 interface ConstructionTaskFormProps {
