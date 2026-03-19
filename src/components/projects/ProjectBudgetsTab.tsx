@@ -275,6 +275,13 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
             revisionNumber={currentRev}
             isLoading={create.isPending || update.isPending}
           />
+
+          <ShoppingListDialog
+            open={shoppingListOpen}
+            onOpenChange={setShoppingListOpen}
+            projectId={projectId}
+            projectName={projectName}
+          />
         </TabsContent>
 
         <TabsContent value="compras" className="mt-4">
