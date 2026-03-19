@@ -1,14 +1,24 @@
 
 
-## Corrigir quebra de linha no último conector da página 4
+## Substituir logo da proposta pela logo correta da Quadra
 
 ### Problema
-O label "em torno de\n25 dias" tem `\n` forçando quebra de linha no conector.
+A logo exibida nas páginas da proposta não é a correta. O usuário forneceu a logo branca correta da Quadra Arquitetura.
 
 ### Solução
-Alterar linha 74 do `FlowPage.tsx`: remover o `\n` para ficar em uma única linha.
+1. Copiar a imagem enviada para `src/assets/quadra-logo-white.png`
+2. Atualizar `LogoSmall` em `shared.tsx` para importar e usar essa logo como fallback (quando `url` não for fornecido)
+3. Atualizar `CoverPage.tsx` para usar a mesma logo importada como fallback
 
-### Edição: `FlowPage.tsx` linha 74
-- De: `` `em torno de\n${timelineConstruction} dias` ``
-- Para: `` `em torno de ${timelineConstruction} dias` ``
+### Edições
+
+**`src/assets/quadra-logo-white.png`** — copiar o arquivo enviado
+
+**`src/components/leads/proposal-pages/shared.tsx`**
+- Importar `quadraLogoWhite` de `@/assets/quadra-logo-white.png`
+- No `LogoSmall`, usar a logo importada como fallback: `src={url || quadraLogoWhite}` e remover o `if (!url) return null`
+
+**`src/components/leads/proposal-pages/CoverPage.tsx`**
+- Importar `quadraLogoWhite` de `@/assets/quadra-logo-white.png`
+- Usar como fallback no lugar do texto "QUADRA" quando `logoUrl` não está definido
 
