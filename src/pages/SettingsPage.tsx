@@ -185,6 +185,12 @@ export default function SettingsPage() {
           </Card>
         ))}
       </div>
+        </TabsContent>
+
+        <TabsContent value="regras">
+          <CalculationRulesTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
