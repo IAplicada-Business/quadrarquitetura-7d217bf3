@@ -51,7 +51,7 @@ export function ScopeItemForm({ open, onOpenChange, onSubmit, initialData, paren
       setStatus((initialData.status as string) || "rascunho");
     } else {
       setDiscipline(""); setDescription(""); setActivities(""); setSuppliersToQuote(""); setPaymentTerms("");
-      setEntryOrder(""); setServiceDuration(""); setParentId(""); setStatus("planejado");
+      setEntryOrder(""); setServiceDuration(""); setParentId(""); setStatus("rascunho");
     }
   }, [initialData, open]);
 
