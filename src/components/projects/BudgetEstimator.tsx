@@ -30,10 +30,10 @@ export function BudgetEstimator({ project, updateProject, onTabChange }: BudgetE
   const { costTable, isLoading } = useCostReferenceTable();
 
   const [area, setArea] = useState<number>((project.area_sqm as number) || 0);
-  const [constructionType, setConstructionType] = useState<ConstructionType>(
+  const [constructionType, setConstructionType] = useState<ConstructionType | "">(
     (project.construction_type_estimate as ConstructionType) || ""
   );
-  const [finishLevel, setFinishLevel] = useState<FinishLevel>(
+  const [finishLevel, setFinishLevel] = useState<FinishLevel | "">(
     FINISH_LEVEL_MAP[(project.finish_level as number)] || ""
   );
   const [costPerSqm, setCostPerSqm] = useState<number>(0);
