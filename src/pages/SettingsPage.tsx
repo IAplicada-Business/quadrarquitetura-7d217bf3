@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Settings, User, Palette, Calculator, Tag, MessageSquare, Save } from "lucide-react";
 import CalculationRulesTab from "@/components/settings/CalculationRulesTab";
+import ProposalBrandingTab from "@/components/settings/ProposalBrandingTab";
 import {
   useCostReferenceTable,
   CONSTRUCTION_TYPE_LABELS,
