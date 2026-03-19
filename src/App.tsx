@@ -23,6 +23,7 @@ import SettingsPage from "./pages/SettingsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import VoiceTasksPage from "./pages/VoiceTasksPage";
 import ConstructionAgenda from "./pages/ConstructionAgenda";
+import NotificationsPage from "./pages/NotificationsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
