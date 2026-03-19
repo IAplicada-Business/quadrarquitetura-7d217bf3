@@ -93,7 +93,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       {/* Logo */}
       <div className="flex items-center p-3 border-b border-sidebar-border">
         <div className="h-16 overflow-hidden flex-1">
-          <img src={logoLight} alt="Quadra Arquitetura" className="h-24 -mt-4 object-contain object-left animate-fade-in" />
+          <img src={logoDark} alt="Quadra Arquitetura" className="h-24 -mt-4 object-contain object-left animate-fade-in" />
         </div>
       </div>
 
