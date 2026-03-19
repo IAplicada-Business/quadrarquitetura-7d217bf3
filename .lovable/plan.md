@@ -1,14 +1,13 @@
 
 
-## Corrigir dois botões X no modal de preview
+## Ajustar posição da imagem — AboutPage
 
 ### Problema
-O modal tem dois X: um do `DialogContent` (do Radix, automático na linha do `dialog.tsx`) e outro manual na toolbar (linha 45 do `ProposalPreviewModal.tsx`).
+O `objectPosition: "top"` ficou extremo demais, cortando a parte inferior. Precisa de um valor intermediário.
 
 ### Solução
-Remover o botão X manual da toolbar do `ProposalPreviewModal.tsx` (linha 45), mantendo apenas o X nativo do `DialogContent`.
+Mudar `objectPosition` de `"top"` para `"top 20%"` (ou `"center top"` com offset) na linha 26, para mostrar um pouco mais do centro da foto sem cortar os rostos.
 
-### Edição: `ProposalPreviewModal.tsx`
-- Remover a linha `<Button size="sm" variant="ghost" onClick={() => onOpenChange(false)}><X className="h-4 w-4" /></Button>` da toolbar
-- Remover o import de `X` do lucide-react (já não será usado)
+### Edição: `AboutPage.tsx` linha 26
+- Alterar `objectPosition: "top"` → `objectPosition: "20% 0%"` para subir a imagem levemente sem ir ao extremo topo.
 
