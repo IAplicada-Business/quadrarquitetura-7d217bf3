@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -32,6 +33,7 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
   const { user } = useAuth();
   const { items, isLoading, create, update, remove } = useScopeItems(projectId);
   const { quotes } = useBudgetQuotes(projectId);
+  const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Record<string, unknown> | null>(null);
   const [scopeTypeFilter, setScopeTypeFilter] = useState<"projeto" | "contratado">("contratado");
@@ -100,6 +102,7 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
               services_description: `${item.discipline}${item.description ? ' - ' + item.description : ''}`,
               status: "pendente",
             });
+            queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] });
           } catch (_) { /* silent */ }
         }
       }
