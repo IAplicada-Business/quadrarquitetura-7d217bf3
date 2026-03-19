@@ -415,7 +415,64 @@ export function ConstructionTaskForm({
             </CollapsibleContent>
           </Collapsible>
 
-          {/* 13. Observações */}
+          {/* 12.5. Configurações do Cronograma */}
+          <Collapsible open={scheduleOpen} onOpenChange={setScheduleOpen}>
+            <CollapsibleTrigger asChild>
+              <Button type="button" variant="ghost" className="w-full justify-between px-2 h-9 text-sm font-medium">
+                <span className="flex items-center gap-1.5">
+                  <Settings className="h-3.5 w-3.5" />
+                  Configurações do Cronograma
+                </span>
+                {scheduleOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 pt-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={isClientVisible} onCheckedChange={(v) => setIsClientVisible(!!v)} />
+                Visível para o cliente
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={isDailyDetail} onCheckedChange={(v) => setIsDailyDetail(!!v)} />
+                Detalhe diário
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={requiresPresence} onCheckedChange={(v) => setRequiresPresence(!!v)} />
+                Requer presença na obra
+              </label>
+              <div className="space-y-2">
+                <Label>Cor no Cronograma</Label>
+                <Select value={color} onValueChange={setColor}>
+                  <SelectTrigger><SelectValue placeholder="Cor automática (disciplina)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Automática</SelectItem>
+                    {[
+                      { value: "#3b82f6", label: "Azul" },
+                      { value: "#ef4444", label: "Vermelho" },
+                      { value: "#22c55e", label: "Verde" },
+                      { value: "#f59e0b", label: "Amarelo" },
+                      { value: "#8b5cf6", label: "Roxo" },
+                      { value: "#ec4899", label: "Rosa" },
+                      { value: "#06b6d4", label: "Ciano" },
+                      { value: "#f97316", label: "Laranja" },
+                    ].map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        <span className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: c.value }} />
+                          {c.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="orderIndex">Ordem de Exibição</Label>
+                <Input id="orderIndex" type="number" min="0" value={orderIndex}
+                  onChange={(e) => setOrderIndex(e.target.value)} placeholder="Ex: 1, 2, 3..." />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
           <div className="space-y-2">
             <Label htmlFor="notes">Observações</Label>
             <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)}
