@@ -6,12 +6,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
+const STATUS_HIERARCHY = ["rascunho", "planejado", "em_cotacao", "contratado", "em_execucao", "executado"];
+const LOCK_THRESHOLD = 3;
+
 const scopeStatusOptions = [
+  { value: "rascunho", label: "Rascunho" },
   { value: "planejado", label: "Planejado" },
   { value: "em_cotacao", label: "Em Cotação" },
   { value: "contratado", label: "Contratado" },
   { value: "em_execucao", label: "Em Execução" },
-  { value: "concluido", label: "Concluído" },
+  { value: "executado", label: "Executado" },
 ];
 
 interface ScopeItemFormProps {
