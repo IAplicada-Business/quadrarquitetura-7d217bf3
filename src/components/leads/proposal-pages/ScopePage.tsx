@@ -1,12 +1,11 @@
 import { PageContainer, COLORS, LogoSmall, type ProposalPageProps } from "./shared";
 
 export function ProposalScopePage({ scopeDescription, logoUrl }: ProposalPageProps) {
-  // Parse bold markers
   const renderText = (text: string) => {
     const parts = text.split(/\*\*(.*?)\*\*/g);
     return parts.map((part, i) =>
       i % 2 === 1
-        ? <strong key={i} style={{ fontWeight: 700 }}>{part}</strong>
+        ? <strong key={i} style={{ fontWeight: 700, color: COLORS.textoTituloVinho }}>{part}</strong>
         : <span key={i}>{part}</span>
     );
   };
