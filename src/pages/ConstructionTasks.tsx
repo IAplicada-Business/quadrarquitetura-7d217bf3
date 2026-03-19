@@ -404,9 +404,27 @@ export default function ConstructionTasks() {
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Tarefas por Obra</h1>
-        <Button onClick={() => { setEditingTask(null); setParentTaskForSub(null); setFormOpen(true); }}>
-          <Plus className="h-4 w-4 mr-1" /> Nova Atividade
-        </Button>
+        <TooltipProvider>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => { setEditingTask(null); setParentTaskForSub(null); setFormOpen(true); }}>
+              <Plus className="h-4 w-4 mr-1" /> Nova Atividade
+            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0}>
+                  <Button disabled className="opacity-50 cursor-not-allowed">
+                    <Upload className="h-4 w-4 mr-1" />
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Importar Planta (em breve)
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                Suba uma planta em PDF e a IA gerará automaticamente a lista de atividades e quantidades
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </TooltipProvider>
       </div>
 
       {/* Metrics */}
