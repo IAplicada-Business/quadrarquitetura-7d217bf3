@@ -155,7 +155,7 @@ export function ConstructionTaskForm({
   };
 
   const addMaterial = () => {
-    setMaterials([...materials, { name: "", quantity: "", unit: "" }]);
+    setMaterials([...materials, { name: "", quantity: "", unit: "", status: "necessario" }]);
   };
 
   const updateMaterial = (index: number, field: keyof MaterialItem, value: string) => {
