@@ -1,13 +1,14 @@
 
 
-## Ajustar posição da imagem — AboutPage
+## Corrigir quebra de linha no último conector da página 4
 
 ### Problema
-O `objectPosition: "top"` ficou extremo demais, cortando a parte inferior. Precisa de um valor intermediário.
+O label "em torno de\n25 dias" tem `\n` forçando quebra de linha no conector.
 
 ### Solução
-Mudar `objectPosition` de `"top"` para `"top 20%"` (ou `"center top"` com offset) na linha 26, para mostrar um pouco mais do centro da foto sem cortar os rostos.
+Alterar linha 74 do `FlowPage.tsx`: remover o `\n` para ficar em uma única linha.
 
-### Edição: `AboutPage.tsx` linha 26
-- Alterar `objectPosition: "top"` → `objectPosition: "20% 0%"` para subir a imagem levemente sem ir ao extremo topo.
+### Edição: `FlowPage.tsx` linha 74
+- De: `` `em torno de\n${timelineConstruction} dias` ``
+- Para: `` `em torno de ${timelineConstruction} dias` ``
 
