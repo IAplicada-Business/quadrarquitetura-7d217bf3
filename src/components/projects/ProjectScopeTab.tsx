@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -7,13 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useScopeItems, ScopeItem } from "@/hooks/useScopeItems";
 import { ScopeItemForm } from "./ScopeItemForm";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
+
+const STATUS_HIERARCHY = ["rascunho", "planejado", "em_cotacao", "contratado", "em_execucao", "executado"];
+const LOCK_THRESHOLD = 3; // "contratado" index
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+  rascunho: { label: "Rascunho", variant: "outline" },
   planejado: { label: "Planejado", variant: "outline" },
   em_cotacao: { label: "Em Cotação", variant: "secondary" },
   contratado: { label: "Contratado", variant: "default" },
   em_execucao: { label: "Em Execução", variant: "default" },
-  concluido: { label: "Concluído", variant: "default" },
+  executado: { label: "Executado", variant: "default" },
 };
 
 interface ProjectScopeTabProps {
@@ -66,7 +71,14 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
     setFormOpen(true);
   };
 
-  const handleStatusChange = (itemId: string, newStatus: string) => {
+  const handleStatusChange = (itemId: string, newStatus: string, currentStatus: string) => {
+    const currentIdx = STATUS_HIERARCHY.indexOf(currentStatus || "rascunho");
+    const newIdx = STATUS_HIERARCHY.indexOf(newStatus);
+    if (currentIdx >= LOCK_THRESHOLD && newIdx < currentIdx) {
+      const currentLabel = statusConfig[currentStatus]?.label || currentStatus;
+      toast({ title: `Status '${currentLabel}' não pode ser revertido`, variant: "destructive" });
+      return;
+    }
     update.mutate({ id: itemId, status: newStatus });
   };
 
@@ -89,16 +101,27 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
           </Badge>
         </TableCell>
         <TableCell>
-          <Select value={item.status || "planejado"} onValueChange={(v) => handleStatusChange(item.id, v)}>
-            <SelectTrigger className="h-7 text-xs w-[120px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(statusConfig).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {(() => {
+            const currentStatus = item.status || "rascunho";
+            const currentIdx = STATUS_HIERARCHY.indexOf(currentStatus);
+            const isLocked = currentIdx >= LOCK_THRESHOLD;
+            const allowedStatuses = STATUS_HIERARCHY.filter((_, i) => i >= currentIdx);
+            return (
+              <div className="flex items-center gap-1">
+                <Select value={currentStatus} onValueChange={(v) => handleStatusChange(item.id, v, currentStatus)}>
+                  <SelectTrigger className="h-7 text-xs w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allowedStatuses.map((k) => (
+                      <SelectItem key={k} value={k}>{statusConfig[k]?.label || k}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isLocked && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+              </div>
+            );
+          })()}
         </TableCell>
         <TableCell className="text-sm">{item.suppliers_to_quote || "—"}</TableCell>
         <TableCell className="text-right">

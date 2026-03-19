@@ -6,12 +6,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
+const STATUS_HIERARCHY = ["rascunho", "planejado", "em_cotacao", "contratado", "em_execucao", "executado"];
+const LOCK_THRESHOLD = 3;
+
 const scopeStatusOptions = [
+  { value: "rascunho", label: "Rascunho" },
   { value: "planejado", label: "Planejado" },
   { value: "em_cotacao", label: "Em Cotação" },
   { value: "contratado", label: "Contratado" },
   { value: "em_execucao", label: "Em Execução" },
-  { value: "concluido", label: "Concluído" },
+  { value: "executado", label: "Executado" },
 ];
 
 interface ScopeItemFormProps {
@@ -32,7 +36,7 @@ export function ScopeItemForm({ open, onOpenChange, onSubmit, initialData, paren
   const [entryOrder, setEntryOrder] = useState("");
   const [serviceDuration, setServiceDuration] = useState("");
   const [parentId, setParentId] = useState("");
-  const [status, setStatus] = useState("planejado");
+  const [status, setStatus] = useState("rascunho");
 
   useEffect(() => {
     if (initialData) {
@@ -44,10 +48,10 @@ export function ScopeItemForm({ open, onOpenChange, onSubmit, initialData, paren
       setEntryOrder(initialData.entry_order ? String(initialData.entry_order) : "");
       setServiceDuration((initialData.service_duration as string) || "");
       setParentId((initialData.parent_id as string) || "");
-      setStatus((initialData.status as string) || "planejado");
+      setStatus((initialData.status as string) || "rascunho");
     } else {
       setDiscipline(""); setDescription(""); setActivities(""); setSuppliersToQuote(""); setPaymentTerms("");
-      setEntryOrder(""); setServiceDuration(""); setParentId(""); setStatus("planejado");
+      setEntryOrder(""); setServiceDuration(""); setParentId(""); setStatus("rascunho");
     }
   }, [initialData, open]);
 
@@ -93,14 +97,21 @@ export function ScopeItemForm({ open, onOpenChange, onSubmit, initialData, paren
             </div>
             <div>
               <Label>Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {scopeStatusOptions.map(o => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {(() => {
+                const originalStatus = initialData ? ((initialData.status as string) || "rascunho") : "rascunho";
+                const originalIdx = STATUS_HIERARCHY.indexOf(originalStatus);
+                const filtered = scopeStatusOptions.filter((o) => STATUS_HIERARCHY.indexOf(o.value) >= originalIdx);
+                return (
+                  <Select value={status} onValueChange={setStatus}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {filtered.map(o => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              })()}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
