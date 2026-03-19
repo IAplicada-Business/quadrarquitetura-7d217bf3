@@ -154,76 +154,80 @@ export default function LeadsProposals() {
 
   const handleGeneratePdf = async (formData: ProposalFormData) => {
     setGenerating(true);
+    const container = document.createElement("div");
+    container.style.position = "fixed";
+    container.style.left = "-9999px";
+    container.style.top = "0";
+    document.body.appendChild(container);
+
+    const roots: ReactDOM.Root[] = [];
+
     try {
       const pages = buildPages(formData);
-
-      // Create a hidden container for rendering
-      const container = document.createElement("div");
-      container.style.position = "fixed";
-      container.style.left = "-9999px";
-      container.style.top = "0";
-      document.body.appendChild(container);
-
-      const renderPage = (page: React.ReactElement, index: number): HTMLElement | null => {
-        const pageDiv = document.createElement("div");
-        container.appendChild(pageDiv);
-        const root = ReactDOM.createRoot(pageDiv);
-        root.render(page);
-        // Force synchronous layout
-        return pageDiv.firstElementChild as HTMLElement;
-      };
-
-      // We need to render all pages first, then wait a bit for images to load
       const pageElements: HTMLDivElement[] = [];
-      const roots: ReactDOM.Root[] = [];
 
       for (let i = 0; i < pages.length; i++) {
         const pageDiv = document.createElement("div");
         container.appendChild(pageDiv);
         const root = ReactDOM.createRoot(pageDiv);
-        root.render(pages[i]);
+        flushSync(() => {
+          root.render(pages[i]);
+        });
         pageElements.push(pageDiv);
         roots.push(root);
       }
 
-      // Wait for rendering
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait for all images to load
+      const allImages = container.querySelectorAll("img");
+      await Promise.all(
+        Array.from(allImages).map(img =>
+          img.complete
+            ? Promise.resolve()
+            : new Promise(resolve => {
+                img.onload = resolve;
+                img.onerror = resolve;
+              })
+        )
+      );
+
+      // Small extra delay for layout
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       const blob = await generateProposalPdf(pages, (_page, index) => {
         return pageElements[index]?.firstElementChild as HTMLElement || null;
       });
 
-      // Upload to storage
+      // Download immediately so user gets the file regardless of upload result
       const fileName = `proposta-${formData.client_name?.replace(/\s+/g, "-") || "cliente"}-${Date.now()}.pdf`;
-      const { error: uploadError } = await supabase.storage
-        .from("proposal-assets")
-        .upload(`pdfs/${fileName}`, blob, { contentType: "application/pdf" });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from("proposal-assets").getPublicUrl(`pdfs/${fileName}`);
-
-      // Save proposal with PDF URL
-      handleSave(formData, "rascunho");
-
-      if (editingProposal) {
-        update.mutate({ id: editingProposal.id, pdf_url: urlData.publicUrl });
-      }
-
-      // Download
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = fileName;
       link.click();
 
-      toast({ title: "PDF gerado com sucesso!" });
+      // Try uploading to storage
+      try {
+        const { error: uploadError } = await supabase.storage
+          .from("proposal-assets")
+          .upload(`pdfs/${fileName}`, blob, { contentType: "application/pdf" });
 
-      // Cleanup
-      roots.forEach(r => r.unmount());
-      document.body.removeChild(container);
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from("proposal-assets").getPublicUrl(`pdfs/${fileName}`);
+          if (editingProposal) {
+            update.mutate({ id: editingProposal.id, pdf_url: urlData.publicUrl });
+          }
+        }
+      } catch {
+        // Upload failed but PDF was downloaded
+      }
+
+      handleSave(formData, "rascunho");
+      toast({ title: "PDF gerado com sucesso!" });
     } catch (err: any) {
+      console.error("Erro ao gerar PDF:", err);
       toast({ title: "Erro ao gerar PDF", description: err.message, variant: "destructive" });
     } finally {
+      roots.forEach(r => r.unmount());
+      if (container.parentNode) document.body.removeChild(container);
       setGenerating(false);
     }
   };
