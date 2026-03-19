@@ -127,6 +127,9 @@ export function useBudgetQuotes(projectId: string | undefined) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["payments", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["budget_quote_items", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["material_tracking", projectId] });
       toast({ title: "Cotação removida" });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),

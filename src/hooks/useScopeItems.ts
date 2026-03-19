@@ -93,6 +93,9 @@ export function useScopeItems(projectId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["scope_items", projectId] });
       queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] });
       queryClient.invalidateQueries({ queryKey: ["material_tracking", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["schedule_tasks", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["discipline_priorities", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["discipline_material_estimates", projectId] });
       toast({ title: "Disciplina removida" });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
