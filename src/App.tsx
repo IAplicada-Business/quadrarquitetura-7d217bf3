@@ -79,6 +79,7 @@ const App = () => (
               {/* Administrativo */}
               <Route path="/admin/settings" element={<SettingsPage />} />
               <Route path="/admin/users" element={<AdminUsersPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
               {/* Redirects de compatibilidade */}
               <Route path="/site-tracking" element={<Navigate to="/construction/tracking" replace />} />
               <Route path="/suppliers" element={<Navigate to="/construction/suppliers" replace />} />
