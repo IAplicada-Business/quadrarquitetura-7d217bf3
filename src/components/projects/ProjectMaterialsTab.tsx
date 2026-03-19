@@ -15,6 +15,9 @@ import { MaterialCalcForm } from "./MaterialCalcForm";
 import { MaterialTrackingForm } from "./MaterialTrackingForm";
 import { ProjectPurchasesTab } from "./ProjectPurchasesTab";
 import { SupplierPurchaseList } from "./SupplierPurchaseList";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { getDisciplineColor } from "@/lib/disciplineColors";
 
 function formatDate(d: string | null) {
   if (!d) return "—";
@@ -34,6 +37,21 @@ export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
   const [filterDiscipline, setFilterDiscipline] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
 
+  // Query schedule_tasks with materials
+  const { data: taskMaterials = [] } = useQuery({
+    queryKey: ["task-materials", projectId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("schedule_tasks")
+        .select("id, task_name, materials, discipline, environment")
+        .eq("project_id", projectId)
+        .not("materials", "is", null);
+      return (data || []).filter((t: any) => {
+        const mats = t.materials as any[];
+        return Array.isArray(mats) && mats.length > 0 && mats.some((m: any) => m.name?.trim());
+      });
+    },
+  });
   const disciplines = useMemo(() => {
     const set = new Set<string>();
     scopeItems.filter(s => !s.parent_id).forEach(s => set.add(s.discipline));
@@ -82,6 +100,7 @@ export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
       <Tabs defaultValue="rastreamento">
         <TabsList>
           <TabsTrigger value="rastreamento">Rastreamento</TabsTrigger>
+          <TabsTrigger value="atividades">Por Atividade</TabsTrigger>
           <TabsTrigger value="calculo">Memória de Cálculo</TabsTrigger>
           <TabsTrigger value="compras">Compras</TabsTrigger>
         </TabsList>
@@ -283,7 +302,68 @@ export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
           )}
         </TabsContent>
 
-        {/* ===== COMPRAS ===== */}
+        {/* ===== POR ATIVIDADE ===== */}
+        <TabsContent value="atividades" className="space-y-4 mt-4">
+          <div>
+            <h3 className="text-lg font-semibold text-display">Materiais por Atividade</h3>
+            <p className="text-sm text-muted-foreground">Materiais associados diretamente às atividades do cronograma. Edite na atividade de origem.</p>
+          </div>
+          {taskMaterials.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+              Nenhuma atividade possui materiais associados.
+            </div>
+          ) : (
+            taskMaterials.map((task: any) => {
+              const mats = (task.materials as any[]).filter((m: any) => m.name?.trim());
+              if (mats.length === 0) return null;
+              const color = getDisciplineColor(task.discipline);
+              return (
+                <Card key={task.id} className="overflow-hidden">
+                  <div className="px-4 py-2 border-b flex items-center gap-2" style={{ borderLeftWidth: 4, borderLeftColor: color }}>
+                    <span className="font-semibold text-sm">{task.task_name}</span>
+                    {task.discipline && <Badge variant="outline" className="text-[10px]">{task.discipline}</Badge>}
+                    {task.environment && <span className="text-xs text-muted-foreground">• {task.environment}</span>}
+                    <span className="text-xs text-muted-foreground ml-auto">{mats.length} {mats.length === 1 ? "item" : "itens"}</span>
+                  </div>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Material</TableHead>
+                          <TableHead className="w-20">Qtd</TableHead>
+                          <TableHead className="w-16">Unid.</TableHead>
+                          <TableHead className="w-28">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {mats.map((mat: any, i: number) => {
+                          const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+                            necessario: { label: "Necessário", variant: "outline" },
+                            comprado: { label: "Comprado", variant: "secondary" },
+                            entregue: { label: "Entregue", variant: "default" },
+                            usado: { label: "Usado", variant: "default" },
+                          };
+                          const s = statusMap[mat.status] || statusMap.necessario;
+                          return (
+                            <TableRow key={i}>
+                              <TableCell className="font-medium">{mat.name}</TableCell>
+                              <TableCell>{mat.quantity || "—"}</TableCell>
+                              <TableCell className="text-xs">{mat.unit || "—"}</TableCell>
+                              <TableCell>
+                                <Badge variant={s.variant} className="text-[10px]">{s.label}</Badge>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </TabsContent>
+
         <TabsContent value="compras" className="space-y-4 mt-4">
           <div className="flex justify-end mb-2">
             <Button size="sm" variant="outline" onClick={() => setSupplierListOpen(true)} disabled={purchases.items.length === 0}>
