@@ -1,30 +1,24 @@
 
 
-## Sidebar com tom do header (azul-marinho mais claro)
+## Atualizar página "Quem Somos" da proposta
 
 ### O que muda
-O sidebar passará do cinza neutro atual para um azul-marinho semelhante ao header, porém com lightness mais alta (mais claro/opaco), criando parentesco visual sem se confundir.
 
-### Edição: `src/index.css`
+1. **Substituir as fotos individuais circulares** pela foto conjunta das sócias (imagem enviada `cena4_risada_cartier-2.png`)
+2. **Usar o texto e informações do PDF de referência**:
+   - Texto "sobre": *"A Quadra é uma empresa que nasceu em 2022 pela inquietação da seguinte pergunta: como fazer com que nossos clientes tenham no final da sua obra seu projeto exatamente igual ao do 3d? Assim, desenvolvemos também o serviço de gerenciamento de obra no qual oferecemos aos nossos clientes assessoria completa pra ter seu espaço do jeitinho que ele sempre sonhou."*
+   - Camilla — Formada em Arquitetura pela FUMEC, 2018
+   - Mariana — Formada em Arquitetura pela UFMG, 2021. Pós Graduação em Arquitetura Hospitalar
+3. **Layout A4 portrait**: Título "QUEM SOMOS" no topo, texto descritivo abaixo, depois a foto grande das duas juntas (estilo retangular com bordas arredondadas, não circular), com os nomes e formações abaixo da foto lado a lado.
 
-**Light mode** — sidebar vars:
-- `--sidebar-background`: `209 40% 22%` (azul-marinho escuro, mas mais claro que o header `209 59% 30%`)
-- `--sidebar-foreground`: `209 15% 80%` (texto claro)
-- `--sidebar-accent`: `209 35% 28%` (hover levemente mais claro)
-- `--sidebar-accent-foreground`: `0 0% 95%`
-- `--sidebar-border`: `209 30% 18%`
-- `--sidebar-primary`: `209 59% 30%` (manter)
-- `--sidebar-primary-foreground`: `0 0% 100%` (manter)
+### Arquivos
 
-**Dark mode** — sidebar vars:
-- `--sidebar-background`: `209 35% 14%`
-- `--sidebar-foreground`: `209 10% 70%`
-- `--sidebar-accent`: `209 30% 20%`
-- `--sidebar-accent-foreground`: `209 8% 90%`
-- `--sidebar-border`: `209 25% 12%`
+**1. Copiar a foto** para `src/assets/founders-photo.png`
 
-### Edição: `src/components/layout/AppSidebar.tsx`
-- Trocar logo de `logo-dark.png` de volta para `logo-light.png` (fundo escuro precisa de logo clara)
-
-Resultado: sidebar azul-marinho mais suave que o header, criando hierarquia sem sobreposição visual.
+**2. `AboutPage.tsx`** — Refatorar layout:
+- Remover fotos circulares individuais do `founderPhotos`
+- Importar a foto fixa das sócias
+- Layout vertical: título → texto → foto retangular (largura ~500px, altura ~350px, object-fit cover, border-radius 12px) → nomes/formações lado a lado abaixo da foto
+- Usar o `aboutText` como fallback mas definir o texto padrão do PDF como default
+- Manter watermark "QUADRA ARQUITETURA" e logo pequena
 
