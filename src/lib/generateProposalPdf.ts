@@ -23,7 +23,7 @@ export async function generateProposalPdf(
     const canvas = await html2canvas(el, {
       width: PAGE_W,
       height: PAGE_H,
-      scale: 3,
+      scale: 2,
       useCORS: true,
       allowTaint: true,
       logging: false,
