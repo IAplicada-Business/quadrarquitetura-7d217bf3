@@ -1,4 +1,5 @@
 import { useState, useMemo, Fragment } from "react";
+import { ImportPlantDialog } from "@/components/construction/ImportPlantDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,6 +41,7 @@ export default function ConstructionTasks() {
   const [selectedProject, setSelectedProject] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Record<string, unknown> | null>(null);
+  const [importPlantOpen, setImportPlantOpen] = useState(false);
   const [parentTaskForSub, setParentTaskForSub] = useState<{ id: string; project_id: string; task_name: string } | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
 
@@ -301,6 +303,12 @@ export default function ConstructionTasks() {
             {!isSubtask && subCount === 0 && <span className="w-5" />}
             {isSubtask && <span className="w-5 ml-3 text-muted-foreground">↳</span>}
             <span>{t.task_name}</span>
+            {t.source === "planta_ia" && (
+              <Badge variant="outline" className="ml-1 text-[10px] px-1 py-0 gap-0.5">
+                <Sparkles className="h-2.5 w-2.5" />
+                via planta
+              </Badge>
+            )}
           </div>
         </TableCell>
         <TableCell className="text-sm">{t.environment ?? "—"}</TableCell>
@@ -411,13 +419,11 @@ export default function ConstructionTasks() {
             </Button>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span tabIndex={0}>
-                  <Button disabled className="opacity-50 cursor-not-allowed">
-                    <Upload className="h-4 w-4 mr-1" />
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Importar Planta (em breve)
-                  </Button>
-                </span>
+                <Button onClick={() => setImportPlantOpen(true)}>
+                  <Upload className="h-4 w-4 mr-1" />
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Importar Planta
+                </Button>
               </TooltipTrigger>
               <TooltipContent>
                 Suba uma planta em PDF e a IA gerará automaticamente a lista de atividades e quantidades
@@ -531,6 +537,12 @@ export default function ConstructionTasks() {
         projects={projects}
         parentTask={parentTaskForSub}
         allTasks={allTasksForForm}
+      />
+
+      <ImportPlantDialog
+        open={importPlantOpen}
+        onOpenChange={setImportPlantOpen}
+        projects={projects}
       />
     </div>
   );

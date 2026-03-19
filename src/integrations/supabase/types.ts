@@ -1224,6 +1224,47 @@ export type Database = {
           },
         ]
       }
+      plant_analyses: {
+        Row: {
+          ai_result: Json | null
+          created_at: string
+          file_url: string
+          focus: string
+          id: string
+          instructions: string | null
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          ai_result?: Json | null
+          created_at?: string
+          file_url: string
+          focus: string
+          id?: string
+          instructions?: string | null
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          ai_result?: Json | null
+          created_at?: string
+          file_url?: string
+          focus?: string
+          id?: string
+          instructions?: string | null
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plant_analyses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1719,6 +1760,7 @@ export type Database = {
           project_id: string
           requires_presence: boolean | null
           scope_item_id: string | null
+          source: string | null
           start_date: string | null
           status: string | null
           supplier_name: string | null
@@ -1746,6 +1788,7 @@ export type Database = {
           project_id: string
           requires_presence?: boolean | null
           scope_item_id?: string | null
+          source?: string | null
           start_date?: string | null
           status?: string | null
           supplier_name?: string | null
@@ -1773,6 +1816,7 @@ export type Database = {
           project_id?: string
           requires_presence?: boolean | null
           scope_item_id?: string | null
+          source?: string | null
           start_date?: string | null
           status?: string | null
           supplier_name?: string | null
