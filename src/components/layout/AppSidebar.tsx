@@ -6,7 +6,7 @@ import { NavLink } from "@/components/NavLink";
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import logoDark from "@/assets/logo-dark.png";
+import logoLight from "@/assets/logo-light.png";
 
 type MenuItem = { title: string; url: string; subItems?: { title: string; url: string }[] };
 type MenuGroup = { label: string; items: MenuItem[] };
