@@ -71,7 +71,7 @@ export function ProposalFlowPage(props: ProposalPageProps) {
     `${timelineBriefing} DIAS`,
     `${timelineStudy} DIAS`,
     `${timelinePriorities} DIAS`,
-    `em torno de\n${timelineConstruction} dias`,
+    `em torno de ${timelineConstruction} dias`,
   ];
 
   return (
