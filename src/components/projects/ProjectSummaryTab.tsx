@@ -29,6 +29,7 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
   const clientName = (project.clients as { name: string } | null)?.name;
   const projectId = project.id as string;
 
+  const { updateProject } = useProjectDetail(projectId);
   const { items: tasks } = useScheduleTasks(projectId);
   const { items: payments } = useProjectPayments(projectId);
 
