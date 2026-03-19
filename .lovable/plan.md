@@ -1,77 +1,52 @@
 
 
-## Reestruturar Formulário de Tarefa — Centrado na Atividade
+## Reestruturar Tabela de Tarefas por Obra
 
-### Resumo
-Transformar o formulário de tarefas para ser centrado na **atividade** (não na disciplina). Adicionar novos campos: Descrição do Serviço, Ambiente, Prazo Estimado, Dependências (caminho crítico) e Materiais Associados. Adicionar status "Pendência". Implementar cálculo automático de datas baseado em dependências.
+### 1. Atualizar colunas da tabela
 
----
+Novas colunas (nesta ordem): Atividade | Ambiente | Disciplina | Responsável | Depende de | Status | Início | Fim | Prazo (dias) | Progresso | Ações
 
-### 1. Migração de Banco de Dados
+A coluna "Depende de" mostra os nomes das tarefas dependentes (lookup pelo array `dependencies`). A coluna "Prazo (dias)" mostra `estimated_days`. Remover coluna "Obra" (já filtrada).
 
-Adicionar colunas à tabela `schedule_tasks`:
+### 2. Filtros múltiplos (acima da tabela)
 
-```sql
-ALTER TABLE schedule_tasks 
-  ADD COLUMN description text,
-  ADD COLUMN environment text,
-  ADD COLUMN estimated_days integer,
-  ADD COLUMN dependencies uuid[] DEFAULT '{}',
-  ADD COLUMN materials jsonb DEFAULT '[]';
-```
+Adicionar filtros usando multi-select com Popover + Checkboxes (sem dependência externa):
+- **Por Obra** — manter Select existente
+- **Por Disciplina** — multi-select, opções extraídas das tarefas carregadas
+- **Por Status** — multi-select com as 5 opções de status
+- **Por Responsável** — multi-select, opções extraídas dos `supplier_name` (split por vírgula)
+- **Por Ambiente** — multi-select, opções extraídas dos `environment` das tarefas
 
-- `description` — detalhamento do serviço
-- `environment` — ambiente (Suíte Master, Cozinha, etc.)
-- `estimated_days` — prazo em dias corridos
-- `dependencies` — array de IDs de outras tarefas do mesmo projeto (caminho crítico)
-- `materials` — JSON array com `[{name, quantity, unit}]` para materiais associados
+Cada filtro: botão com badge mostrando count de seleções. Popover com lista de checkboxes.
 
-Usar `uuid[]` para dependências (mais simples que junction table; são IDs do mesmo projeto). Usar `jsonb` para materiais (preenchimento manual por ora, futuramente vinculado ao orçamento).
+### 3. Toggle de agrupamento
 
----
+Botão toggle "Ver por lista" / "Agrupar por disciplina":
+- **Lista** (padrão): todas atividades em sequência plana (com subtarefas expandíveis)
+- **Agrupar por disciplina**: agrupar visualmente com header de seção por disciplina, atividades independentes dentro de cada grupo
 
-### 2. Atualizar `ConstructionTaskForm.tsx`
+### 4. Toggle "Ver pendências"
 
-Reestruturar completamente o formulário com a seguinte ordem de campos:
+Botão/toggle que filtra:
+- Status = "pendencia" OU (progresso < 100% E data fim < hoje)
+- Funciona como checklist de final de obra
+- Cada linha ganha um **checkbox** rápido que marca status = "executado" e progresso = 100% sem abrir formulário (mutation inline)
 
-1. **Projeto/Obra** (Select, obrigatório — manter)
-2. **Nome da Atividade** (texto, obrigatório — renomear placeholder)
-3. **Descrição do Serviço** (textarea — NOVO)
-4. **Disciplina** (Select com lista expandida: +Automação, Ar-condicionado, Gesso/Forro, Revestimento, Marcenaria, Piso — classificatória apenas)
-5. **Ambiente** (texto livre — NOVO)
-6. **Responsável/Fornecedor** (tags — manter)
-7. **Prazo Estimado** (input number, em dias — NOVO)
-8. **Depende de** (multi-select com checkboxes — NOVO, lista atividades do mesmo projeto)
-9. **Data Início** / **Data Fim** (manter, com auto-cálculo)
-10. **Status** (adicionar "Pendência" `pendencia`)
-11. **Progresso** (slider — manter)
-12. **Materiais Associados** (seção expansível — NOVO, lista de {nome, quantidade, unidade})
-13. **Observações** (textarea — manter)
+### 5. Métricas ajustadas
 
-**Regras de auto-cálculo:**
-- Se "Depende de" preenchido e "Data Início" vazio → Data Início = max(Data Fim das dependências) + 1 dia
-- Se "Prazo Estimado" preenchido e "Data Fim" vazio → Data Fim = Data Início + Prazo Estimado
+Contar **TODAS** as atividades (incluindo subtarefas), não apenas tarefas-pai:
+- Total: `tasks.length`
+- Em Execução: `status === "em_execucao"`
+- Atrasadas: `end_date < hoje E status !== "executado"`
+- Pendências: `status === "pendencia"`
+- Concluídas: `status === "executado"`
 
-**Props adicionais:** receber `allTasks` (lista de tarefas do mesmo projeto) para popular o campo "Depende de".
+### Detalhes técnicos
 
-Subtarefas herdam projeto e disciplina do pai (comportamento existente mantido).
-
----
-
-### 3. Atualizar `ConstructionTasks.tsx`
-
-- Passar `allTasks` filtradas pelo projeto selecionado no form para o componente do formulário
-- Atualizar mutations `createTask` e `updateTask` para incluir os novos campos: `description`, `environment`, `estimated_days`, `dependencies`, `materials`
-- Adicionar coluna "Ambiente" na tabela de listagem
-- Adicionar status "Pendência" nos labels e cores (`pendencia: "bg-yellow-100 text-yellow-800"`)
-- Incluir "Pendência" nas métricas do dashboard
-
----
-
-### Detalhes Técnicos
-
-- Disciplinas expandidas: Alvenaria, Elétrica, Hidráulica, Pintura, Acabamento, Demolição, Estrutura, Impermeabilização, Esquadrias, Automação, Ar-condicionado, Gesso/Forro, Revestimento, Marcenaria, Piso, Outros
-- Materiais armazenados como `jsonb` array: `[{"name":"Cimento","quantity":10,"unit":"sacos"}]`
-- Dependências como `uuid[]` — filtrando apenas tarefas do mesmo projeto (excluindo a própria tarefa)
-- Nenhuma rota, aba ou navegação existente será removida ou alterada
+- Criar componente helper `MultiSelectFilter` (Popover + Checkboxes) reutilizável para os 4 filtros novos
+- Estado: `filterDisciplines: string[]`, `filterStatuses: string[]`, `filterResponsibles: string[]`, `filterEnvironments: string[]`, `groupByDiscipline: boolean`, `showPendencias: boolean`
+- Filtrar `tasks` por todos os filtros ativos antes de separar em parentTasks/subtasks
+- Quick-complete checkbox usa `updateTask.mutate({ id, status: "executado", progress_percentage: 100 })`
+- Nenhuma migração necessária — todos os dados já existem no schema atual
+- Nenhuma rota, aba ou navegação será removida
 
