@@ -91,6 +91,8 @@ export function useScopeItems(projectId: string | undefined) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["scope_items", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["material_tracking", projectId] });
       toast({ title: "Disciplina removida" });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
