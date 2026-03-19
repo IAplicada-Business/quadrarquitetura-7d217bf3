@@ -48,7 +48,7 @@ export function ScopeItemForm({ open, onOpenChange, onSubmit, initialData, paren
       setEntryOrder(initialData.entry_order ? String(initialData.entry_order) : "");
       setServiceDuration((initialData.service_duration as string) || "");
       setParentId((initialData.parent_id as string) || "");
-      setStatus((initialData.status as string) || "planejado");
+      setStatus((initialData.status as string) || "rascunho");
     } else {
       setDiscipline(""); setDescription(""); setActivities(""); setSuppliersToQuote(""); setPaymentTerms("");
       setEntryOrder(""); setServiceDuration(""); setParentId(""); setStatus("planejado");
