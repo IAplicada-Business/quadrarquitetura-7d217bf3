@@ -1,26 +1,17 @@
 
 
-## Banco de Dados — Campos schedule_tasks
+## Aumentar altura vertical das colunas do Pipeline Kanban
 
-### Situação atual
+### Problema
+As colunas do Kanban têm `min-h-[400px]` fixo (linha 233) e não expandem para ocupar toda a altura disponível da viewport. O container da página já usa `flex flex-col h-full` (linha 112) e o wrapper do Kanban usa `flex-1 min-h-0` (linha 224), mas o layout pai (`AppLayout`) envolve o conteúdo com padding que não propaga a altura corretamente.
 
-Todos os campos solicitados **já existem** na tabela `schedule_tasks`:
-- `description` (text, nullable) 
-- `environment` (text, nullable) 
-- `estimated_days` (integer, nullable) 
-- `dependencies` (uuid[], default '{}') 
-- `materials` (jsonb, default '[]') 
+### Solução
 
-O campo `status` é do tipo `text` sem constraint — qualquer valor é aceito no banco. Basta adicionar "Pendência" como opção nos formulários.
+1. **`src/pages/LeadsPipeline.tsx`** — Linha 112: trocar `h-full` por `h-[calc(100vh-theme(spacing.32))]` (ou similar) para que o container da página ocupe a altura real disponível descontando header + padding. Remover o `min-h-[400px]` da coluna (linha 233) pois o `flex-1` já fará o trabalho quando o pai tiver altura definida.
 
-### Alterações necessárias
+2. **Alternativa mais limpa**: Na `div` raiz (linha 112), usar classes que garantam altura real:
+   - Trocar `space-y-4 animate-fade-in flex flex-col h-full` por `space-y-4 animate-fade-in flex flex-col` e adicionar estilo `minHeight` calculado, ou usar `h-[calc(100vh-12rem)]` para descontar header (~4rem) + padding (~4rem) + métricas (~4rem).
 
-**Nenhuma migração de banco de dados.** Apenas atualizar os selects de status nos formulários:
-
-1. **`ScheduleTaskForm.tsx`** — Adicionar `<SelectItem value="pendencia">Pendência</SelectItem>` ao select de status
-2. **`ConstructionTaskForm.tsx`** — Adicionar a mesma opção de "Pendência" ao select de status (se existir select de status nesse form)
-
-### Detalhes técnicos
-- Sem migração SQL
-- Arquivos editados: `ScheduleTaskForm.tsx`, `ConstructionTaskForm.tsx`
+### Arquivo editado
+- `src/pages/LeadsPipeline.tsx` — ajustar altura do container principal e remover `min-h-[400px]` das colunas
 
