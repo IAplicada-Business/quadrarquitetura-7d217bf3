@@ -199,6 +199,11 @@ export function ConstructionTaskForm({
       progress_percentage: progress,
       materials: materials.filter((m) => m.name.trim()),
       payment_note: notes || null,
+      is_client_visible: isClientVisible,
+      is_daily_detail: isDailyDetail,
+      requires_presence: requiresPresence,
+      color: color || null,
+      order_index: orderIndex ? parseInt(orderIndex) : null,
     };
     if (parentTask && !initialData) {
       data.parent_id = parentTask.id;
