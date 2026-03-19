@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Wallet, Hammer, FileText, HardHat } from "lucide-react";
 import { useScheduleTasks } from "@/hooks/useScheduleTasks";
 import { useProjectPayments } from "@/hooks/useProjectPayments";
-
+import { useProjectDetail } from "@/hooks/useProjectDetail";
+import { BudgetEstimator } from "./BudgetEstimator";
 function formatCurrency(value: number | null | undefined) {
   if (value == null) return "—";
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
