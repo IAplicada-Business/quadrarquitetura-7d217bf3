@@ -45,7 +45,7 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
         {showMenuButton ? (
           <button
             onClick={onMenuClick}
-            className="p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+            className="p-2 rounded-md text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
             aria-label="Abrir menu"
           >
             <Menu className="h-5 w-5" />
