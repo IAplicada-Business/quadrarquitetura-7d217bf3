@@ -173,7 +173,7 @@ export function useScenarios(projectId: string) {
           estimated_value: item.estimated_value,
           entry_order: idx + 1,
           scope_type: "contratado",
-          status: "planejado",
+          status: "contratado",
         }));
         const { error: contErr } = await supabase.from("scope_items").insert(contratadoInserts);
         if (contErr) throw contErr;
