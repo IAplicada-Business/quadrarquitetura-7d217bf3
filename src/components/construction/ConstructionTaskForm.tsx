@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { X, Plus, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { X, Plus, ChevronDown, ChevronRight, Trash2, Settings } from "lucide-react";
 import { addDays, format, parseISO } from "date-fns";
 
 interface Project {
@@ -76,6 +76,12 @@ export function ConstructionTaskForm({
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [materialsOpen, setMaterialsOpen] = useState(false);
   const [notes, setNotes] = useState("");
+  const [isClientVisible, setIsClientVisible] = useState(false);
+  const [isDailyDetail, setIsDailyDetail] = useState(false);
+  const [requiresPresence, setRequiresPresence] = useState(false);
+  const [color, setColor] = useState("");
+  const [orderIndex, setOrderIndex] = useState("");
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -98,6 +104,12 @@ export function ConstructionTaskForm({
       setMaterials(mats);
       setMaterialsOpen(mats.length > 0);
       setNotes((initialData?.payment_note as string) || "");
+      setIsClientVisible(!!initialData?.is_client_visible);
+      setIsDailyDetail(!!initialData?.is_daily_detail);
+      setRequiresPresence(!!initialData?.requires_presence);
+      setColor((initialData?.color as string) || "");
+      setOrderIndex(initialData?.order_index != null ? String(initialData.order_index) : "");
+      setScheduleOpen(!!initialData?.is_client_visible || !!initialData?.is_daily_detail || !!initialData?.requires_presence || !!(initialData?.color) || initialData?.order_index != null);
     }
   }, [initialData, open, parentTask]);
 
@@ -187,6 +199,11 @@ export function ConstructionTaskForm({
       progress_percentage: progress,
       materials: materials.filter((m) => m.name.trim()),
       payment_note: notes || null,
+      is_client_visible: isClientVisible,
+      is_daily_detail: isDailyDetail,
+      requires_presence: requiresPresence,
+      color: color || null,
+      order_index: orderIndex ? parseInt(orderIndex) : null,
     };
     if (parentTask && !initialData) {
       data.parent_id = parentTask.id;
@@ -398,7 +415,64 @@ export function ConstructionTaskForm({
             </CollapsibleContent>
           </Collapsible>
 
-          {/* 13. Observações */}
+          {/* 12.5. Configurações do Cronograma */}
+          <Collapsible open={scheduleOpen} onOpenChange={setScheduleOpen}>
+            <CollapsibleTrigger asChild>
+              <Button type="button" variant="ghost" className="w-full justify-between px-2 h-9 text-sm font-medium">
+                <span className="flex items-center gap-1.5">
+                  <Settings className="h-3.5 w-3.5" />
+                  Configurações do Cronograma
+                </span>
+                {scheduleOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 pt-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={isClientVisible} onCheckedChange={(v) => setIsClientVisible(!!v)} />
+                Visível para o cliente
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={isDailyDetail} onCheckedChange={(v) => setIsDailyDetail(!!v)} />
+                Detalhe diário
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={requiresPresence} onCheckedChange={(v) => setRequiresPresence(!!v)} />
+                Requer presença na obra
+              </label>
+              <div className="space-y-2">
+                <Label>Cor no Cronograma</Label>
+                <Select value={color} onValueChange={setColor}>
+                  <SelectTrigger><SelectValue placeholder="Cor automática (disciplina)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Automática</SelectItem>
+                    {[
+                      { value: "#3b82f6", label: "Azul" },
+                      { value: "#ef4444", label: "Vermelho" },
+                      { value: "#22c55e", label: "Verde" },
+                      { value: "#f59e0b", label: "Amarelo" },
+                      { value: "#8b5cf6", label: "Roxo" },
+                      { value: "#ec4899", label: "Rosa" },
+                      { value: "#06b6d4", label: "Ciano" },
+                      { value: "#f97316", label: "Laranja" },
+                    ].map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        <span className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: c.value }} />
+                          {c.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="orderIndex">Ordem de Exibição</Label>
+                <Input id="orderIndex" type="number" min="0" value={orderIndex}
+                  onChange={(e) => setOrderIndex(e.target.value)} placeholder="Ex: 1, 2, 3..." />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
           <div className="space-y-2">
             <Label htmlFor="notes">Observações</Label>
             <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)}
