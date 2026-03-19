@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Wallet, Hammer, FileText, HardHat } from "lucide-react";
 import { useScheduleTasks } from "@/hooks/useScheduleTasks";
 import { useProjectPayments } from "@/hooks/useProjectPayments";
-
+import { useProjectDetail } from "@/hooks/useProjectDetail";
+import { BudgetEstimator } from "./BudgetEstimator";
 function formatCurrency(value: number | null | undefined) {
   if (value == null) return "—";
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -28,6 +29,7 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
   const clientName = (project.clients as { name: string } | null)?.name;
   const projectId = project.id as string;
 
+  const { updateProject } = useProjectDetail(projectId);
   const { items: tasks } = useScheduleTasks(projectId);
   const { items: payments } = useProjectPayments(projectId);
 
@@ -173,6 +175,9 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
           </div>
         </CardContent>
       </Card>
+
+      {/* Budget Estimator */}
+      <BudgetEstimator project={project} updateProject={updateProject} onTabChange={onTabChange} />
     </div>
   );
 }
