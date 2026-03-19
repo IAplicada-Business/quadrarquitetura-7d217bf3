@@ -18,8 +18,8 @@ export function ProposalAboutPage({ aboutText, logoUrl }: ProposalPageProps) {
         </div>
 
         {/* Group photo */}
-        <div style={{ width: 500, height: 400, borderRadius: 12, overflow: "hidden", marginBottom: 32, border: `3px solid ${COLORS.shapeBege}` }}>
-          <img src={foundersPhoto} alt="Camilla e Mariana" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "20% 15%" }} />
+        <div style={{ width: 500, maxHeight: 400, borderRadius: 12, overflow: "hidden", marginBottom: 32, border: `3px solid ${COLORS.shapeBege}` }}>
+          <img src={foundersPhoto} alt="Camilla e Mariana" style={{ width: "100%", height: "auto", display: "block" }} />
         </div>
 
         {/* Bios side by side */}
