@@ -26,10 +26,18 @@ export function useBudgetQuotes(projectId: string | undefined) {
     // Check if material_tracking already exists for this budget_quote
     const { data: existing } = await supabase
       .from("material_tracking")
-      .select("id")
+      .select("id, quantity_needed")
       .eq("budget_quote_id", budgetQuoteId)
       .limit(1);
-    if (existing && existing.length > 0) return;
+    if (existing && existing.length > 0) {
+      if (existing[0].quantity_needed !== materialEstimate) {
+        await supabase.from("material_tracking")
+          .update({ quantity_needed: materialEstimate })
+          .eq("id", existing[0].id);
+        queryClient.invalidateQueries({ queryKey: ["material_tracking", projectId] });
+      }
+      return;
+    }
 
     // Get discipline from scope item if available
     let discipline: string | null = null;
