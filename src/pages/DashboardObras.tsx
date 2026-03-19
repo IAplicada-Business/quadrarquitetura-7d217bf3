@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import {
   HardHat,
   AlertCircle,
@@ -13,14 +14,18 @@ import {
   CreditCard,
   TrendingUp,
   MapPin,
+  Users,
+  BarChart3,
+  Bell,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, startOfWeek, endOfWeek, isAfter, parseISO, getDay } from "date-fns";
+import { format, startOfWeek, endOfWeek, isAfter, parseISO, getDay, differenceInDays, getISOWeek, eachWeekOfInterval, min as dateMin, max as dateMax, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 /* ── paleta azul obras ──────────────────────────── */
