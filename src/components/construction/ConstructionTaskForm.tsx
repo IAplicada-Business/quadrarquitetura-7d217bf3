@@ -104,6 +104,12 @@ export function ConstructionTaskForm({
       setMaterials(mats);
       setMaterialsOpen(mats.length > 0);
       setNotes((initialData?.payment_note as string) || "");
+      setIsClientVisible(!!initialData?.is_client_visible);
+      setIsDailyDetail(!!initialData?.is_daily_detail);
+      setRequiresPresence(!!initialData?.requires_presence);
+      setColor((initialData?.color as string) || "");
+      setOrderIndex(initialData?.order_index != null ? String(initialData.order_index) : "");
+      setScheduleOpen(!!initialData?.is_client_visible || !!initialData?.is_daily_detail || !!initialData?.requires_presence || !!(initialData?.color) || initialData?.order_index != null);
     }
   }, [initialData, open, parentTask]);
 
