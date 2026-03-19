@@ -76,6 +76,12 @@ export function ConstructionTaskForm({
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [materialsOpen, setMaterialsOpen] = useState(false);
   const [notes, setNotes] = useState("");
+  const [isClientVisible, setIsClientVisible] = useState(false);
+  const [isDailyDetail, setIsDailyDetail] = useState(false);
+  const [requiresPresence, setRequiresPresence] = useState(false);
+  const [color, setColor] = useState("");
+  const [orderIndex, setOrderIndex] = useState("");
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
