@@ -1,38 +1,52 @@
 
 
-## Filtrar material_tracking por revisão ativa do orçamento
+## Estimativa Rápida de Orçamento — Aba Resumo
 
-### Problema
-Ao criar Rev 2 de budget_quotes, os material_tracking da Rev 1 continuam aparecendo na aba Materiais, misturando dados de revisões antigas e atuais.
+### Contexto
+Adicionar calculadora de orçamento rápido na aba Resumo do projeto, abaixo dos dados gerais. Usa `area_sqm` (já existe), e precisa de `construction_type_estimate` (novo) e reutiliza `finish_level` com mapeamento para labels textuais.
 
-### Solução
+### Alterações
 
-**1. Migration SQL** — adicionar coluna `is_active` na tabela `material_tracking`:
+**1. Migration SQL** — adicionar coluna `construction_type_estimate` na tabela `projects`:
 
 ```sql
-ALTER TABLE material_tracking 
-  ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS construction_type_estimate text;
 ```
 
-**2. `src/hooks/useBudgetQuotes.ts`** — no `createRevision`, após marcar quotes como `is_current_revision = false`:
-- Buscar todos `material_tracking` vinculados aos budget_quotes da revisão anterior (via `budget_quote_id`) e setar `is_active = false`
-- Após inserir cada novo budget_quote da nova revisão, chamar `autoCreateMaterialTracking` para criar novos registros `is_active = true`
-- Invalidar cache de `material_tracking`
+O campo `area_sqm` já existe. O campo `finish_level` (integer 1-5) já existe — será mapeado para os 4 níveis (1=Básico, 2=Intermediário, 3=Alto Padrão, 4=Luxo).
 
-Lógica adicionada dentro do `mutationFn` do `createRevision`:
+**2. Tabela de referência de valores** — armazenada no campo `calculation_params` da tabela `settings` do usuário, sob a chave `cost_per_sqm_table`. Valores padrão iniciais:
 
-```text
-1. Coletar IDs dos budget_quotes da revisão anterior
-2. UPDATE material_tracking SET is_active = false WHERE budget_quote_id IN (ids anteriores)
-3. Para cada novo quote inserido (com material_estimate > 0), criar material_tracking com is_active = true
+```json
+{
+  "reforma_completa": { "basico": 1200, "intermediario": 2000, "alto_padrao": 3500, "luxo": 5500 },
+  "reforma_parcial": { "basico": 800, "intermediario": 1400, "alto_padrao": 2500, "luxo": 4000 },
+  "construcao": { "basico": 1500, "intermediario": 2500, "alto_padrao": 4000, "luxo": 6500 },
+  "ampliacao": { "basico": 1000, "intermediario": 1800, "alto_padrao": 3000, "luxo": 5000 }
+}
 ```
 
-**3. `src/hooks/useMaterialTracking.ts`** — no query, adicionar filtro `.eq("is_active", true)` para que a aba Materiais exiba apenas registros ativos.
+**3. Novo componente `src/components/projects/BudgetEstimator.tsx`**:
+- Card com ícone Calculator no header, título "Estimativa Rápida de Orçamento"
+- Campos: Área (m², pré-preenchido de `project.area_sqm`), Tipo de obra (Select), Nível de acabamento (Select), Valor por m² (auto-preenchido, editável)
+- Resultado em destaque: valor estimado + faixa (±15%)
+- Botão "Salvar como orçamento estimado" → `updateProject({ estimated_budget: valor })`
+- Botão "Criar cenário a partir desta estimativa" → `onTabChange("cenarios")` (com valor no state)
+- Collapsible "Detalhamento": nº ambientes, metragens por ambiente (campos opcionais, não persistidos por ora)
+- Ao alterar área/tipo/nível, persiste no projeto via `updateProject`
 
-**4. `src/hooks/useBudgetQuotes.ts`** — na função `autoCreateMaterialTracking`, garantir que novos registros criados incluam `is_active: true` explicitamente.
+**4. Hook `src/hooks/useCostReferenceTable.ts`**:
+- Busca `settings` do usuário e extrai `calculation_params.cost_per_sqm_table`
+- Se não existir, retorna os valores padrão hardcoded
+- Mutation para salvar/atualizar a tabela
 
-### Resumo
-- 1 migration SQL (1 coluna adicionada)
-- 2 arquivos editados (filtro no query + lógica na criação de revisão)
+**5. `src/components/projects/ProjectSummaryTab.tsx`** — importar e renderizar `<BudgetEstimator>` após o card "Informações Gerais"
+
+**6. `src/pages/SettingsPage.tsx`** — substituir o placeholder "Parâmetros de Cálculo" por editor funcional da tabela de custo por m². Grid editável 4×4 com inputs numéricos formatados em R$.
+
+### Arquivos criados/editados
+- 1 migration SQL (1 coluna)
+- 2 arquivos criados: `BudgetEstimator.tsx`, `useCostReferenceTable.ts`
+- 2 arquivos editados: `ProjectSummaryTab.tsx`, `SettingsPage.tsx`
 - Nenhuma aba, sub-aba ou rota alterada
 
