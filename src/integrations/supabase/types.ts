@@ -1259,6 +1259,7 @@ export type Database = {
           city: string | null
           client_budget: number | null
           client_id: string | null
+          construction_type_estimate: string | null
           contingency_percentage: number | null
           contract_id: string | null
           created_at: string
@@ -1287,6 +1288,7 @@ export type Database = {
           city?: string | null
           client_budget?: number | null
           client_id?: string | null
+          construction_type_estimate?: string | null
           contingency_percentage?: number | null
           contract_id?: string | null
           created_at?: string
@@ -1315,6 +1317,7 @@ export type Database = {
           city?: string | null
           client_budget?: number | null
           client_id?: string | null
+          construction_type_estimate?: string | null
           contingency_percentage?: number | null
           contract_id?: string | null
           created_at?: string
