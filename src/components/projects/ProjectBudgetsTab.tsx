@@ -186,6 +186,9 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
               <Button variant="outline" size="sm" onClick={() => createRevision.mutate(currentRev)} disabled={createRevision.isPending}>
                 <RefreshCw className="h-4 w-4 mr-1" /> Nova Revisão
               </Button>
+              <Button variant="outline" size="sm" onClick={() => setShoppingListOpen(true)}>
+                <ShoppingCart className="h-4 w-4 mr-1" /> Lista de Compras
+              </Button>
             </div>
           </div>
 
