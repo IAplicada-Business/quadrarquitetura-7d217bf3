@@ -36,6 +36,9 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
   const { updateProject } = useProjectDetail(projectId);
   const { items: tasks } = useScheduleTasks(projectId);
   const { items: payments } = useProjectPayments(projectId);
+  const { activeToken, isLoading: tokenLoading, createToken, deactivateToken, isCreating } = useClientPortalToken(projectId);
+  const [portalDialogOpen, setPortalDialogOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const idealBudget = (project.ideal_budget as number) || 0;
   const contractedBudget = (project.estimated_budget as number) || 0;
