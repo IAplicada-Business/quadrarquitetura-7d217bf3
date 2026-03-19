@@ -102,6 +102,7 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
               services_description: `${item.discipline}${item.description ? ' - ' + item.description : ''}`,
               status: "pendente",
             });
+            queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] });
           } catch (_) { /* silent */ }
         }
       }
