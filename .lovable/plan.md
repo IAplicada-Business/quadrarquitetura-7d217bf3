@@ -1,24 +1,14 @@
 
 
-## Substituir logo da proposta pela logo correta da Quadra
+## Ajustar enquadramento da foto — AboutPage
 
 ### Problema
-A logo exibida nas páginas da proposta não é a correta. O usuário forneceu a logo branca correta da Quadra Arquitetura.
+A foto das sócias está mostrando muito teto/parede acima delas. Precisa descer o ponto focal para mostrar menos espaço vazio acima e mais das sócias.
 
 ### Solução
-1. Copiar a imagem enviada para `src/assets/quadra-logo-white.png`
-2. Atualizar `LogoSmall` em `shared.tsx` para importar e usar essa logo como fallback (quando `url` não for fornecido)
-3. Atualizar `CoverPage.tsx` para usar a mesma logo importada como fallback
+Em `AboutPage.tsx`, alterar `objectPosition` de `"20% 0%"` para `"20% 15%"` — o segundo valor (vertical) sai de 0% (topo) para 15%, cortando um pouco do espaço vazio acima e centralizando melhor as duas.
 
-### Edições
-
-**`src/assets/quadra-logo-white.png`** — copiar o arquivo enviado
-
-**`src/components/leads/proposal-pages/shared.tsx`**
-- Importar `quadraLogoWhite` de `@/assets/quadra-logo-white.png`
-- No `LogoSmall`, usar a logo importada como fallback: `src={url || quadraLogoWhite}` e remover o `if (!url) return null`
-
-**`src/components/leads/proposal-pages/CoverPage.tsx`**
-- Importar `quadraLogoWhite` de `@/assets/quadra-logo-white.png`
-- Usar como fallback no lugar do texto "QUADRA" quando `logoUrl` não está definido
+### Edição: `src/components/leads/proposal-pages/AboutPage.tsx` linha 26
+- De: `objectPosition: "20% 0%"`
+- Para: `objectPosition: "20% 15%"`
 
