@@ -31,7 +31,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
 
 interface Activity {
-  task_name: string;
+  activity_name: string;
   environment: string;
   discipline: string;
   quantity: number;
