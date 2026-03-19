@@ -108,7 +108,7 @@ export default function DashboardObras() {
   const { data: scheduleTasks = [] } = useQuery({
     queryKey: ["dash-obras-schedule"],
     queryFn: async () => {
-      const { data } = await supabase.from("schedule_tasks").select("id, task_name, start_date, end_date, status, discipline, project_id, projects(name)").eq("user_id", user!.id);
+      const { data } = await supabase.from("schedule_tasks").select("id, task_name, start_date, end_date, status, discipline, project_id, supplier_name, projects(name)").eq("user_id", user!.id);
       return data ?? [];
     },
     enabled: !!user,
