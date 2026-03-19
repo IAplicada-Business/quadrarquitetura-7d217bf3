@@ -119,13 +119,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "budget_quotes_scope_item_id_fkey"
-            columns: ["scope_item_id"]
-            isOneToOne: false
-            referencedRelation: "scope_items"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "budget_quotes_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
