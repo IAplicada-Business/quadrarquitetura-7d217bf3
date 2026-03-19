@@ -5,9 +5,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useScopeItems, ScopeItem } from "@/hooks/useScopeItems";
+import { useBudgetQuotes } from "@/hooks/useBudgetQuotes";
 import { ScopeItemForm } from "./ScopeItemForm";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const STATUS_HIERARCHY = ["rascunho", "planejado", "em_cotacao", "contratado", "em_execucao", "executado"];
 const LOCK_THRESHOLD = 3; // "contratado" index
@@ -26,7 +29,9 @@ interface ProjectScopeTabProps {
 }
 
 export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
+  const { user } = useAuth();
   const { items, isLoading, create, update, remove } = useScopeItems(projectId);
+  const { quotes } = useBudgetQuotes(projectId);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Record<string, unknown> | null>(null);
   const [scopeTypeFilter, setScopeTypeFilter] = useState<"projeto" | "contratado">("contratado");
@@ -71,7 +76,7 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
     setFormOpen(true);
   };
 
-  const handleStatusChange = (itemId: string, newStatus: string, currentStatus: string) => {
+  const handleStatusChange = async (itemId: string, newStatus: string, currentStatus: string) => {
     const currentIdx = STATUS_HIERARCHY.indexOf(currentStatus || "rascunho");
     const newIdx = STATUS_HIERARCHY.indexOf(newStatus);
     if (currentIdx >= LOCK_THRESHOLD && newIdx < currentIdx) {
@@ -80,6 +85,25 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
       return;
     }
     update.mutate({ id: itemId, status: newStatus });
+
+    // Auto-create budget_quote when status changes to "contratado" or beyond
+    if (newIdx >= LOCK_THRESHOLD && currentIdx < LOCK_THRESHOLD && user) {
+      const hasQuote = quotes.some((q: any) => q.scope_item_id === itemId);
+      if (!hasQuote) {
+        const item = items.find((i) => i.id === itemId);
+        if (item) {
+          try {
+            await supabase.from("budget_quotes").insert({
+              project_id: projectId,
+              user_id: user.id,
+              scope_item_id: itemId,
+              services_description: `${item.discipline}${item.description ? ' - ' + item.description : ''}`,
+              status: "pendente",
+            });
+          } catch (_) { /* silent */ }
+        }
+      }
+    }
   };
 
   const renderRow = (item: ScopeItem, isChild = false) => {

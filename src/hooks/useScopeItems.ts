@@ -39,16 +39,31 @@ export function useScopeItems(projectId: string | undefined) {
 
   const create = useMutation({
     mutationFn: async (item: Partial<ScopeItem>) => {
-      const { error } = await supabase.from("scope_items").insert({
+      const { data, error } = await supabase.from("scope_items").insert({
         ...item,
         project_id: projectId!,
         user_id: user!.id,
-      } as any);
+      } as any).select().single();
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["scope_items", projectId] });
       toast({ title: "Disciplina adicionada" });
+
+      // Auto-create budget_quote linked to this scope item
+      if (data) {
+        try {
+          await supabase.from("budget_quotes").insert({
+            project_id: projectId!,
+            user_id: user!.id,
+            scope_item_id: data.id,
+            services_description: `${data.discipline}${data.description ? ' - ' + data.description : ''}`,
+            status: "pendente",
+          });
+          queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] });
+        } catch (_) { /* silent — budget can be created manually */ }
+      }
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });

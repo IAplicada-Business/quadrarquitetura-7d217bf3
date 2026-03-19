@@ -163,7 +163,8 @@ export function useScenarios(projectId: string) {
         if (projErr) throw projErr;
       }
 
-      // 4. Insert INCLUDED items as scope_type="contratado"
+      // 4. Insert INCLUDED items as scope_type="contratado" and return them
+      let contratadoIds: string[] = [];
       if (includedItems.length > 0) {
         const contratadoInserts = includedItems.map((item, idx) => ({
           user_id: user!.id,
@@ -175,8 +176,24 @@ export function useScenarios(projectId: string) {
           scope_type: "contratado",
           status: "contratado",
         }));
-        const { error: contErr } = await supabase.from("scope_items").insert(contratadoInserts);
+        const { data: contData, error: contErr } = await supabase
+          .from("scope_items")
+          .insert(contratadoInserts)
+          .select("id, discipline, description");
         if (contErr) throw contErr;
+        contratadoIds = (contData || []).map((d) => d.id);
+
+        // 4b. Auto-create budget_quotes for each contratado scope item
+        if (contData && contData.length > 0) {
+          const budgetInserts = contData.map((si) => ({
+            project_id: projectId,
+            user_id: user!.id,
+            scope_item_id: si.id,
+            services_description: `${si.discipline}${si.description ? ' - ' + si.description : ''}`,
+            status: "pendente" as const,
+          }));
+          await supabase.from("budget_quotes").insert(budgetInserts);
+        }
       }
 
       // 5. Update project budgets
@@ -197,7 +214,8 @@ export function useScenarios(projectId: string) {
       queryClient.invalidateQueries({ queryKey: ["scenarios", projectId] });
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       queryClient.invalidateQueries({ queryKey: ["scope_items", projectId] });
-      toast({ title: "Cenário aprovado! Escopo preenchido automaticamente." });
+      queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] });
+      toast({ title: "Cenário aprovado! Escopo e orçamentos preenchidos automaticamente." });
     },
     onError: (e: Error) => toast({ title: "Erro ao aprovar", description: e.message, variant: "destructive" }),
   });
