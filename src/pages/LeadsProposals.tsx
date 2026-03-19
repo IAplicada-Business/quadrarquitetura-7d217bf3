@@ -289,7 +289,7 @@ export default function LeadsProposals() {
         </div>
         {view === "list" && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setView(view === "templates" ? "list" : "templates")}>
+            <Button variant="outline" size="sm" onClick={() => setView("templates")}>
               <Settings2 className="h-4 w-4 mr-1" /> Templates
             </Button>
             <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Nova Proposta</Button>
