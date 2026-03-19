@@ -25,6 +25,7 @@ import VoiceTasksPage from "./pages/VoiceTasksPage";
 import ConstructionAgenda from "./pages/ConstructionAgenda";
 import NotificationsPage from "./pages/NotificationsPage";
 import NotFound from "./pages/NotFound";
+import ClientPortal from "./pages/ClientPortal";
 
 const queryClient = new QueryClient();
 
@@ -90,6 +91,7 @@ const App = () => (
               <Route path="/purchases" element={<Navigate to="/projects" replace />} />
               <Route path="/financial" element={<Navigate to="/projects" replace />} />
             </Route>
+            <Route path="/client/:token" element={<ClientPortal />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
