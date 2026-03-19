@@ -1,23 +1,27 @@
-import { useState } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Pencil, Trash2, FileText, Check, X, Copy, Send, Sparkles, Settings2 } from "lucide-react";
+import { Plus, Pencil, Trash2, FileText, Check, X, Send, Settings2, Download, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProposals, Proposal } from "@/hooks/useProposals";
-import { useLeads, Lead } from "@/hooks/useLeads";
+import { useLeads } from "@/hooks/useLeads";
 import { useProposalTemplates } from "@/hooks/useProposalTemplates";
-import { ProposalPreview } from "@/components/leads/ProposalPreview";
+import { useProposalAssets } from "@/hooks/useProposalAssets";
 import { TemplateManager } from "@/components/leads/TemplateManager";
+import ProposalFormNew, { ProposalFormData } from "@/components/leads/ProposalFormNew";
+import { ProposalPreviewModal } from "@/components/leads/ProposalPreviewModal";
+import { buildProposalPages } from "@/components/leads/ProposalPageRenderer";
+import { ProposalPageProps } from "@/components/leads/proposal-pages/shared";
+import { generateProposalPdf } from "@/lib/generateProposalPdf";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import ReactDOM from "react-dom/client";
 
 const statusLabels: Record<string, string> = {
   rascunho: "Rascunho", enviada: "Enviada", aprovada: "Aprovada", rejeitada: "Rejeitada",
@@ -37,132 +41,226 @@ function generateProposalNumber(proposals: Proposal[]): string {
 
 export default function LeadsProposals() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { proposals, isLoading, create, update, remove } = useProposals();
   const { leads } = useLeads();
   const { templates, create: createTemplate, update: updateTemplate, remove: removeTemplate } = useProposalTemplates();
+  const { logos, founderPhotos, portfolio, feedbacks, texts, contacts } = useProposalAssets();
 
-  const [formOpen, setFormOpen] = useState(false);
+  const [view, setView] = useState<"list" | "form" | "templates">("list");
   const [editingProposal, setEditingProposal] = useState<Proposal | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [rejectOpen, setRejectOpen] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewPages, setPreviewPages] = useState<React.ReactElement[]>([]);
   const [generating, setGenerating] = useState(false);
-  const [activeTab, setActiveTab] = useState("lista");
+  const renderContainerRef = useRef<HTMLDivElement>(null);
 
-  const [formData, setFormData] = useState({
-    lead_id: "", template_id: "", title: "", project_description: "", value: "",
-    discount_percent: "", estimated_area: "", estimated_duration: "", deadline: "",
-    payment_conditions: "", payment_method: "", notes: "", custom_services: "",
-    includes_architectural_project: true, includes_construction_management: true,
-    includes_interior_design: false, includes_3d_visualization: false,
-  });
-
-  const selectedLead = leads.find(l => l.id === formData.lead_id);
-  const selectedTemplate = templates.find(t => t.id === formData.template_id);
-
-  const openNew = () => {
-    setEditingProposal(null);
-    setFormData({
-      lead_id: "", template_id: "", title: "", project_description: "", value: "",
-      discount_percent: "", estimated_area: "", estimated_duration: "", deadline: "",
-      payment_conditions: "", payment_method: "", notes: "", custom_services: "",
-      includes_architectural_project: true, includes_construction_management: true,
-      includes_interior_design: false, includes_3d_visualization: false,
+  // Build shared page props from assets
+  const buildPageProps = useCallback((formData: ProposalFormData): ProposalPageProps => {
+    const pillarTexts: Record<string, string> = {};
+    texts.forEach(t => {
+      const key = (t.metadata as any)?.key;
+      if (key && t.description) pillarTexts[key] = t.description;
     });
-    setFormOpen(true);
-  };
 
-  const openEdit = (p: Proposal) => {
-    setEditingProposal(p);
-    setFormData({
-      lead_id: p.lead_id, template_id: (p as any).template_id || "",
-      title: (p as any).title || "", project_description: p.project_description || "",
-      value: p.value?.toString() || "", discount_percent: p.discount_percent?.toString() || "",
-      estimated_area: (p as any).estimated_area?.toString() || "",
-      estimated_duration: (p as any).estimated_duration || "",
-      deadline: p.deadline || "", payment_conditions: p.payment_conditions || "",
-      payment_method: (p as any).payment_method || "", notes: (p as any).notes || "",
-      custom_services: (p as any).custom_services || "",
-      includes_architectural_project: (p as any).includes_architectural_project ?? true,
-      includes_construction_management: (p as any).includes_construction_management ?? true,
-      includes_interior_design: (p as any).includes_interior_design ?? false,
-      includes_3d_visualization: (p as any).includes_3d_visualization ?? false,
+    const diffText = texts.find(t => (t.metadata as any)?.key === "diferenciais");
+    const differentials = diffText?.description?.split("|") || [];
+
+    const instagram = contacts.find(c => c.name === "Instagram")?.description;
+    const phone1 = contacts.find(c => c.name === "Telefone 1")?.description;
+    const phone2 = contacts.find(c => c.name === "Telefone 2")?.description;
+    const aboutText = texts.find(t => (t.metadata as any)?.key === "quem_somos")?.description;
+
+    return {
+      clientName: formData.client_name,
+      projectName: formData.project_name,
+      scopeDescription: formData.scope_description,
+      servicesIncluded: formData.services_included,
+      timelineBriefing: formData.timeline_briefing,
+      timelineStudy: formData.timeline_study,
+      timelinePriorities: formData.timeline_priorities,
+      timelineConstruction: formData.timeline_construction,
+      priceFull: formData.price_full,
+      priceCash: formData.price_cash,
+      installmentsCount: formData.installments_count,
+      installmentEntry: formData.installment_entry,
+      installmentValue: formData.installment_value,
+      priceNote: formData.price_note,
+      logoUrl: logos[0]?.file_url || undefined,
+      founderPhotos,
+      aboutText,
+      pillarTexts,
+      differentials: differentials.length > 0 ? differentials : undefined,
+      contactInstagram: instagram,
+      contactPhone1: phone1,
+      contactPhone2: phone2,
+    };
+  }, [logos, founderPhotos, texts, contacts]);
+
+  const buildPages = useCallback((formData: ProposalFormData) => {
+    const pageProps = buildPageProps(formData);
+    return buildProposalPages({
+      data: pageProps,
+      portfolioImages: portfolio,
+      feedbackImages: feedbacks,
+      selectedPortfolioProjects: formData.portfolio_projects,
+      selectedFeedbackIds: formData.feedback_items,
     });
-    setFormOpen(true);
-  };
+  }, [buildPageProps, portfolio, feedbacks]);
 
-  const calcFinalValue = () => {
-    const v = Number(formData.value) || 0;
-    const d = Number(formData.discount_percent) || 0;
-    return v - (v * d / 100);
-  };
-
-  const handleGenerateAI = async () => {
-    if (!formData.lead_id) { toast({ title: "Selecione um lead primeiro", variant: "destructive" }); return; }
-    setGenerating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("generate-proposal", {
-        body: {
-          leadName: selectedLead?.name,
-          projectType: selectedLead?.project_type,
-          constructionType: (selectedLead as any)?.construction_type,
-          templateIntroduction: selectedTemplate?.introduction,
-          templateMethodology: selectedTemplate?.methodology,
-          templateDifferentials: selectedTemplate?.differentials,
-          services: {
-            architectural: formData.includes_architectural_project,
-            construction: formData.includes_construction_management,
-            interior: formData.includes_interior_design,
-            visualization: formData.includes_3d_visualization,
-            custom: formData.custom_services,
-          },
-          estimatedArea: formData.estimated_area,
-          value: formData.value,
-          paymentConditions: formData.payment_conditions,
-        },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setFormData({ ...formData, project_description: data.text });
-      toast({ title: "Texto gerado com sucesso!" });
-    } catch (e: any) {
-      toast({ title: "Erro ao gerar com IA", description: e.message, variant: "destructive" });
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const handleSubmit = () => {
-    if (!formData.lead_id) return;
-    const finalVal = calcFinalValue();
+  const handleSave = (formData: ProposalFormData, status: string) => {
     const payload: Record<string, unknown> = {
       lead_id: formData.lead_id,
-      template_id: formData.template_id || null,
-      title: formData.title || null,
-      project_description: formData.project_description || null,
-      value: formData.value ? Number(formData.value) : null,
-      discount_percent: formData.discount_percent ? Number(formData.discount_percent) : null,
-      final_value: finalVal > 0 ? finalVal : null,
-      estimated_area: formData.estimated_area ? Number(formData.estimated_area) : null,
-      estimated_duration: formData.estimated_duration || null,
-      deadline: formData.deadline || null,
-      payment_conditions: formData.payment_conditions || null,
-      payment_method: formData.payment_method || null,
-      notes: formData.notes || null,
-      custom_services: formData.custom_services || null,
-      includes_architectural_project: formData.includes_architectural_project,
-      includes_construction_management: formData.includes_construction_management,
-      includes_interior_design: formData.includes_interior_design,
-      includes_3d_visualization: formData.includes_3d_visualization,
+      client_name: formData.client_name,
+      project_name: formData.project_name,
+      project_type: formData.project_type,
+      scope_description: formData.scope_description,
+      services_included: formData.services_included,
+      timeline_briefing: formData.timeline_briefing,
+      timeline_study: formData.timeline_study,
+      timeline_priorities: formData.timeline_priorities,
+      timeline_construction: formData.timeline_construction,
+      price_full: formData.price_full,
+      price_cash: formData.price_cash,
+      installments_count: formData.installments_count,
+      installment_entry: formData.installment_entry,
+      installment_value: formData.installment_value,
+      price_note: formData.price_note,
+      portfolio_projects: formData.portfolio_projects,
+      feedback_items: formData.feedback_items,
+      value: formData.price_full,
+      final_value: formData.price_cash || formData.price_full,
+      status,
     };
+
     if (editingProposal) {
       update.mutate({ id: editingProposal.id, ...payload });
     } else {
       const num = generateProposalNumber(proposals);
       create.mutate({ ...payload, proposal_number: num } as any);
     }
-    setFormOpen(false);
+    setView("list");
+    setEditingProposal(null);
   };
+
+  const handlePreview = (formData: ProposalFormData) => {
+    const pages = buildPages(formData);
+    setPreviewPages(pages);
+    setPreviewOpen(true);
+  };
+
+  const handleGeneratePdf = async (formData: ProposalFormData) => {
+    setGenerating(true);
+    try {
+      const pages = buildPages(formData);
+
+      // Create a hidden container for rendering
+      const container = document.createElement("div");
+      container.style.position = "fixed";
+      container.style.left = "-9999px";
+      container.style.top = "0";
+      document.body.appendChild(container);
+
+      const renderPage = (page: React.ReactElement, index: number): HTMLElement | null => {
+        const pageDiv = document.createElement("div");
+        container.appendChild(pageDiv);
+        const root = ReactDOM.createRoot(pageDiv);
+        root.render(page);
+        // Force synchronous layout
+        return pageDiv.firstElementChild as HTMLElement;
+      };
+
+      // We need to render all pages first, then wait a bit for images to load
+      const pageElements: HTMLDivElement[] = [];
+      const roots: ReactDOM.Root[] = [];
+
+      for (let i = 0; i < pages.length; i++) {
+        const pageDiv = document.createElement("div");
+        container.appendChild(pageDiv);
+        const root = ReactDOM.createRoot(pageDiv);
+        root.render(pages[i]);
+        pageElements.push(pageDiv);
+        roots.push(root);
+      }
+
+      // Wait for rendering
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const blob = await generateProposalPdf(pages, (_page, index) => {
+        return pageElements[index]?.firstElementChild as HTMLElement || null;
+      });
+
+      // Upload to storage
+      const fileName = `proposta-${formData.client_name?.replace(/\s+/g, "-") || "cliente"}-${Date.now()}.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from("proposal-assets")
+        .upload(`pdfs/${fileName}`, blob, { contentType: "application/pdf" });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("proposal-assets").getPublicUrl(`pdfs/${fileName}`);
+
+      // Save proposal with PDF URL
+      handleSave(formData, "rascunho");
+
+      if (editingProposal) {
+        update.mutate({ id: editingProposal.id, pdf_url: urlData.publicUrl });
+      }
+
+      // Download
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
+
+      toast({ title: "PDF gerado com sucesso!" });
+
+      // Cleanup
+      roots.forEach(r => r.unmount());
+      document.body.removeChild(container);
+    } catch (err: any) {
+      toast({ title: "Erro ao gerar PDF", description: err.message, variant: "destructive" });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const openNew = () => {
+    setEditingProposal(null);
+    setView("form");
+  };
+
+  const openEdit = (p: Proposal) => {
+    setEditingProposal(p);
+    setView("form");
+  };
+
+  const editInitialData = useMemo((): Partial<ProposalFormData> | undefined => {
+    if (!editingProposal) return undefined;
+    const p = editingProposal as any;
+    return {
+      lead_id: p.lead_id,
+      client_name: p.client_name || p.leads?.name || "",
+      project_name: p.project_name || p.title || "",
+      project_type: p.project_type || "residencial",
+      scope_description: p.scope_description || p.project_description || "",
+      services_included: p.services_included || "ambos",
+      timeline_briefing: p.timeline_briefing ?? 4,
+      timeline_study: p.timeline_study ?? 15,
+      timeline_priorities: p.timeline_priorities ?? 7,
+      timeline_construction: p.timeline_construction ?? 25,
+      price_full: p.price_full || p.value,
+      price_cash: p.price_cash,
+      installments_count: p.installments_count,
+      installment_entry: p.installment_entry,
+      installment_value: p.installment_value,
+      price_note: p.price_note || "*Neste valor, não está incluso execução de obra (mão de obra e materiais)",
+      portfolio_projects: p.portfolio_projects || [],
+      feedback_items: p.feedback_items || [],
+    };
+  }, [editingProposal]);
 
   const handleReject = (id: string) => {
     update.mutate({ id, status: "rejeitada", rejected_at: new Date().toISOString(), rejection_reason: rejectReason });
@@ -178,20 +276,29 @@ export default function LeadsProposals() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
+          {view !== "list" && (
+            <Button variant="ghost" size="sm" className="mb-2" onClick={() => { setView("list"); setEditingProposal(null); }}>
+              <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+            </Button>
+          )}
           <h1 className="text-2xl font-bold text-display">Propostas</h1>
           <p className="text-sm text-muted-foreground">{proposals.length} proposta(s)</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setActiveTab(activeTab === "templates" ? "lista" : "templates")}>
-            <Settings2 className="h-4 w-4 mr-1" /> Templates
-          </Button>
-          <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Nova Proposta</Button>
-        </div>
+        {view === "list" && (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setView("templates")}>
+              <Settings2 className="h-4 w-4 mr-1" /> Templates
+            </Button>
+            <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Nova Proposta</Button>
+          </div>
+        )}
       </div>
 
-      {activeTab === "templates" ? (
+      {/* Templates view */}
+      {view === "templates" && (
         <TemplateManager
           title="Templates de Proposta"
           templates={templates}
@@ -206,7 +313,21 @@ export default function LeadsProposals() {
           onUpdate={(d) => updateTemplate.mutate(d)}
           onRemove={(id) => removeTemplate.mutate(id)}
         />
-      ) : (
+      )}
+
+      {/* Form view */}
+      {view === "form" && (
+        <ProposalFormNew
+          initialData={editInitialData}
+          onSave={handleSave}
+          onPreview={handlePreview}
+          onGeneratePdf={handleGeneratePdf}
+          saving={create.isPending || update.isPending || generating}
+        />
+      )}
+
+      {/* List view */}
+      {view === "list" && (
         <>
           <div className="flex gap-2 flex-wrap">
             {["todos", "rascunho", "enviada", "aprovada", "rejeitada"].map((s) => (
@@ -226,16 +347,20 @@ export default function LeadsProposals() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-xs text-muted-foreground">{(p as any).proposal_number || "—"}</p>
-                        <p className="font-semibold text-sm">{(p as any).title || (p.leads as any)?.name || "Lead"}</p>
+                        <p className="font-semibold text-sm">{(p as any).client_name || (p as any).title || (p.leads as any)?.name || "Lead"}</p>
+                        {(p as any).project_name && <p className="text-xs text-muted-foreground">{(p as any).project_name}</p>}
                       </div>
                       <Badge variant={p.status === "aprovada" ? "default" : p.status === "rejeitada" ? "destructive" : "secondary"}>
                         {statusLabels[p.status] || p.status}
                       </Badge>
                     </div>
-                    {p.project_description && <p className="text-sm text-muted-foreground line-clamp-2">{p.project_description}</p>}
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-bold">{formatCurrency((p as any).final_value || p.value)}</span>
-                      {p.discount_percent != null && p.discount_percent > 0 && <span className="text-muted-foreground">{p.discount_percent}% desc.</span>}
+                      <span className="font-bold">{formatCurrency((p as any).price_full || (p as any).final_value || p.value)}</span>
+                      {(p as any).pdf_url && (
+                        <a href={(p as any).pdf_url} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="ghost" className="h-7"><Download className="h-3 w-3 mr-1" /> PDF</Button>
+                        </a>
+                      )}
                     </div>
                     <div className="flex gap-1 pt-1 flex-wrap">
                       <Button size="sm" variant="ghost" className="h-7" onClick={() => openEdit(p)}><Pencil className="h-3 w-3" /></Button>
@@ -269,153 +394,8 @@ export default function LeadsProposals() {
         </>
       )}
 
-      {/* Form Dialog */}
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-          <DialogHeader><DialogTitle>{editingProposal ? "Editar Proposta" : "Nova Proposta"}</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-y-auto max-h-[70vh] pr-2">
-            {/* Left: Form */}
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label>Lead *</Label>
-                <Select value={formData.lead_id} onValueChange={(v) => setFormData({ ...formData, lead_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione um lead" /></SelectTrigger>
-                  <SelectContent>
-                    {leads.map((l) => <SelectItem key={l.id} value={l.id}>{l.name} — {l.phone}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Template</Label>
-                <Select value={formData.template_id} onValueChange={(v) => setFormData({ ...formData, template_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione (opcional)" /></SelectTrigger>
-                  <SelectContent>
-                    {templates.filter(t => t.is_active).map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Título da Proposta</Label>
-                <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="Ex: Projeto Residencial Vila Nova" />
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label>Descrição dos Serviços</Label>
-                  <Button size="sm" variant="outline" onClick={handleGenerateAI} disabled={generating}>
-                    <Sparkles className="h-3 w-3 mr-1" /> {generating ? "Gerando..." : "Gerar com IA"}
-                  </Button>
-                </div>
-                <Textarea value={formData.project_description} onChange={(e) => setFormData({ ...formData, project_description: e.target.value })} rows={5} />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="font-semibold">Serviços Inclusos</Label>
-                <div className="space-y-2">
-                  {[
-                    { key: "includes_architectural_project", label: "Projeto Arquitetônico" },
-                    { key: "includes_construction_management", label: "Acompanhamento de Obra" },
-                    { key: "includes_interior_design", label: "Design de Interiores" },
-                    { key: "includes_3d_visualization", label: "Visualização 3D" },
-                  ].map((s) => (
-                    <div key={s.key} className="flex items-center gap-2">
-                      <Switch
-                        checked={formData[s.key as keyof typeof formData] as boolean}
-                        onCheckedChange={(v) => setFormData({ ...formData, [s.key]: v })}
-                      />
-                      <span className="text-sm">{s.label}</span>
-                    </div>
-                  ))}
-                  <Input
-                    placeholder="Serviços adicionais..."
-                    value={formData.custom_services}
-                    onChange={(e) => setFormData({ ...formData, custom_services: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label>Área (m²)</Label>
-                  <Input type="number" value={formData.estimated_area} onChange={(e) => setFormData({ ...formData, estimated_area: e.target.value })} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Prazo Estimado</Label>
-                  <Input value={formData.estimated_duration} onChange={(e) => setFormData({ ...formData, estimated_duration: e.target.value })} placeholder="Ex: 6 meses" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Valor (R$)</Label>
-                  <Input type="number" value={formData.value} onChange={(e) => setFormData({ ...formData, value: e.target.value })} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Desconto (%)</Label>
-                  <Input type="number" value={formData.discount_percent} onChange={(e) => setFormData({ ...formData, discount_percent: e.target.value })} />
-                </div>
-              </div>
-
-              {(Number(formData.value) > 0) && (
-                <p className="text-sm font-semibold">Valor final: {formatCurrency(calcFinalValue())}</p>
-              )}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label>Condições de Pagamento</Label>
-                  <Input value={formData.payment_conditions} onChange={(e) => setFormData({ ...formData, payment_conditions: e.target.value })} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Forma de Pagamento</Label>
-                  <Input value={formData.payment_method} onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })} placeholder="Pix, boleto..." />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Validade da Proposta</Label>
-                <Input value={formData.deadline} onChange={(e) => setFormData({ ...formData, deadline: e.target.value })} placeholder="30 dias" />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Observações Internas</Label>
-                <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={2} />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
-                <Button onClick={handleSubmit} disabled={!formData.lead_id || create.isPending || update.isPending}>
-                  {editingProposal ? "Salvar" : "Criar Proposta"}
-                </Button>
-              </div>
-            </div>
-
-            {/* Right: Preview */}
-            <ProposalPreview
-              proposalNumber={editingProposal ? ((editingProposal as any).proposal_number || "") : generateProposalNumber(proposals)}
-              leadName={selectedLead?.name || ""}
-              title={formData.title}
-              projectDescription={formData.project_description}
-              services={{
-                architectural: formData.includes_architectural_project,
-                construction: formData.includes_construction_management,
-                interior: formData.includes_interior_design,
-                visualization: formData.includes_3d_visualization,
-                custom: formData.custom_services,
-              }}
-              value={Number(formData.value) || null}
-              discountPercent={Number(formData.discount_percent) || null}
-              finalValue={calcFinalValue() > 0 ? calcFinalValue() : null}
-              paymentConditions={formData.payment_conditions}
-              paymentMethod={formData.payment_method}
-              deadline={formData.deadline || formData.estimated_duration}
-              estimatedArea={Number(formData.estimated_area) || null}
-              templateIntroduction={selectedTemplate?.introduction || ""}
-              templateMethodology={selectedTemplate?.methodology || ""}
-              templateDifferentials={selectedTemplate?.differentials || ""}
-              templateTerms={selectedTemplate?.terms || ""}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Preview Modal */}
+      <ProposalPreviewModal open={previewOpen} onOpenChange={setPreviewOpen} pages={previewPages} />
 
       {/* Reject Dialog */}
       <Dialog open={!!rejectOpen} onOpenChange={() => setRejectOpen(null)}>
@@ -431,6 +411,9 @@ export default function LeadsProposals() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Hidden render container for PDF */}
+      <div ref={renderContainerRef} style={{ position: "fixed", left: "-9999px", top: 0 }} />
     </div>
   );
 }

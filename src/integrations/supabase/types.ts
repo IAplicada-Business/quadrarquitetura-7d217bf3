@@ -1481,6 +1481,54 @@ export type Database = {
           },
         ]
       }
+      proposal_assets: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          display_order: number | null
+          file_url: string | null
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          name: string
+          project_category: string | null
+          project_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name: string
+          project_category?: string | null
+          project_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name?: string
+          project_category?: string | null
+          project_name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       proposal_templates: {
         Row: {
           created_at: string
@@ -1533,6 +1581,7 @@ export type Database = {
         Row: {
           approved_at: string | null
           client_id: string | null
+          client_name: string | null
           created_at: string
           created_by: string | null
           custom_services: string | null
@@ -1541,25 +1590,41 @@ export type Database = {
           discount_value: number | null
           estimated_area: number | null
           estimated_duration: string | null
+          feedback_items: Json | null
           final_value: number | null
           id: string
           includes_3d_visualization: boolean | null
           includes_architectural_project: boolean | null
           includes_construction_management: boolean | null
           includes_interior_design: boolean | null
+          installment_entry: number | null
+          installment_value: number | null
+          installments_count: number | null
           lead_id: string
           notes: string | null
           payment_conditions: string | null
           payment_method: string | null
+          pdf_url: string | null
+          portfolio_projects: Json | null
+          price_cash: number | null
+          price_full: number | null
+          price_note: string | null
           project_description: string | null
+          project_name: string | null
           project_type: string | null
           proposal_number: string | null
           rejected_at: string | null
           rejection_reason: string | null
+          scope_description: string | null
           sent_at: string | null
+          services_included: string | null
           status: string
           template_id: string | null
           template_name: string | null
+          timeline_briefing: number | null
+          timeline_construction: number | null
+          timeline_priorities: number | null
+          timeline_study: number | null
           title: string | null
           updated_at: string
           user_id: string
@@ -1568,6 +1633,7 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           client_id?: string | null
+          client_name?: string | null
           created_at?: string
           created_by?: string | null
           custom_services?: string | null
@@ -1576,25 +1642,41 @@ export type Database = {
           discount_value?: number | null
           estimated_area?: number | null
           estimated_duration?: string | null
+          feedback_items?: Json | null
           final_value?: number | null
           id?: string
           includes_3d_visualization?: boolean | null
           includes_architectural_project?: boolean | null
           includes_construction_management?: boolean | null
           includes_interior_design?: boolean | null
+          installment_entry?: number | null
+          installment_value?: number | null
+          installments_count?: number | null
           lead_id: string
           notes?: string | null
           payment_conditions?: string | null
           payment_method?: string | null
+          pdf_url?: string | null
+          portfolio_projects?: Json | null
+          price_cash?: number | null
+          price_full?: number | null
+          price_note?: string | null
           project_description?: string | null
+          project_name?: string | null
           project_type?: string | null
           proposal_number?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
+          scope_description?: string | null
           sent_at?: string | null
+          services_included?: string | null
           status?: string
           template_id?: string | null
           template_name?: string | null
+          timeline_briefing?: number | null
+          timeline_construction?: number | null
+          timeline_priorities?: number | null
+          timeline_study?: number | null
           title?: string | null
           updated_at?: string
           user_id: string
@@ -1603,6 +1685,7 @@ export type Database = {
         Update: {
           approved_at?: string | null
           client_id?: string | null
+          client_name?: string | null
           created_at?: string
           created_by?: string | null
           custom_services?: string | null
@@ -1611,25 +1694,41 @@ export type Database = {
           discount_value?: number | null
           estimated_area?: number | null
           estimated_duration?: string | null
+          feedback_items?: Json | null
           final_value?: number | null
           id?: string
           includes_3d_visualization?: boolean | null
           includes_architectural_project?: boolean | null
           includes_construction_management?: boolean | null
           includes_interior_design?: boolean | null
+          installment_entry?: number | null
+          installment_value?: number | null
+          installments_count?: number | null
           lead_id?: string
           notes?: string | null
           payment_conditions?: string | null
           payment_method?: string | null
+          pdf_url?: string | null
+          portfolio_projects?: Json | null
+          price_cash?: number | null
+          price_full?: number | null
+          price_note?: string | null
           project_description?: string | null
+          project_name?: string | null
           project_type?: string | null
           proposal_number?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
+          scope_description?: string | null
           sent_at?: string | null
+          services_included?: string | null
           status?: string
           template_id?: string | null
           template_name?: string | null
+          timeline_briefing?: number | null
+          timeline_construction?: number | null
+          timeline_priorities?: number | null
+          timeline_study?: number | null
           title?: string | null
           updated_at?: string
           user_id?: string
