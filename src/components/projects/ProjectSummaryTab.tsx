@@ -134,7 +134,7 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
       </Card>
 
       {/* Quick Links */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
           { icon: Wallet, label: "Financeiro", tab: "financeiro" },
           { icon: Hammer, label: "Cronograma", tab: "cronograma" },
@@ -151,6 +151,14 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
             <span>{link.label}</span>
           </Button>
         ))}
+        <Button
+          variant="outline"
+          className="h-20 flex flex-col items-center justify-center gap-2 hover:bg-primary/5 hover:border-primary/30 transition-all"
+          onClick={() => setPortalDialogOpen(true)}
+        >
+          <Link2 className="h-6 w-6 text-primary" />
+          <span>Portal Cliente</span>
+        </Button>
       </div>
 
       <Card>
@@ -185,6 +193,79 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
 
       {/* Budget Estimator */}
       <BudgetEstimator project={project} updateProject={updateProject} onTabChange={onTabChange} />
+
+      {/* Portal do Cliente Dialog */}
+      <Dialog open={portalDialogOpen} onOpenChange={setPortalDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Portal do Cliente</DialogTitle>
+            <DialogDescription>
+              Gere um link público para seu cliente acompanhar a obra.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {tokenLoading ? (
+              <p className="text-sm text-muted-foreground">Carregando...</p>
+            ) : activeToken ? (
+              <>
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  <code className="text-xs flex-1 truncate">
+                    {window.location.origin}/client/{activeToken.token}
+                  </code>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/client/${activeToken.token}`);
+                      setCopied(true);
+                      toast({ title: "Link copiado!" });
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                  >
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => window.open(`/client/${activeToken.token}`, "_blank")}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive"
+                    onClick={async () => {
+                      await deactivateToken(activeToken.id);
+                    }}
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Desativar link
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      await deactivateToken(activeToken.id);
+                      await createToken();
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                    Regenerar
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <Button onClick={() => createToken()} disabled={isCreating}>
+                <Link2 className="h-4 w-4 mr-2" />
+                {isCreating ? "Gerando..." : "Gerar Link do Cliente"}
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
