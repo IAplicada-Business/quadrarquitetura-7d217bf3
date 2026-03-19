@@ -46,7 +46,7 @@ export function ProposalPreviewModal({ open, onOpenChange, pages }: Props) {
               </div>
             </div>
             <div className="flex-1 overflow-auto flex items-center justify-center bg-muted/50 p-4">
-              <div style={{ transform: "scale(0.65)", transformOrigin: "center center" }}>
+              <div style={{ transform: "scale(0.55)", transformOrigin: "center center" }}>
                 {pages[current]}
               </div>
             </div>
