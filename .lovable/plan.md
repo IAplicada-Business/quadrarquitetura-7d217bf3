@@ -1,52 +1,41 @@
 
 
-## Reestruturar Tabela de Tarefas por Obra
+## Trava de Status no Escopo da Obra
 
-### 1. Atualizar colunas da tabela
+### Resumo
+Implementar hierarquia irreversível de status no escopo: após "Contratado", o status só avança. Adicionar "Rascunho" e "Executado" à lista de status. Mostrar cadeado visual e bloquear retrocesso.
 
-Novas colunas (nesta ordem): Atividade | Ambiente | Disciplina | Responsável | Depende de | Status | Início | Fim | Prazo (dias) | Progresso | Ações
+---
 
-A coluna "Depende de" mostra os nomes das tarefas dependentes (lookup pelo array `dependencies`). A coluna "Prazo (dias)" mostra `estimated_days`. Remover coluna "Obra" (já filtrada).
+### 1. Atualizar `ProjectScopeTab.tsx`
 
-### 2. Filtros múltiplos (acima da tabela)
+**Expandir `statusConfig`** para incluir todos os 6 status na ordem hierárquica:
+- `rascunho` → `planejado` → `em_cotacao` → `contratado` → `em_execucao` → `executado`
 
-Adicionar filtros usando multi-select com Popover + Checkboxes (sem dependência externa):
-- **Por Obra** — manter Select existente
-- **Por Disciplina** — multi-select, opções extraídas das tarefas carregadas
-- **Por Status** — multi-select com as 5 opções de status
-- **Por Responsável** — multi-select, opções extraídas dos `supplier_name` (split por vírgula)
-- **Por Ambiente** — multi-select, opções extraídas dos `environment` das tarefas
+**Criar array de hierarquia** `STATUS_HIERARCHY = ["rascunho", "planejado", "em_cotacao", "contratado", "em_execucao", "executado"]` para determinar o índice de cada status.
 
-Cada filtro: botão com badge mostrando count de seleções. Popover com lista de checkboxes.
+**Definir índice de bloqueio**: status com índice >= 3 (`contratado`) é "locked" — só pode avançar.
 
-### 3. Toggle de agrupamento
+**No Select de status inline** (linha ~92-101):
+- Filtrar opções: mostrar apenas status com índice >= índice atual
+- Se status atual é "contratado" ou posterior, exibir ícone 🔒 ao lado do SelectTrigger
 
-Botão toggle "Ver por lista" / "Agrupar por disciplina":
-- **Lista** (padrão): todas atividades em sequência plana (com subtarefas expandíveis)
-- **Agrupar por disciplina**: agrupar visualmente com header de seção por disciplina, atividades independentes dentro de cada grupo
+**No `handleStatusChange`**:
+- Antes de chamar `update.mutate`, verificar se o novo status tem índice >= índice atual
+- Se não, exibir toast: `"Status 'Contratado' não pode ser revertido"` (ou o label do status atual) e não executar a mutation
 
-### 4. Toggle "Ver pendências"
+### 2. Atualizar `ScopeItemForm.tsx`
 
-Botão/toggle que filtra:
-- Status = "pendencia" OU (progresso < 100% E data fim < hoje)
-- Funciona como checklist de final de obra
-- Cada linha ganha um **checkbox** rápido que marca status = "executado" e progresso = 100% sem abrir formulário (mutation inline)
-
-### 5. Métricas ajustadas
-
-Contar **TODAS** as atividades (incluindo subtarefas), não apenas tarefas-pai:
-- Total: `tasks.length`
-- Em Execução: `status === "em_execucao"`
-- Atrasadas: `end_date < hoje E status !== "executado"`
-- Pendências: `status === "pendencia"`
-- Concluídas: `status === "executado"`
+**No Select de status do formulário de edição** (linha ~100):
+- Receber o status atual do item sendo editado
+- Filtrar `scopeStatusOptions` para mostrar apenas status com índice >= índice do status atual
+- Adicionar "Rascunho" e "Executado" às opções de status
 
 ### Detalhes técnicos
 
-- Criar componente helper `MultiSelectFilter` (Popover + Checkboxes) reutilizável para os 4 filtros novos
-- Estado: `filterDisciplines: string[]`, `filterStatuses: string[]`, `filterResponsibles: string[]`, `filterEnvironments: string[]`, `groupByDiscipline: boolean`, `showPendencias: boolean`
-- Filtrar `tasks` por todos os filtros ativos antes de separar em parentTasks/subtasks
-- Quick-complete checkbox usa `updateTask.mutate({ id, status: "executado", progress_percentage: 100 })`
-- Nenhuma migração necessária — todos os dados já existem no schema atual
-- Nenhuma rota, aba ou navegação será removida
+- Hierarquia: `["rascunho", "planejado", "em_cotacao", "contratado", "em_execucao", "executado"]`
+- Threshold de bloqueio: índice 3 (`contratado`) — a partir daqui, retrocesso bloqueado
+- Validação apenas no frontend (conforme solicitado)
+- Nenhuma migração necessária — os valores de status já são texto livre
+- Nenhuma rota ou aba será removida ou alterada
 
