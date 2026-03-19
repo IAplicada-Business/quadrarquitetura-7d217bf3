@@ -71,7 +71,14 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
     setFormOpen(true);
   };
 
-  const handleStatusChange = (itemId: string, newStatus: string) => {
+  const handleStatusChange = (itemId: string, newStatus: string, currentStatus: string) => {
+    const currentIdx = STATUS_HIERARCHY.indexOf(currentStatus || "rascunho");
+    const newIdx = STATUS_HIERARCHY.indexOf(newStatus);
+    if (currentIdx >= LOCK_THRESHOLD && newIdx < currentIdx) {
+      const currentLabel = statusConfig[currentStatus]?.label || currentStatus;
+      toast({ title: `Status '${currentLabel}' não pode ser revertido`, variant: "destructive" });
+      return;
+    }
     update.mutate({ id: itemId, status: newStatus });
   };
 
