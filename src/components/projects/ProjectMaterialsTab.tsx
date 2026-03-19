@@ -25,7 +25,7 @@ function formatDate(d: string | null) {
   return new Date(d).toLocaleDateString("pt-BR");
 }
 
-export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
+export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId: string; projectName?: string }) {
   const calc = useMaterialCalc(projectId);
   const tracking = useMaterialTracking(projectId);
   const purchases = useProjectPurchases(projectId);
