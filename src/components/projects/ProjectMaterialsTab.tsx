@@ -415,6 +415,13 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
           status: p.status,
         }))}
       />
+
+      <ShoppingListDialog
+        open={shoppingListOpen}
+        onOpenChange={setShoppingListOpen}
+        projectId={projectId}
+        projectName={projectName}
+      />
     </div>
   );
 }
