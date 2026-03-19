@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -7,13 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useScopeItems, ScopeItem } from "@/hooks/useScopeItems";
 import { ScopeItemForm } from "./ScopeItemForm";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
+
+const STATUS_HIERARCHY = ["rascunho", "planejado", "em_cotacao", "contratado", "em_execucao", "executado"];
+const LOCK_THRESHOLD = 3; // "contratado" index
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+  rascunho: { label: "Rascunho", variant: "outline" },
   planejado: { label: "Planejado", variant: "outline" },
   em_cotacao: { label: "Em Cotação", variant: "secondary" },
   contratado: { label: "Contratado", variant: "default" },
   em_execucao: { label: "Em Execução", variant: "default" },
-  concluido: { label: "Concluído", variant: "default" },
+  executado: { label: "Executado", variant: "default" },
 };
 
 interface ProjectScopeTabProps {
