@@ -41,6 +41,7 @@ export default function ConstructionTasks() {
   const [selectedProject, setSelectedProject] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Record<string, unknown> | null>(null);
+  const [importPlantOpen, setImportPlantOpen] = useState(false);
   const [parentTaskForSub, setParentTaskForSub] = useState<{ id: string; project_id: string; task_name: string } | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
 
