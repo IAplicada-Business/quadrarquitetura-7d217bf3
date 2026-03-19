@@ -25,6 +25,7 @@ import VoiceTasksPage from "./pages/VoiceTasksPage";
 import ConstructionAgenda from "./pages/ConstructionAgenda";
 import NotificationsPage from "./pages/NotificationsPage";
 import NotFound from "./pages/NotFound";
+import ClientPortal from "./pages/ClientPortal";
 
 const queryClient = new QueryClient();
 
