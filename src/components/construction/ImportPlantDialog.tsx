@@ -123,7 +123,7 @@ export function ImportPlantDialog({ open, onOpenChange, projects }: Props) {
       }
 
       const acts: Activity[] = (data.activities || []).map((a: any) => ({
-        task_name: a.task_name || "",
+        activity_name: a.activity_name || a.task_name || "",
         environment: a.environment || "",
         discipline: a.discipline || focus,
         quantity: Number(a.quantity) || 1,
