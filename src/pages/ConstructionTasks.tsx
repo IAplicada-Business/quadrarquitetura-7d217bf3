@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ConstructionTaskForm } from "@/components/construction/ConstructionTaskForm";
-import { Plus, Pencil, Trash2, ListChecks, Clock, AlertTriangle, CheckCircle, ChevronRight, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash2, ListChecks, Clock, AlertTriangle, CheckCircle, ChevronRight, ChevronDown, PauseCircle } from "lucide-react";
 import { format } from "date-fns";
 
 const statusLabels: Record<string, string> = {
@@ -18,6 +18,7 @@ const statusLabels: Record<string, string> = {
   em_execucao: "Em Execução",
   executado: "Executado",
   atrasado: "Atrasado",
+  pendencia: "Pendência",
 };
 
 const statusColors: Record<string, string> = {
@@ -25,6 +26,7 @@ const statusColors: Record<string, string> = {
   em_execucao: "bg-blue-100 text-blue-800",
   executado: "bg-green-100 text-green-800",
   atrasado: "bg-red-100 text-red-800",
+  pendencia: "bg-yellow-100 text-yellow-800",
 };
 
 export default function ConstructionTasks() {
@@ -85,12 +87,17 @@ export default function ConstructionTasks() {
       if (!projectId) throw new Error("Selecione um projeto");
       const { error } = await supabase.from("schedule_tasks").insert({
         task_name: item.task_name as string,
+        description: item.description as string | undefined,
         start_date: item.start_date as string | undefined,
         end_date: item.end_date as string | undefined,
         status: (item.status as string) ?? "planejado",
         payment_note: item.payment_note as string | undefined,
         supplier_name: item.supplier_name as string | undefined,
         discipline: item.discipline as string | undefined,
+        environment: item.environment as string | undefined,
+        estimated_days: item.estimated_days as number | undefined,
+        dependencies: item.dependencies as string[] | undefined,
+        materials: item.materials as any,
         progress_percentage: item.progress_percentage as number | undefined,
         project_id: projectId,
         user_id: user!.id,
@@ -100,7 +107,7 @@ export default function ConstructionTasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all_schedule_tasks"] });
-      toast({ title: "Tarefa criada" });
+      toast({ title: "Atividade criada" });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
@@ -115,7 +122,7 @@ export default function ConstructionTasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all_schedule_tasks"] });
-      toast({ title: "Tarefa atualizada" });
+      toast({ title: "Atividade atualizada" });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
@@ -127,7 +134,7 @@ export default function ConstructionTasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all_schedule_tasks"] });
-      toast({ title: "Tarefa removida" });
+      toast({ title: "Atividade removida" });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
@@ -137,7 +144,8 @@ export default function ConstructionTasks() {
     const emExecucao = parentTasks.filter((t: any) => t.status === "em_execucao").length;
     const atrasadas = parentTasks.filter((t: any) => t.status === "atrasado").length;
     const concluidas = parentTasks.filter((t: any) => t.status === "executado").length;
-    return { total, emExecucao, atrasadas, concluidas };
+    const pendencias = parentTasks.filter((t: any) => t.status === "pendencia").length;
+    return { total, emExecucao, atrasadas, concluidas, pendencias };
   }, [parentTasks]);
 
   const handleSubmit = (data: Record<string, unknown>) => {
@@ -156,6 +164,15 @@ export default function ConstructionTasks() {
     setFormOpen(true);
     setExpandedTasks((prev) => new Set(prev).add(task.id));
   };
+
+  const allTasksForForm = useMemo(() => {
+    return tasks.map((t: any) => ({
+      id: t.id,
+      task_name: t.task_name,
+      end_date: t.end_date,
+      parent_id: t.parent_id,
+    }));
+  }, [tasks]);
 
   const renderTaskRow = (t: any, isSubtask = false) => {
     const subCount = subtasksByParent[t.id]?.length || 0;
@@ -177,6 +194,7 @@ export default function ConstructionTasks() {
         </TableCell>
         <TableCell className="text-muted-foreground text-sm">{t.projects?.name ?? "—"}</TableCell>
         <TableCell className="text-sm">{t.discipline ?? "—"}</TableCell>
+        <TableCell className="text-sm">{t.environment ?? "—"}</TableCell>
         <TableCell className="text-sm">{t.supplier_name ?? "—"}</TableCell>
         <TableCell>
           <Badge variant="secondary" className={statusColors[t.status] ?? ""}>
@@ -219,12 +237,12 @@ export default function ConstructionTasks() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Tarefas por Obra</h1>
         <Button onClick={() => { setEditingTask(null); setParentTaskForSub(null); setFormOpen(true); }}>
-          <Plus className="h-4 w-4 mr-1" /> Nova Tarefa
+          <Plus className="h-4 w-4 mr-1" /> Nova Atividade
         </Button>
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card><CardContent className="flex items-center gap-3 p-4">
           <ListChecks className="h-8 w-8 text-muted-foreground" />
           <div><p className="text-2xl font-bold">{metrics.total}</p><p className="text-xs text-muted-foreground">Total</p></div>
@@ -240,6 +258,10 @@ export default function ConstructionTasks() {
         <Card><CardContent className="flex items-center gap-3 p-4">
           <CheckCircle className="h-8 w-8 text-green-500" />
           <div><p className="text-2xl font-bold">{metrics.concluidas}</p><p className="text-xs text-muted-foreground">Concluídas</p></div>
+        </CardContent></Card>
+        <Card><CardContent className="flex items-center gap-3 p-4">
+          <PauseCircle className="h-8 w-8 text-yellow-500" />
+          <div><p className="text-2xl font-bold">{metrics.pendencias}</p><p className="text-xs text-muted-foreground">Pendências</p></div>
         </CardContent></Card>
       </div>
 
@@ -262,9 +284,10 @@ export default function ConstructionTasks() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Tarefa</TableHead>
+                <TableHead>Atividade</TableHead>
                 <TableHead>Obra</TableHead>
-                <TableHead>Tipo</TableHead>
+                <TableHead>Disciplina</TableHead>
+                <TableHead>Ambiente</TableHead>
                 <TableHead>Responsáveis</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Início</TableHead>
@@ -275,9 +298,9 @@ export default function ConstructionTasks() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : parentTasks.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma tarefa encontrada</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Nenhuma atividade encontrada</TableCell></TableRow>
               ) : (
                 parentTasks.map((t: any) => (
                   <>
@@ -299,6 +322,7 @@ export default function ConstructionTasks() {
         isLoading={createTask.isPending || updateTask.isPending}
         projects={projects}
         parentTask={parentTaskForSub}
+        allTasks={allTasksForForm}
       />
     </div>
   );
