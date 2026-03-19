@@ -1,4 +1,5 @@
 import { ProposalAsset } from "@/hooks/useProposalAssets";
+import quadraLogoWhite from "@/assets/quadra-logo-white.png";
 
 // Shared types and constants for proposal pages
 export const COLORS = {
@@ -61,7 +62,6 @@ export function PageContainer({ bg, children }: { bg: string; children: React.Re
 }
 
 export function LogoSmall({ url, position = "br" }: { url?: string; position?: "br" | "bl" }) {
-  if (!url) return null;
   const style: React.CSSProperties = {
     position: "absolute",
     bottom: 24,
@@ -69,7 +69,7 @@ export function LogoSmall({ url, position = "br" }: { url?: string; position?: "
     opacity: 0.9,
     ...(position === "br" ? { right: 36 } : { left: 36 }),
   };
-  return <img src={url} alt="Quadra" style={style} />;
+  return <img src={url || quadraLogoWhite} alt="Quadra" style={style} />;
 }
 
 export function DecorativeShape({ position = "bl", color = COLORS.shapeBege }: { position?: "bl" | "br"; color?: string }) {
