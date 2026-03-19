@@ -1,41 +1,38 @@
 
 
-## Trigger de irreversibilidade de status no banco de dados
+## Filtrar material_tracking por revisão ativa do orçamento
 
-### Contexto
-A validação de status irreversível (>= "contratado" não pode regredir) existe apenas no frontend. Chamadas diretas ao banco podem violar essa regra.
+### Problema
+Ao criar Rev 2 de budget_quotes, os material_tracking da Rev 1 continuam aparecendo na aba Materiais, misturando dados de revisões antigas e atuais.
 
-### Alteração
+### Solução
 
-**1 migration SQL** — criar function + trigger:
+**1. Migration SQL** — adicionar coluna `is_active` na tabela `material_tracking`:
 
 ```sql
-CREATE OR REPLACE FUNCTION public.check_scope_status_irreversible()
-RETURNS TRIGGER AS $$
-DECLARE
-  status_order text[] := ARRAY['rascunho','planejado','em_cotacao','contratado','em_execucao','executado'];
-  old_idx int;
-  new_idx int;
-BEGIN
-  old_idx := array_position(status_order, OLD.status);
-  new_idx := array_position(status_order, NEW.status);
-  IF old_idx >= 4 AND new_idx < old_idx THEN
-    RAISE EXCEPTION 'Status não pode ser revertido após Contratado';
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER scope_status_check
-  BEFORE UPDATE ON scope_items
-  FOR EACH ROW
-  EXECUTE FUNCTION public.check_scope_status_irreversible();
+ALTER TABLE material_tracking 
+  ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
 ```
 
-**Nenhuma alteração de código frontend** — a validação no frontend (toast + select filtrado) permanece como UX; o trigger atua como blindagem no banco.
+**2. `src/hooks/useBudgetQuotes.ts`** — no `createRevision`, após marcar quotes como `is_current_revision = false`:
+- Buscar todos `material_tracking` vinculados aos budget_quotes da revisão anterior (via `budget_quote_id`) e setar `is_active = false`
+- Após inserir cada novo budget_quote da nova revisão, chamar `autoCreateMaterialTracking` para criar novos registros `is_active = true`
+- Invalidar cache de `material_tracking`
+
+Lógica adicionada dentro do `mutationFn` do `createRevision`:
+
+```text
+1. Coletar IDs dos budget_quotes da revisão anterior
+2. UPDATE material_tracking SET is_active = false WHERE budget_quote_id IN (ids anteriores)
+3. Para cada novo quote inserido (com material_estimate > 0), criar material_tracking com is_active = true
+```
+
+**3. `src/hooks/useMaterialTracking.ts`** — no query, adicionar filtro `.eq("is_active", true)` para que a aba Materiais exiba apenas registros ativos.
+
+**4. `src/hooks/useBudgetQuotes.ts`** — na função `autoCreateMaterialTracking`, garantir que novos registros criados incluam `is_active: true` explicitamente.
 
 ### Resumo
-- 1 migration SQL (function + trigger)
-- 0 arquivos editados
+- 1 migration SQL (1 coluna adicionada)
+- 2 arquivos editados (filtro no query + lógica na criação de revisão)
 - Nenhuma aba, sub-aba ou rota alterada
 
