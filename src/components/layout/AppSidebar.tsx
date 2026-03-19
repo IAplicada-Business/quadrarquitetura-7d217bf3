@@ -6,7 +6,7 @@ import { NavLink } from "@/components/NavLink";
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import logoDark from "@/assets/logo-dark.png";
+import logoLight from "@/assets/logo-light.png";
 
 type MenuItem = { title: string; url: string; subItems?: { title: string; url: string }[] };
 type MenuGroup = { label: string; items: MenuItem[] };
@@ -93,7 +93,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       {/* Logo */}
       <div className="flex items-center p-3 border-b border-sidebar-border">
         <div className="h-16 overflow-hidden flex-1">
-          <img src={logoDark} alt="Quadra Arquitetura" className="h-24 -mt-4 object-contain object-left animate-fade-in" />
+          <img src={logoLight} alt="Quadra Arquitetura" className="h-24 -mt-4 object-contain object-left animate-fade-in" />
         </div>
       </div>
 
