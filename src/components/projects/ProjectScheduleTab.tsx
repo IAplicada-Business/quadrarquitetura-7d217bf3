@@ -36,8 +36,10 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
-  const [ganttView, setGanttView] = useState<"week" | "month">("week");
+  const [ganttView, setGanttView] = useState<"day" | "week" | "month">("week");
   const [filterDiscipline, setFilterDiscipline] = useState("all");
+  const [filterSupplier, setFilterSupplier] = useState("all");
+  const [filterEnvironment, setFilterEnvironment] = useState("all");
   const [importing, setImporting] = useState(false);
 
   const disciplines = useMemo(() => {
@@ -49,24 +51,53 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
     return Array.from(set).sort();
   }, [items]);
 
+  const suppliers = useMemo(() => {
+    const set = new Set<string>();
+    items.forEach((t: any) => { if (t.supplier_name) set.add(t.supplier_name); });
+    return Array.from(set).sort();
+  }, [items]);
+
+  const environments = useMemo(() => {
+    const set = new Set<string>();
+    items.forEach((t: any) => { if (t.environment) set.add(t.environment); });
+    return Array.from(set).sort();
+  }, [items]);
+
   const filteredItems = useMemo(() => {
-    if (filterDiscipline === "all") return items;
     return items.filter((t: any) => {
       const d = t.discipline || (t.scope_items as any)?.discipline;
-      return d === filterDiscipline;
+      if (filterDiscipline !== "all" && d !== filterDiscipline) return false;
+      if (filterSupplier !== "all" && t.supplier_name !== filterSupplier) return false;
+      if (filterEnvironment !== "all" && t.environment !== filterEnvironment) return false;
+      return true;
     });
-  }, [items, filterDiscipline]);
+  }, [items, filterDiscipline, filterSupplier, filterEnvironment]);
+
+  const allGanttTasks = useMemo(() =>
+    items.map((t: any) => ({
+      id: t.id, task_name: t.task_name, start_date: t.start_date, end_date: t.end_date,
+      status: t.status, discipline: t.discipline || (t.scope_items as any)?.discipline || null,
+      supplier_name: t.supplier_name, progress_percentage: t.progress_percentage,
+      color: t.color, requires_presence: t.requires_presence, is_daily_detail: t.is_daily_detail,
+      dependencies: t.dependencies, environment: t.environment,
+    })),
+  [items]);
+
+  const ganttTasks = useMemo(() =>
+    filteredItems.map((t: any) => ({
+      id: t.id, task_name: t.task_name, start_date: t.start_date, end_date: t.end_date,
+      status: t.status, discipline: t.discipline || (t.scope_items as any)?.discipline || null,
+      supplier_name: t.supplier_name, progress_percentage: t.progress_percentage,
+      color: t.color, requires_presence: t.requires_presence, is_daily_detail: t.is_daily_detail,
+      dependencies: t.dependencies, environment: t.environment,
+    })),
+  [filteredItems]);
 
   const clientTasks = useMemo(() =>
     items.filter((t: any) => t.is_client_visible !== false).map((t: any) => ({
-      id: t.id,
-      task_name: t.task_name,
-      start_date: t.start_date,
-      end_date: t.end_date,
-      status: t.status,
-      discipline: t.discipline || (t.scope_items as any)?.discipline || null,
-      color: t.color,
-      progress_percentage: t.progress_percentage,
+      id: t.id, task_name: t.task_name, start_date: t.start_date, end_date: t.end_date,
+      status: t.status, discipline: t.discipline || (t.scope_items as any)?.discipline || null,
+      color: t.color, progress_percentage: t.progress_percentage,
     })),
   [items]);
 
@@ -89,30 +120,19 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
         toast({ title: "Nenhuma disciplina contratada encontrada no escopo." });
         return;
       }
-
-      // Check which disciplines already exist
       const existingDisciplines = new Set(items.map((t: any) => t.discipline || (t.scope_items as any)?.discipline));
       const newItems = contractedItems.filter(s => !existingDisciplines.has(s.discipline));
-
       if (newItems.length === 0) {
         toast({ title: "Todas as disciplinas já estão no cronograma." });
         return;
       }
-
       const inserts = newItems.map((s, idx) => ({
-        project_id: projectId,
-        user_id: user.id,
-        task_name: s.discipline,
-        discipline: s.discipline,
-        scope_item_id: s.id,
-        status: "planejado",
-        order_index: items.length + idx + 1,
-        is_client_visible: true,
+        project_id: projectId, user_id: user.id, task_name: s.discipline,
+        discipline: s.discipline, scope_item_id: s.id, status: "planejado",
+        order_index: items.length + idx + 1, is_client_visible: true,
       }));
-
       const { error } = await supabase.from("schedule_tasks").insert(inserts);
       if (error) throw error;
-
       queryClient.invalidateQueries({ queryKey: ["schedule_tasks", projectId] });
       toast({ title: `${newItems.length} etapas importadas do escopo!` });
     } catch (e: any) {
@@ -153,21 +173,40 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 justify-between">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Select value={ganttView} onValueChange={(v) => setGanttView(v as any)}>
                 <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="day">Dia (14d)</SelectItem>
                   <SelectItem value="week">Semana</SelectItem>
                   <SelectItem value="month">Mês</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={filterDiscipline} onValueChange={setFilterDiscipline}>
-                <SelectTrigger className="w-[160px] h-8 text-xs"><SelectValue placeholder="Disciplina" /></SelectTrigger>
+                <SelectTrigger className="w-[150px] h-8 text-xs"><SelectValue placeholder="Disciplina" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="all">Todas Disciplinas</SelectItem>
                   {disciplines.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {suppliers.length > 0 && (
+                <Select value={filterSupplier} onValueChange={setFilterSupplier}>
+                  <SelectTrigger className="w-[150px] h-8 text-xs"><SelectValue placeholder="Fornecedor" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Fornecedores</SelectItem>
+                    {suppliers.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+              {environments.length > 0 && (
+                <Select value={filterEnvironment} onValueChange={setFilterEnvironment}>
+                  <SelectTrigger className="w-[150px] h-8 text-xs"><SelectValue placeholder="Ambiente" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Ambientes</SelectItem>
+                    {environments.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={handleImportFromScope} disabled={importing}>
@@ -185,12 +224,8 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
             </div>
           ) : (
             <GanttChart
-              tasks={filteredItems.map((t: any) => ({
-                id: t.id, task_name: t.task_name, start_date: t.start_date, end_date: t.end_date,
-                status: t.status, discipline: t.discipline || (t.scope_items as any)?.discipline || null,
-                supplier_name: t.supplier_name, progress_percentage: t.progress_percentage,
-                color: t.color, requires_presence: t.requires_presence, is_daily_detail: t.is_daily_detail,
-              }))}
+              tasks={ganttTasks}
+              allTasks={allGanttTasks}
               onEdit={handleEdit}
               viewMode={ganttView}
             />
