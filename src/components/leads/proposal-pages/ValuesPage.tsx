@@ -4,13 +4,21 @@ export function ProposalValuesPage(props: ProposalPageProps) {
   const { priceFull, priceCash, installmentsCount, installmentEntry, installmentValue, priceNote, logoUrl } = props;
   return (
     <PageContainer bg={COLORS.azulMarinho}>
-      <div style={{ padding: "80px 120px", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+      <div style={{ padding: "80px 120px", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
         <h2 style={{ color: COLORS.textoClaro, fontSize: 52, fontWeight: 700, textTransform: "uppercase", marginBottom: 48 }}>VALORES</h2>
 
         <div style={{ marginBottom: 32 }}>
-          <p style={{ color: COLORS.textoClaro, fontSize: 42, fontWeight: 700 }}>{formatBRL(priceFull)}</p>
-          <div style={{ width: 200, height: 3, background: COLORS.linhaDestaque, marginTop: 12, marginBottom: 16 }} />
-          {priceCash && <p style={{ color: COLORS.textoClaro, fontSize: 32, fontWeight: 500, opacity: 0.9 }}>à vista: {formatBRL(priceCash)}</p>}
+          {/* Full price with strikethrough */}
+          {priceCash && priceFull && priceCash < priceFull && (
+            <p style={{ color: COLORS.textoClaro, fontSize: 32, fontWeight: 500, opacity: 0.7, textDecoration: "line-through", textDecorationColor: COLORS.linhaDestaque, textDecorationThickness: 3, marginBottom: 8 }}>
+              {formatBRL(priceFull)}
+            </p>
+          )}
+          <p style={{ color: COLORS.textoClaro, fontSize: 48, fontWeight: 700 }}>{formatBRL(priceCash || priceFull)}</p>
+          <div style={{ width: 200, height: 3, background: COLORS.linhaDestaque, margin: "16px auto" }} />
+          {priceCash && priceFull && priceCash < priceFull && (
+            <p style={{ color: COLORS.textoClaro, fontSize: 18, opacity: 0.8 }}>à vista</p>
+          )}
         </div>
 
         {installmentsCount && (

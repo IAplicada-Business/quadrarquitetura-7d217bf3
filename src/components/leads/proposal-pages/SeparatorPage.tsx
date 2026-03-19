@@ -1,4 +1,4 @@
-import { PageContainer, COLORS, type ProposalPageProps } from "./shared";
+import { PageContainer, COLORS, DecorativeShape, type ProposalPageProps } from "./shared";
 
 export function ProposalSeparatorPage({ title }: { title: string } & Partial<ProposalPageProps>) {
   return (
@@ -8,6 +8,7 @@ export function ProposalSeparatorPage({ title }: { title: string } & Partial<Pro
           {title}
         </h2>
       </div>
+      <DecorativeShape position="br" color={COLORS.textoClaro + "40"} />
     </PageContainer>
   );
 }
