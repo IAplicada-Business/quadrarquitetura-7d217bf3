@@ -39,6 +39,7 @@ function parsePaymentTerms(terms: string | null, totalValue: number): { percent:
 
 interface ProjectBudgetsTabProps {
   projectId: string;
+  projectName?: string;
 }
 
 export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
