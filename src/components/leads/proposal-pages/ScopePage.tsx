@@ -12,11 +12,11 @@ export function ProposalScopePage({ scopeDescription, logoUrl }: ProposalPagePro
 
   return (
     <PageContainer bg={COLORS.begeClaro}>
-      <div style={{ padding: "80px 120px", display: "flex", flexDirection: "column", justifyContent: "center", height: "100%" }}>
-        <h2 style={{ color: COLORS.textoEscuro, fontSize: 36, fontWeight: 700, textAlign: "center", textTransform: "uppercase", marginBottom: 48 }}>
+      <div style={{ padding: "60px 60px", display: "flex", flexDirection: "column", justifyContent: "center", height: "100%" }}>
+        <h2 style={{ color: COLORS.textoEscuro, fontSize: 28, fontWeight: 700, textAlign: "center", textTransform: "uppercase", marginBottom: 40 }}>
           O que está sendo contemplado
         </h2>
-        <p style={{ color: COLORS.textoEscuro, fontSize: 20, lineHeight: 1.8, textAlign: "center", maxWidth: 1000, margin: "0 auto" }}>
+        <p style={{ color: COLORS.textoEscuro, fontSize: 16, lineHeight: 1.8, textAlign: "center", maxWidth: 650, margin: "0 auto" }}>
           {renderText(scopeDescription || "")}
         </p>
       </div>

@@ -25,22 +25,20 @@ export function ProposalPillarPage({ pillarKey, pillarTexts, logoUrl }: PillarPa
   return (
     <PageContainer bg={COLORS.roseMauve}>
       {/* Large icon */}
-      <div style={{ position: "absolute", top: 60, left: 80 }}>
-        <Icon size={120} color={COLORS.textoClaro} strokeWidth={1} style={{ opacity: 0.7 }} />
+      <div style={{ position: "absolute", top: 50, left: 60 }}>
+        <Icon size={80} color={COLORS.textoClaro} strokeWidth={1} style={{ opacity: 0.7 }} />
       </div>
 
-      <div style={{ padding: "60px 80px", height: "100%", display: "flex", gap: 60 }}>
-        {/* Left: Title */}
-        <div style={{ display: "flex", alignItems: "center", minWidth: 280, paddingTop: 100 }}>
-          <h2 style={{ color: COLORS.textoClaro, fontSize: 32, fontWeight: 700, textTransform: "uppercase", lineHeight: 1.2 }}>
-            {config.title}
-          </h2>
-        </div>
+      <div style={{ padding: "60px 60px", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        {/* Title */}
+        <h2 style={{ color: COLORS.textoClaro, fontSize: 26, fontWeight: 700, textTransform: "uppercase", lineHeight: 1.2, marginBottom: 32, paddingTop: 60 }}>
+          {config.title}
+        </h2>
 
-        {/* Right: Bullets */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", paddingTop: 40 }}>
+        {/* Bullets */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
           {bullets.map((bullet, i) => (
-            <p key={i} style={{ color: COLORS.textoClaro, fontSize: 17, lineHeight: 1.8, marginBottom: 4 }}>
+            <p key={i} style={{ color: COLORS.textoClaro, fontSize: 15, lineHeight: 1.8, marginBottom: 4 }}>
               {bullet.startsWith("•") ? bullet : `• ${bullet}`}
             </p>
           ))}
