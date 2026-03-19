@@ -54,6 +54,7 @@ export function useBudgetQuotes(projectId: string | undefined) {
       discipline,
       source: "orcamento",
       budget_quote_id: budgetQuoteId,
+      is_active: true,
     });
     queryClient.invalidateQueries({ queryKey: ["material_tracking", projectId] });
   };

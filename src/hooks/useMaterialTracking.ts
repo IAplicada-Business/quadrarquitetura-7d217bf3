@@ -31,6 +31,7 @@ export function useMaterialTracking(projectId: string | undefined) {
         .from("material_tracking")
         .select("*")
         .eq("project_id", projectId!)
+        .eq("is_active", true)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data;
