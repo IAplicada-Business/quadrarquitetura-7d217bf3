@@ -39,7 +39,7 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
     : email.charAt(0).toUpperCase();
 
   return (
-    <header className="flex items-center justify-between h-14 px-4 lg:px-6 border-b border-sidebar-border bg-sidebar shrink-0">
+    <header className="flex items-center justify-between h-14 px-4 lg:px-6 border-b border-primary/20 bg-primary shrink-0">
       {/* Left side - Logo + toggle */}
       <div className="flex items-center gap-2">
         {showMenuButton ? (
