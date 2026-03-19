@@ -15,6 +15,9 @@ import { MaterialCalcForm } from "./MaterialCalcForm";
 import { MaterialTrackingForm } from "./MaterialTrackingForm";
 import { ProjectPurchasesTab } from "./ProjectPurchasesTab";
 import { SupplierPurchaseList } from "./SupplierPurchaseList";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { getDisciplineColor } from "@/lib/disciplineColors";
 
 function formatDate(d: string | null) {
   if (!d) return "—";
