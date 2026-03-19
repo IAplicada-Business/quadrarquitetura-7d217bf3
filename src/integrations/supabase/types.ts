@@ -132,6 +132,13 @@ export type Database = {
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_budget_quotes_scope_item"
+            columns: ["scope_item_id"]
+            isOneToOne: false
+            referencedRelation: "scope_items"
+            referencedColumns: ["id"]
+          },
         ]
       }
       budgets: {
@@ -1021,6 +1028,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_material_tracking_budget_quote"
+            columns: ["budget_quote_id"]
+            isOneToOne: false
+            referencedRelation: "budget_quotes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "material_tracking_project_id_fkey"
             columns: ["project_id"]
