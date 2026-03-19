@@ -413,13 +413,11 @@ export default function ConstructionTasks() {
             </Button>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span tabIndex={0}>
-                  <Button disabled className="opacity-50 cursor-not-allowed">
-                    <Upload className="h-4 w-4 mr-1" />
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Importar Planta (em breve)
-                  </Button>
-                </span>
+                <Button onClick={() => setImportPlantOpen(true)}>
+                  <Upload className="h-4 w-4 mr-1" />
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Importar Planta
+                </Button>
               </TooltipTrigger>
               <TooltipContent>
                 Suba uma planta em PDF e a IA gerará automaticamente a lista de atividades e quantidades
