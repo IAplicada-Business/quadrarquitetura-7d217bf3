@@ -99,7 +99,7 @@ export default function DashboardObras() {
   const { data: materials = [] } = useQuery({
     queryKey: ["dash-obras-materials"],
     queryFn: async () => {
-      const { data } = await supabase.from("material_tracking").select("id, material_name, quantity_needed, quantity_purchased, quantity_delivered, unit, project_id, supplier_name, projects(name)").eq("user_id", user!.id);
+      const { data } = await supabase.from("material_tracking").select("id, material_name, quantity_needed, quantity_purchased, quantity_delivered, unit, project_id, supplier_name, purchase_date, delivery_date, projects(name)").eq("user_id", user!.id);
       return data ?? [];
     },
     enabled: !!user,
