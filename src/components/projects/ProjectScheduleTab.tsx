@@ -79,7 +79,7 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
       status: t.status, discipline: t.discipline || (t.scope_items as any)?.discipline || null,
       supplier_name: t.supplier_name, progress_percentage: t.progress_percentage,
       color: t.color, requires_presence: t.requires_presence, is_daily_detail: t.is_daily_detail,
-      dependencies: t.dependencies, environment: t.environment,
+      dependencies: t.dependencies, environment: t.environment, estimated_days: t.estimated_days,
     })),
   [items]);
 
@@ -89,7 +89,7 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
       status: t.status, discipline: t.discipline || (t.scope_items as any)?.discipline || null,
       supplier_name: t.supplier_name, progress_percentage: t.progress_percentage,
       color: t.color, requires_presence: t.requires_presence, is_daily_detail: t.is_daily_detail,
-      dependencies: t.dependencies, environment: t.environment,
+      dependencies: t.dependencies, environment: t.environment, estimated_days: t.estimated_days,
     })),
   [filteredItems]);
 
