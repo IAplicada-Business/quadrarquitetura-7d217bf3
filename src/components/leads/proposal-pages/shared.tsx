@@ -1,4 +1,5 @@
 import { ProposalAsset } from "@/hooks/useProposalAssets";
+import quadraLogoWhite from "@/assets/quadra-logo-white.png";
 
 // Shared types and constants for proposal pages
 export const COLORS = {

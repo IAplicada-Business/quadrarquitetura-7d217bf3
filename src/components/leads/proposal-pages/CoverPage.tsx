@@ -1,5 +1,6 @@
 import { PageContainer, COLORS, DecorativeShape, type ProposalPageProps } from "./shared";
 import sociasCover from "@/assets/socias-cover.jpg";
+import quadraLogoWhite from "@/assets/quadra-logo-white.png";
 
 export function ProposalCoverPage({ clientName, projectName, logoUrl }: ProposalPageProps) {
   return (
