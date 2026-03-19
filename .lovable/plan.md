@@ -1,16 +1,29 @@
 
 
-## Corrigir corte do rosto na foto — AboutPage
+## Fluxo vertical na página 4
 
 ### Problema
-O container da foto (500x350) usa `objectFit: "cover"`, que corta o topo da imagem onde está o rosto da mulher loira.
+O fluxo atual usa layout horizontal em duas linhas com setas lado a lado, ficando apertado e cortado na página A4 portrait.
 
 ### Solução
-Mudar `objectFit` de `"cover"` para `"contain"` e adicionar `objectPosition: "top"` como fallback. Alternativamente, aumentar a altura do container para acomodar melhor a foto sem cortar os rostos.
+Refatorar para layout **vertical** — cada etapa empilhada de cima para baixo, com seta apontando para baixo entre elas, centralizado na página.
 
-### Edição: `AboutPage.tsx` (linha 25-26)
-- Mudar `height: 350` → `height: 400`
-- Mudar `objectFit: "cover"` → `objectFit: "cover"` com `objectPosition: "top"` para priorizar o topo da imagem (rostos)
+### Edição: `FlowPage.tsx`
 
-Isso garante que o crop priorize a parte superior da foto onde estão os rostos.
+1. **Substituir `ArrowShape` horizontal** por um componente de etapa vertical:
+   - Retângulo arredondado (largura ~500px, altura ~70px) com título da etapa
+   - Alternando cores roseMauve / azulMarinho
+   - Subtexto logo abaixo do retângulo
+
+2. **Seta/conector vertical** entre etapas:
+   - Linha vertical + badge de dias (ex: "4 DIAS") entre cada etapa
+   - Altura ~40px entre blocos
+
+3. **Layout geral**:
+   - `flexDirection: "column"`, `alignItems: "center"`, `justifyContent: "center"`
+   - Título "COMO FUNCIONA NOSSO SERVIÇO?" no topo
+   - 5 blocos empilhados verticalmente com conectores de dias entre eles
+   - Logo pequena no rodapé
+
+4. **Remover** as funções `ArrowShape` e `DaysBadge` atuais, substituindo por componentes verticais `StepBlock` e `DaysConnector`.
 
