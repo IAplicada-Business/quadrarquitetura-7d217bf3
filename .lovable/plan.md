@@ -1,24 +1,16 @@
 
 
-## Atualizar página "Quem Somos" da proposta
+## Corrigir corte do rosto na foto — AboutPage
 
-### O que muda
+### Problema
+O container da foto (500x350) usa `objectFit: "cover"`, que corta o topo da imagem onde está o rosto da mulher loira.
 
-1. **Substituir as fotos individuais circulares** pela foto conjunta das sócias (imagem enviada `cena4_risada_cartier-2.png`)
-2. **Usar o texto e informações do PDF de referência**:
-   - Texto "sobre": *"A Quadra é uma empresa que nasceu em 2022 pela inquietação da seguinte pergunta: como fazer com que nossos clientes tenham no final da sua obra seu projeto exatamente igual ao do 3d? Assim, desenvolvemos também o serviço de gerenciamento de obra no qual oferecemos aos nossos clientes assessoria completa pra ter seu espaço do jeitinho que ele sempre sonhou."*
-   - Camilla — Formada em Arquitetura pela FUMEC, 2018
-   - Mariana — Formada em Arquitetura pela UFMG, 2021. Pós Graduação em Arquitetura Hospitalar
-3. **Layout A4 portrait**: Título "QUEM SOMOS" no topo, texto descritivo abaixo, depois a foto grande das duas juntas (estilo retangular com bordas arredondadas, não circular), com os nomes e formações abaixo da foto lado a lado.
+### Solução
+Mudar `objectFit` de `"cover"` para `"contain"` e adicionar `objectPosition: "top"` como fallback. Alternativamente, aumentar a altura do container para acomodar melhor a foto sem cortar os rostos.
 
-### Arquivos
+### Edição: `AboutPage.tsx` (linha 25-26)
+- Mudar `height: 350` → `height: 400`
+- Mudar `objectFit: "cover"` → `objectFit: "cover"` com `objectPosition: "top"` para priorizar o topo da imagem (rostos)
 
-**1. Copiar a foto** para `src/assets/founders-photo.png`
-
-**2. `AboutPage.tsx`** — Refatorar layout:
-- Remover fotos circulares individuais do `founderPhotos`
-- Importar a foto fixa das sócias
-- Layout vertical: título → texto → foto retangular (largura ~500px, altura ~350px, object-fit cover, border-radius 12px) → nomes/formações lado a lado abaixo da foto
-- Usar o `aboutText` como fallback mas definir o texto padrão do PDF como default
-- Manter watermark "QUADRA ARQUITETURA" e logo pequena
+Isso garante que o crop priorize a parte superior da foto onde estão os rostos.
 
