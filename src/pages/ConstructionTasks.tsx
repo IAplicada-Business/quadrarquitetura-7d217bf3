@@ -309,6 +309,7 @@ export default function ConstructionTasks() {
                 via planta
               </Badge>
             )}
+          </div>
         </TableCell>
         <TableCell className="text-sm">{t.environment ?? "—"}</TableCell>
         <TableCell className="text-sm">{t.discipline ?? "—"}</TableCell>
