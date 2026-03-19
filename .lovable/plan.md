@@ -1,29 +1,36 @@
 
 
-## Ajuste no filtro da Visão Cliente do Cronograma
+## Adicionar seção "Configurações do Cronograma" ao ConstructionTaskForm
 
-### Estado atual
-A aba "Visão Cliente" já existe dentro do Cronograma (`ProjectScheduleTab.tsx`, linha 151) com:
-- Agrupamento semanal por disciplina com cores
-- Botão "Exportar PDF" e "Copiar para Enviar"
-- Merge de semanas consecutivas com mesmas disciplinas
-- Layout limpo e profissional
+### O que será feito
+Adicionar uma seção colapsável abaixo de "Materiais Associados" (linha 399) e acima de "Observações" (linha 401) com 5 campos que já existem na tabela `schedule_tasks`.
 
-### Problema encontrado
-O filtro atual (linha 97) usa `t.is_client_visible !== false`, o que inclui atividades onde `is_client_visible` é `null` ou `undefined`. A solicitação pede que **apenas** atividades com `is_client_visible = true` apareçam.
+### Alterações no arquivo `src/components/construction/ConstructionTaskForm.tsx`
 
-### Alteração necessária
+**1. Novos estados (após linha 78):**
+- `isClientVisible` (boolean, default false)
+- `isDailyDetail` (boolean, default false)
+- `requiresPresence` (boolean, default false)
+- `color` (string, default "")
+- `orderIndex` (string, default "")
+- `scheduleOpen` (boolean, default false)
 
-**Arquivo: `src/components/projects/ProjectScheduleTab.tsx`** — Linha 97
+**2. Inicialização no useEffect (após linha 100):**
+- Ler `is_client_visible`, `is_daily_detail`, `requires_presence`, `color`, `order_index` do `initialData`
 
-Trocar:
-```typescript
-items.filter((t: any) => t.is_client_visible !== false)
-```
-Por:
-```typescript
-items.filter((t: any) => t.is_client_visible === true)
-```
+**3. Inclusão no handleSubmit (após linha 189):**
+- Adicionar os 5 campos ao objeto `data`
 
-Nenhuma outra alteração é necessária. Nenhuma aba, sub-aba ou rota será modificada.
+**4. Nova seção colapsável no JSX (entre Materiais e Observações, linhas 399-401):**
+- Collapsible "Configurações do Cronograma" com:
+  - Checkbox "Visível para o cliente" → `is_client_visible`
+  - Checkbox "Detalhe diário" → `is_daily_detail`
+  - Checkbox "Requer presença na obra" → `requires_presence`
+  - Select de cores predefinidas (palette de disciplinas) → `color`
+  - Input numérico "Ordem de exibição" → `order_index`
+
+**5. Import adicional:**
+- Adicionar `Settings` (lucide) para ícone da seção
+
+Nenhuma aba, sub-aba ou rota será alterada.
 
