@@ -51,8 +51,12 @@ export function useScopeItems(projectId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["scope_items", projectId] });
       toast({ title: "Disciplina adicionada" });
 
-      // Auto-create budget_quote linked to this scope item
-      if (data) {
+      // Auto-create budget_quote only for "contratado" scope_type with eligible status
+      const BUDGET_ELIGIBLE_STATUSES = ["contratado", "em_execucao", "executado"];
+      const shouldCreateBudget = data
+        && data.scope_type === "contratado"
+        && BUDGET_ELIGIBLE_STATUSES.includes(data.status ?? "");
+      if (shouldCreateBudget) {
         try {
           await supabase.from("budget_quotes").insert({
             project_id: projectId!,
