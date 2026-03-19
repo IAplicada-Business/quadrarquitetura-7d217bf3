@@ -8,6 +8,16 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useScenarios, Scenario } from "@/hooks/useScenarios";
 import { useProjectDetail } from "@/hooks/useProjectDetail";
 
@@ -34,6 +44,7 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
   const [addItemOpen, setAddItemOpen] = useState<string | null>(null);
   const [newItem, setNewItem] = useState({ discipline: "", description: "", estimated_value: "" });
   const [budgetInput, setBudgetInput] = useState((project as any)?.client_budget?.toString() || "");
+  const [confirmApproveScenario, setConfirmApproveScenario] = useState<Scenario | null>(null);
 
   const handleCreateScenario = () => {
     if (!newScenarioName.trim()) return;
@@ -56,6 +67,22 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
   const handleSaveBudget = () => {
     const val = budgetInput ? Number(budgetInput) : null;
     updateProject.mutate({ client_budget: val });
+  };
+
+  const handleApproveClick = (scenario: Scenario) => {
+    const hasApproved = scenarios.some((s) => s.is_approved);
+    if (hasApproved) {
+      setConfirmApproveScenario(scenario);
+    } else {
+      approveScenario.mutate(scenario);
+    }
+  };
+
+  const handleConfirmApprove = () => {
+    if (confirmApproveScenario) {
+      approveScenario.mutate(confirmApproveScenario);
+      setConfirmApproveScenario(null);
+    }
   };
 
   const clientBudget = (project as any)?.client_budget as number | null;
@@ -151,7 +178,7 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
                     </div>
                     <div className="flex items-center gap-2">
                       {!scenario.is_approved && (
-                        <Button size="sm" variant="default" onClick={() => approveScenario.mutate(scenario)} disabled={approveScenario.isPending}>
+                        <Button size="sm" variant="default" onClick={() => handleApproveClick(scenario)} disabled={approveScenario.isPending}>
                           <Check className="h-3 w-3 mr-1" /> Aprovar
                         </Button>
                       )}
@@ -234,6 +261,22 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Approve Dialog */}
+      <AlertDialog open={!!confirmApproveScenario} onOpenChange={(open) => { if (!open) setConfirmApproveScenario(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Substituir cenário aprovado?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Já existe um cenário aprovado. Aprovar este novo cenário substituirá o escopo atual. Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmApprove}>Sim, aprovar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
