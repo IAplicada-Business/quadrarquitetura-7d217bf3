@@ -169,7 +169,7 @@ export function ImportPlantDialog({ open, onOpenChange, projects }: Props) {
   const addBlankActivity = () => {
     setActivities((prev) => [
       ...prev,
-      { task_name: "", environment: "", discipline: focus, quantity: 1, unit: "un", estimated_days: 1, selected: true },
+      { activity_name: "", environment: "", discipline: focus, quantity: 1, unit: "un", estimated_days: 1, selected: true },
     ]);
   };
 
