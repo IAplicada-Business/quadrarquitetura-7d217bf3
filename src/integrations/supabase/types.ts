@@ -230,6 +230,48 @@ export type Database = {
         }
         Relationships: []
       }
+      calculation_rules: {
+        Row: {
+          created_at: string
+          discipline: string
+          formula: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          result_name: string
+          unit: string
+          updated_at: string
+          user_id: string
+          variable_name: string
+        }
+        Insert: {
+          created_at?: string
+          discipline: string
+          formula: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          result_name: string
+          unit: string
+          updated_at?: string
+          user_id: string
+          variable_name: string
+        }
+        Update: {
+          created_at?: string
+          discipline?: string
+          formula?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          result_name?: string
+          unit?: string
+          updated_at?: string
+          user_id?: string
+          variable_name?: string
+        }
+        Relationships: []
+      }
       chat_conversations: {
         Row: {
           created_at: string
