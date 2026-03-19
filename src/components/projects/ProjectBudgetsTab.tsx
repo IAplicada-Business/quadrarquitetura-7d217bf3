@@ -14,6 +14,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { BudgetQuoteCard } from "./BudgetQuoteCard";
 import { BudgetQuoteForm } from "./BudgetQuoteForm";
 import { ProjectPurchasesTab } from "./ProjectPurchasesTab";
+import { ShoppingListDialog } from "./ShoppingListDialog";
+import { ShoppingCart } from "lucide-react";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
