@@ -76,7 +76,7 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
     setFormOpen(true);
   };
 
-  const handleStatusChange = (itemId: string, newStatus: string, currentStatus: string) => {
+  const handleStatusChange = async (itemId: string, newStatus: string, currentStatus: string) => {
     const currentIdx = STATUS_HIERARCHY.indexOf(currentStatus || "rascunho");
     const newIdx = STATUS_HIERARCHY.indexOf(newStatus);
     if (currentIdx >= LOCK_THRESHOLD && newIdx < currentIdx) {
@@ -85,6 +85,25 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
       return;
     }
     update.mutate({ id: itemId, status: newStatus });
+
+    // Auto-create budget_quote when status changes to "contratado" or beyond
+    if (newIdx >= LOCK_THRESHOLD && currentIdx < LOCK_THRESHOLD && user) {
+      const hasQuote = quotes.some((q: any) => q.scope_item_id === itemId);
+      if (!hasQuote) {
+        const item = items.find((i) => i.id === itemId);
+        if (item) {
+          try {
+            await supabase.from("budget_quotes").insert({
+              project_id: projectId,
+              user_id: user.id,
+              scope_item_id: itemId,
+              services_description: `${item.discipline}${item.description ? ' - ' + item.description : ''}`,
+              status: "pendente",
+            });
+          } catch (_) { /* silent */ }
+        }
+      }
+    }
   };
 
   const renderRow = (item: ScopeItem, isChild = false) => {

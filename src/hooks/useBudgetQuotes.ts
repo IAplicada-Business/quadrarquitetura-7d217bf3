@@ -97,12 +97,17 @@ export function useBudgetQuotes(projectId: string | undefined) {
 
   const update = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Record<string, unknown>) => {
-      const { error } = await supabase.from("budget_quotes").update(updates).eq("id", id);
+      const { data, error } = await supabase.from("budget_quotes").update(updates).eq("id", id).select().single();
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] });
       toast({ title: "Cotação atualizada" });
+      // Auto-create material tracking if material_estimate > 0
+      if (data && (data.material_estimate ?? 0) > 0) {
+        await autoCreateMaterialTracking(data.id, data.material_estimate!, data.scope_item_id);
+      }
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
