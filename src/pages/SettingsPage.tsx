@@ -75,6 +75,7 @@ export default function SettingsPage() {
         <TabsList className="mb-6">
           <TabsTrigger value="geral">Geral</TabsTrigger>
           <TabsTrigger value="regras">Regras de Cálculo</TabsTrigger>
+          <TabsTrigger value="proposta">Proposta</TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral">
