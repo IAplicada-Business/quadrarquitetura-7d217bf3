@@ -1,16 +1,24 @@
 
 
-## Invalidação do cache de budget_quotes no ProjectScopeTab
+## Condicionar criação automática de budget_quote no useScopeItems.create
 
 ### Alteração
 
-**`src/components/projects/ProjectScopeTab.tsx`**
-- Adicionar `import { useQueryClient } from "@tanstack/react-query"` nos imports (linha 1)
-- Dentro do componente, declarar `const queryClient = useQueryClient()`
-- Após a linha 102 (fechamento do `.insert()`), adicionar `queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] })` dentro do bloco `try`
+**`src/hooks/useScopeItems.ts`** — linhas 54-65
 
-### Resultado
-A aba Orçamentos refletirá imediatamente qualquer budget_quote criado automaticamente pela mudança de status no Escopo.
+Envolver a inserção automática de `budget_quote` com uma guarda que verifica:
+1. `data.scope_type === "contratado"`
+2. `data.status` está em `["contratado", "em_execucao", "executado"]`
 
-1 arquivo editado. Nenhuma aba, sub-aba ou rota alterada.
+Ambas as condições devem ser verdadeiras. Caso contrário, o bloco de inserção é ignorado silenciosamente.
+
+```
+const BUDGET_ELIGIBLE_STATUSES = ["contratado", "em_execucao", "executado"];
+const shouldCreateBudget = data.scope_type === "contratado" 
+  && BUDGET_ELIGIBLE_STATUSES.includes(data.status);
+```
+
+### Resumo
+- 1 arquivo editado, ~3 linhas adicionadas
+- Nenhuma aba, sub-aba ou rota alterada
 
