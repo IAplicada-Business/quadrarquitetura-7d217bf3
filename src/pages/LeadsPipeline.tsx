@@ -109,7 +109,7 @@ export default function LeadsPipeline() {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in flex flex-col h-full">
+    <div className="space-y-4 animate-fade-in flex flex-col h-[calc(100vh-12rem)]">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
