@@ -87,10 +87,10 @@ export default function ProjectDetail() {
             <ProjectScopeTab projectId={project.id} />
           </TabsContent>
           <TabsContent value="orcamentos">
-            <ProjectBudgetsTab projectId={project.id} />
+            <ProjectBudgetsTab projectId={project.id} projectName={project.name} />
           </TabsContent>
           <TabsContent value="materiais">
-            <ProjectMaterialsTab projectId={project.id} />
+            <ProjectMaterialsTab projectId={project.id} projectName={project.name} />
           </TabsContent>
           <TabsContent value="cronograma">
             <ProjectScheduleTab projectId={project.id} />

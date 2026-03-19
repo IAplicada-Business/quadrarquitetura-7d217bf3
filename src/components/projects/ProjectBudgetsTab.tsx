@@ -14,6 +14,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { BudgetQuoteCard } from "./BudgetQuoteCard";
 import { BudgetQuoteForm } from "./BudgetQuoteForm";
 import { ProjectPurchasesTab } from "./ProjectPurchasesTab";
+import { ShoppingListDialog } from "./ShoppingListDialog";
+import { ShoppingCart } from "lucide-react";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -37,9 +39,10 @@ function parsePaymentTerms(terms: string | null, totalValue: number): { percent:
 
 interface ProjectBudgetsTabProps {
   projectId: string;
+  projectName?: string;
 }
 
-export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
+export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudgetsTabProps) {
   const { items: scopeItems } = useScopeItems(projectId);
   const { quotes, isLoading, create, update, remove, createRevision } = useBudgetQuotes(projectId);
   const { user } = useAuth();
@@ -47,6 +50,7 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingQuote, setEditingQuote] = useState<Record<string, unknown> | null>(null);
   const [activeScopeId, setActiveScopeId] = useState<string | null>(null);
+  const [shoppingListOpen, setShoppingListOpen] = useState(false);
 
   const revisions = useMemo(() => {
     const revNums = [...new Set(quotes.map((q) => q.revision_number))].sort((a, b) => (a ?? 0) - (b ?? 0));
@@ -182,6 +186,9 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
               <Button variant="outline" size="sm" onClick={() => createRevision.mutate(currentRev)} disabled={createRevision.isPending}>
                 <RefreshCw className="h-4 w-4 mr-1" /> Nova Revisão
               </Button>
+              <Button variant="outline" size="sm" onClick={() => setShoppingListOpen(true)}>
+                <ShoppingCart className="h-4 w-4 mr-1" /> Lista de Compras
+              </Button>
             </div>
           </div>
 
@@ -267,6 +274,13 @@ export function ProjectBudgetsTab({ projectId }: ProjectBudgetsTabProps) {
             scopeItemName={activeScopeName}
             revisionNumber={currentRev}
             isLoading={create.isPending || update.isPending}
+          />
+
+          <ShoppingListDialog
+            open={shoppingListOpen}
+            onOpenChange={setShoppingListOpen}
+            projectId={projectId}
+            projectName={projectName}
           />
         </TabsContent>
 

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2, Download, ExternalLink, ShoppingCart, Package, Filter } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, ExternalLink, ShoppingCart, Package, Filter, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import { MaterialCalcForm } from "./MaterialCalcForm";
 import { MaterialTrackingForm } from "./MaterialTrackingForm";
 import { ProjectPurchasesTab } from "./ProjectPurchasesTab";
 import { SupplierPurchaseList } from "./SupplierPurchaseList";
+import { ShoppingListDialog } from "./ShoppingListDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { getDisciplineColor } from "@/lib/disciplineColors";
@@ -24,7 +25,7 @@ function formatDate(d: string | null) {
   return new Date(d).toLocaleDateString("pt-BR");
 }
 
-export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
+export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId: string; projectName?: string }) {
   const calc = useMaterialCalc(projectId);
   const tracking = useMaterialTracking(projectId);
   const purchases = useProjectPurchases(projectId);
@@ -36,6 +37,7 @@ export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
   const [supplierListOpen, setSupplierListOpen] = useState(false);
   const [filterDiscipline, setFilterDiscipline] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [shoppingListOpen, setShoppingListOpen] = useState(false);
 
   // Query schedule_tasks with materials
   const { data: taskMaterials = [] } = useQuery({
@@ -155,6 +157,9 @@ export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => tracking.importFromBudget.mutate()} disabled={tracking.importFromBudget.isPending}>
                 <Download className="h-4 w-4 mr-1" /> Importar do Orçamento
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setShoppingListOpen(true)}>
+                <Copy className="h-4 w-4 mr-1" /> Lista de Compras
               </Button>
               <Button size="sm" onClick={() => { setEditingTrack(null); setTrackFormOpen(true); }}>
                 <Plus className="h-4 w-4 mr-1" /> Novo Material
@@ -409,6 +414,13 @@ export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
           specifications: p.specifications,
           status: p.status,
         }))}
+      />
+
+      <ShoppingListDialog
+        open={shoppingListOpen}
+        onOpenChange={setShoppingListOpen}
+        projectId={projectId}
+        projectName={projectName}
       />
     </div>
   );
