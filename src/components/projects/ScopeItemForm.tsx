@@ -36,7 +36,7 @@ export function ScopeItemForm({ open, onOpenChange, onSubmit, initialData, paren
   const [entryOrder, setEntryOrder] = useState("");
   const [serviceDuration, setServiceDuration] = useState("");
   const [parentId, setParentId] = useState("");
-  const [status, setStatus] = useState("planejado");
+  const [status, setStatus] = useState("rascunho");
 
   useEffect(() => {
     if (initialData) {
