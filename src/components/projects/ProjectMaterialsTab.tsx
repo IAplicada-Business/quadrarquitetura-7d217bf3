@@ -158,6 +158,9 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
               <Button size="sm" variant="outline" onClick={() => tracking.importFromBudget.mutate()} disabled={tracking.importFromBudget.isPending}>
                 <Download className="h-4 w-4 mr-1" /> Importar do Orçamento
               </Button>
+              <Button size="sm" variant="outline" onClick={() => setShoppingListOpen(true)}>
+                <Copy className="h-4 w-4 mr-1" /> Lista de Compras
+              </Button>
               <Button size="sm" onClick={() => { setEditingTrack(null); setTrackFormOpen(true); }}>
                 <Plus className="h-4 w-4 mr-1" /> Novo Material
               </Button>
