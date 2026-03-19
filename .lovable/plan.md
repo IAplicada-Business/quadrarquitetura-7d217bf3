@@ -1,20 +1,19 @@
 
 
-## Corrigir página "Quem Somos" — watermark visível e foto desfocada no PDF
+## Otimizar velocidade de geração do PDF
 
-### Problemas identificados
+### Problema
+O PDF está lento porque cada página é capturada com `html2canvas` em `scale: 3` (794×1123 px × 3 = canvas de 2382×3369 pixels) e salva como PNG sem compressão. Com ~10 páginas, isso gera canvases enormes e a conversão para base64 PNG é custosa.
 
-1. **Watermark "QUADRA ARQUITETURA" aparecendo atrás da foto** — linha 10-12 do `AboutPage.tsx` renderiza um texto grande com `opacity: 0.05`. Na tela parece sutil, mas no PDF exportado fica visível por trás da imagem.
-
-2. **Foto desfocada no PDF** — o `html2canvas` usa `scale: 2` em `generateProposalPdf.ts`, mas a resolução da imagem capturada e a compressão JPEG a 0.92 podem degradar a foto. Aumentar o scale para 3 e a qualidade JPEG para 0.95 melhorará a nitidez.
+### Solução
+Reduzir o scale de 3 para 2 (ainda boa qualidade para A4) e usar JPEG com qualidade 0.92 em vez de PNG. JPEG é muito mais rápido para converter e gera strings base64 menores, acelerando tanto o `toDataURL` quanto o `addImage` do jsPDF.
 
 ### Edições
 
-**`src/components/leads/proposal-pages/AboutPage.tsx`**
-- Remover o bloco do watermark (linhas 9-12) — o `<div>` com "QUADRA ARQUITETURA"
-
 **`src/lib/generateProposalPdf.ts`**
-- Linha 26: `scale: 2` → `scale: 3` (maior resolução de captura)
-- Linha 32: qualidade JPEG de `0.92` → `0.95`
-- Alterar formato de `"image/jpeg"` para `"image/png"` para evitar artefatos de compressão na foto
+- `scale: 3` → `scale: 2`
+- `canvas.toDataURL("image/png")` → `canvas.toDataURL("image/jpeg", 0.92)`
+- `pdf.addImage(imgData, "PNG", ...)` → `pdf.addImage(imgData, "JPEG", ...)`
+
+Isso deve reduzir o tempo de geração em ~50-60% mantendo qualidade visual adequada para o PDF.
 
