@@ -1,15 +1,19 @@
 
 
-## Corrigir alinhamento uniforme dos 5 steps na Página 3
+## Centralizar foto na Página 2 (Quem Somos)
 
 ### Problema
-Os badges de tempo ficam desalinhados verticalmente porque os steps têm alturas variáveis e o step 5 ("Início da Obra") não tem badge, quebrando o alinhamento visual.
+A foto está com `marginTop: -40` que a desloca para cima, cortando parte da imagem e desalinhando-a em relação ao texto da coluna direita.
 
-### Edições em `src/components/leads/proposal-pages/ScopeFlowPage.tsx`
+### Solução
 
-**Container de cada step (linha 116):** Adicionar `display: "flex"`, `flexDirection: "column"`, `alignItems: "center"`, `minHeight: 120`.
+No container da coluna esquerda (linha 18), usar `display: "flex"`, `alignItems: "center"`, `justifyContent: "center"` para centralizar a imagem verticalmente em relação ao conteúdo da coluna direita. Remover o `marginTop: -40` da imagem.
 
-**Descrição `<p>` (linha 181):** Adicionar `minHeight: 28` para reservar espaço uniforme.
+A imagem continuará com `width: "100%"` e `height: "auto"` (compatível com html2canvas), e o `overflow: hidden` no container cortará qualquer excesso mantendo a proporção.
 
-**Badge de dias (linhas 182-197):** Substituir o condicional `{step.days && ...}` por renderização sempre presente. Quando `step.days` estiver vazio, renderizar um `<span>` invisível com mesma altura (22px). Atualizar o estilo do badge para: `minWidth: 52`, `height: 22`, `lineHeight: "22px"`, `textAlign: "center"`, `borderRadius: 11`, `padding: "0 8px"`, `whiteSpace: "nowrap"`.
+### Arquivo editado
+
+| Arquivo | Mudança |
+|---|---|
+| `src/components/leads/proposal-pages/AboutPage.tsx` | Container esquerdo: adicionar flex centering. Imagem: remover marginTop negativo. |
 
