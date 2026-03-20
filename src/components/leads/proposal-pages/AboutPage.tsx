@@ -15,16 +15,15 @@ export function ProposalAboutPage({ aboutText, logoUrl }: ProposalPageProps) {
         }}
       >
         {/* Left: photo column */}
-        <div style={{ position: "relative", overflow: "hidden" }}>
+        <div style={{ overflow: "hidden", height: PAGE_H, flexShrink: 0 }}>
           <img
             src={foundersPhoto}
             alt="Camilla e Mariana"
             style={{
               width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center top",
+              height: "auto",
               display: "block",
+              marginTop: -40,
             }}
           />
         </div>
