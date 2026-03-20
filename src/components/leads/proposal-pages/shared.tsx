@@ -1,5 +1,4 @@
 import { ProposalAsset } from "@/hooks/useProposalAssets";
-import quadraLogoWhite from "@/assets/quadra-logo-white.png";
 
 // Shared types and constants for proposal pages
 export const COLORS = {
@@ -13,9 +12,12 @@ export const COLORS = {
   shapeBege: "#D4B8A0",
 } as const;
 
-// A4 portrait ratio (210x297mm) — pixel dimensions for rendering
-export const PAGE_W = 794;
-export const PAGE_H = 1123;
+// 595×842 matches the HTML template dimensions
+export const PAGE_W = 595;
+export const PAGE_H = 842;
+
+export const FONT_TITLE = "'Cormorant Garamond', serif";
+export const FONT_BODY = "'Jost', sans-serif";
 
 export interface ProposalPageProps {
   clientName?: string;
@@ -53,7 +55,7 @@ export function PageContainer({ bg, children }: { bg: string; children: React.Re
         background: bg,
         position: "relative",
         overflow: "hidden",
-        fontFamily: "'Inter', 'Segoe UI', sans-serif",
+        fontFamily: FONT_BODY,
       }}
     >
       {children}
@@ -61,37 +63,35 @@ export function PageContainer({ bg, children }: { bg: string; children: React.Re
   );
 }
 
-export function LogoSmall({ url, position = "br" }: { url?: string; position?: "br" | "bl" }) {
-  const style: React.CSSProperties = {
-    position: "absolute",
-    bottom: 24,
-    height: 36,
-    opacity: 0.9,
-    ...(position === "br" ? { right: 36 } : { left: 36 }),
-  };
-  return <img src={url || quadraLogoWhite} alt="Quadra" style={style} />;
-}
-
-export function DecorativeShape({ position = "bl", color = COLORS.shapeBege }: { position?: "bl" | "br"; color?: string }) {
-  const isLeft = position === "bl";
+export function LogoQuadra() {
   return (
     <div
       style={{
         position: "absolute",
-        bottom: 0,
-        [isLeft ? "left" : "right"]: 0,
-        width: 120,
-        height: 120,
-        background: "transparent",
-        borderLeft: isLeft ? `3px solid ${color}` : "none",
-        borderRight: !isLeft ? `3px solid ${color}` : "none",
-        borderBottom: `3px solid ${color}`,
-        clipPath: isLeft
-          ? "polygon(0 30%, 0 100%, 70% 100%)"
-          : "polygon(30% 100%, 100% 100%, 100% 30%)",
+        bottom: 24,
+        right: 28,
+        fontFamily: FONT_BODY,
+        fontWeight: 600,
+        fontSize: 11,
+        letterSpacing: 3,
+        color: COLORS.textoClaro,
+        opacity: 0.7,
+        lineHeight: 1,
+        textAlign: "right",
       }}
-    />
+    >
+      QUA
+      <small style={{ fontSize: 8, letterSpacing: 4, display: "block", marginTop: 2, fontWeight: 300 }}>DRA</small>
+    </div>
   );
+}
+
+export function LogoSmall({ url, position = "br" }: { url?: string; position?: "br" | "bl" }) {
+  return <LogoQuadra />;
+}
+
+export function DecorativeShape({ position = "bl", color = COLORS.shapeBege }: { position?: "bl" | "br"; color?: string }) {
+  return null; // Not used in new design
 }
 
 export function formatBRL(value: number | null | undefined) {

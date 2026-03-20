@@ -1,40 +1,136 @@
-import { PageContainer, COLORS, LogoSmall, type ProposalPageProps } from "./shared";
+import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, PAGE_H, type ProposalPageProps } from "./shared";
 import foundersPhoto from "@/assets/founders-photo.png";
 
-const DEFAULT_ABOUT = "A Quadra é uma empresa que nasceu em 2022 pela inquietação da seguinte pergunta: como fazer com que nossos clientes tenham no final da sua obra seu projeto exatamente igual ao do 3d? Assim, desenvolvemos também o serviço de gerenciamento de obra no qual oferecemos aos nossos clientes assessoria completa pra ter seu espaço do jeitinho que ele sempre sonhou.";
+const DEFAULT_ABOUT =
+  "A Quadra nasceu em 2022 da seguinte pergunta: como garantir que o cliente tenha, no final da obra, o resultado exatamente igual ao projeto 3D? Desenvolvemos um serviço de gerenciamento completo para que cada detalhe seja executado do jeito que sempre foi sonhado.";
 
 export function ProposalAboutPage({ aboutText, logoUrl }: ProposalPageProps) {
   return (
     <PageContainer bg={COLORS.begeClaro}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          height: PAGE_H,
+        }}
+      >
+        {/* Left: photo column */}
+        <div style={{ position: "relative", overflow: "hidden" }}>
+          <img
+            src={foundersPhoto}
+            alt="Camilla e Mariana"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center top",
+              display: "block",
+            }}
+          />
+        </div>
 
-      <div style={{ padding: "60px 60px", display: "flex", flexDirection: "column", height: "100%", position: "relative", zIndex: 1, justifyContent: "center", alignItems: "center" }}>
-        {/* Title */}
-        <div style={{ width: "100%", marginBottom: 32 }}>
-          <h2 style={{ color: COLORS.textoTituloVinho, fontSize: 32, fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>Quem Somos</h2>
-          <div style={{ width: 60, height: 3, background: COLORS.linhaDestaque, marginBottom: 24 }} />
-          <p style={{ color: COLORS.textoEscuro, fontSize: 15, lineHeight: 1.7 }}>
+        {/* Right: text column */}
+        <div
+          style={{
+            padding: "56px 36px 48px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          }}
+        >
+          {/* Tag */}
+          <div
+            style={{
+              fontSize: 9,
+              letterSpacing: 4,
+              textTransform: "uppercase",
+              color: COLORS.linhaDestaque,
+              fontWeight: 500,
+              marginBottom: 12,
+            }}
+          >
+            Sobre nós
+          </div>
+
+          {/* Title */}
+          <h2
+            style={{
+              fontFamily: FONT_TITLE,
+              fontSize: 38,
+              fontWeight: 600,
+              color: COLORS.textoTituloVinho,
+              lineHeight: 1.1,
+              marginBottom: 20,
+              textDecoration: "underline",
+              textDecorationColor: COLORS.linhaDestaque,
+              textUnderlineOffset: 5,
+              textDecorationThickness: 1.5,
+            }}
+          >
+            Quem Somos
+          </h2>
+
+          {/* Body text */}
+          <p
+            style={{
+              fontSize: 12.5,
+              color: COLORS.textoEscuro,
+              lineHeight: 1.75,
+              marginBottom: 28,
+            }}
+          >
             {aboutText || DEFAULT_ABOUT}
           </p>
-        </div>
 
-        {/* Group photo */}
-        <div style={{ width: 500, maxHeight: 400, borderRadius: 12, overflow: "hidden", marginBottom: 32, border: `3px solid ${COLORS.shapeBege}` }}>
-          <img src={foundersPhoto} alt="Camilla e Mariana" style={{ width: "100%", height: "auto", display: "block" }} />
-        </div>
-
-        {/* Bios side by side */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 80, width: "100%" }}>
-          <div style={{ textAlign: "center" }}>
-            <h3 style={{ color: COLORS.textoTituloVinho, fontSize: 16, fontWeight: 700, textTransform: "uppercase" }}>Camilla</h3>
-            <p style={{ color: COLORS.textoEscuro, fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>Formada em Arquitetura pela FUMEC, 2018</p>
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <h3 style={{ color: COLORS.textoTituloVinho, fontSize: 16, fontWeight: 700, textTransform: "uppercase" }}>Mariana</h3>
-            <p style={{ color: COLORS.textoEscuro, fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>Formada em Arquitetura pela UFMG, 2021<br />Pós Graduação em Arquitetura Hospitalar</p>
+          {/* Founders list */}
+          <div
+            style={{
+              borderTop: `1px solid ${COLORS.linhaDestaque}`,
+              paddingTop: 20,
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+            }}
+          >
+            <div>
+              <h4
+                style={{
+                  fontFamily: FONT_TITLE,
+                  fontWeight: 600,
+                  fontSize: 15,
+                  color: COLORS.textoTituloVinho,
+                  letterSpacing: 1,
+                  marginBottom: 0,
+                }}
+              >
+                Camilla
+              </h4>
+              <p style={{ fontSize: 11, color: "#666", lineHeight: 1.5, marginBottom: 0 }}>
+                Formada em Arquitetura pela FUMEC, 2018
+              </p>
+            </div>
+            <div>
+              <h4
+                style={{
+                  fontFamily: FONT_TITLE,
+                  fontWeight: 600,
+                  fontSize: 15,
+                  color: COLORS.textoTituloVinho,
+                  letterSpacing: 1,
+                  marginBottom: 0,
+                }}
+              >
+                Mariana
+              </h4>
+              <p style={{ fontSize: 11, color: "#666", lineHeight: 1.5, marginBottom: 0 }}>
+                Formada em Arquitetura pela UFMG, 2021
+                <br />
+                Pós-graduação em Arquitetura Hospitalar
+              </p>
+            </div>
           </div>
         </div>
       </div>
-      <LogoSmall url={logoUrl} />
     </PageContainer>
   );
 }

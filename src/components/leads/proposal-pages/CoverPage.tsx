@@ -1,19 +1,87 @@
-import { PageContainer, COLORS, DecorativeShape, type ProposalPageProps } from "./shared";
+import { PageContainer, COLORS, LogoQuadra, FONT_TITLE, FONT_BODY, type ProposalPageProps } from "./shared";
 import sociasCover from "@/assets/socias-cover.jpg";
-import quadraLogoWhite from "@/assets/quadra-logo-white.png";
 
 export function ProposalCoverPage({ clientName, projectName, logoUrl }: ProposalPageProps) {
   return (
     <PageContainer bg={COLORS.azulMarinho}>
-      <img src={sociasCover} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 25%" }} />
-      <div style={{ position: "absolute", inset: 0, background: "rgba(27, 42, 74, 0.72)" }} />
-      <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", textAlign: "center", zIndex: 1 }}>
-        <h1 style={{ color: COLORS.textoClaro, fontSize: 48, fontWeight: 700, letterSpacing: 10, textTransform: "uppercase", margin: 0 }}>PROPOSTA</h1>
-        <h2 style={{ color: COLORS.textoClaro, fontSize: 32, fontWeight: 600, textTransform: "uppercase", marginTop: 20, letterSpacing: 4 }}>{clientName || "CLIENTE"}</h2>
-        <h3 style={{ color: COLORS.textoClaro, fontSize: 24, fontWeight: 400, textTransform: "uppercase", marginTop: 10, letterSpacing: 3, opacity: 0.85 }}>{projectName || "PROJETO"}</h3>
+      {/* Background photo */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage: `url(${sociasCover})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center top",
+        }}
+      />
+      {/* Gradient overlay */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(to bottom, transparent 25%, rgba(27,42,74,0.55) 50%, rgba(27,42,74,0.90) 75%, rgba(27,42,74,0.97) 100%)",
+        }}
+      />
+      {/* Content */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 64,
+          left: 0,
+          right: 0,
+          textAlign: "center",
+          padding: "0 40px",
+        }}
+      >
+        <span
+          style={{
+            fontFamily: FONT_TITLE,
+            fontSize: 54,
+            fontWeight: 300,
+            color: COLORS.textoClaro,
+            letterSpacing: 14,
+            display: "block",
+            marginBottom: 10,
+          }}
+        >
+          PROPOSTA
+        </span>
+        <div
+          style={{
+            width: 48,
+            height: 1,
+            background: COLORS.linhaDestaque,
+            margin: "14px auto",
+          }}
+        />
+        <div
+          style={{
+            fontFamily: FONT_BODY,
+            fontWeight: 500,
+            fontSize: 16,
+            letterSpacing: 6,
+            color: COLORS.textoClaro,
+            textTransform: "uppercase",
+            opacity: 0.85,
+          }}
+        >
+          {clientName || "CLIENTE"}
+        </div>
+        <div
+          style={{
+            fontSize: 11,
+            letterSpacing: 4,
+            color: COLORS.textoClaro,
+            opacity: 0.55,
+            textTransform: "uppercase",
+            marginTop: 6,
+          }}
+        >
+          Projeto
+        </div>
       </div>
-      <img src={logoUrl || quadraLogoWhite} alt="Quadra" style={{ position: "absolute", bottom: 36, right: 40, height: 44, zIndex: 2 }} />
-      <DecorativeShape position="bl" />
+      <LogoQuadra />
     </PageContainer>
   );
 }
