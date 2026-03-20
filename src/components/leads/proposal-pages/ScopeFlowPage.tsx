@@ -113,7 +113,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
         {/* Flow grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 0, alignItems: "start" }}>
           {steps.map((step, i) => (
-            <div key={i} style={{ textAlign: "center", position: "relative" }}>
+            <div key={i} style={{ textAlign: "center", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", minHeight: 120 }}>
               {/* Connecting lines */}
               {i > 0 && (
                 <div
@@ -158,6 +158,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
                   zIndex: 1,
                   background: i % 2 === 0 ? COLORS.roseMauve : COLORS.azulMarinho,
                   color: COLORS.textoClaro,
+                  flexShrink: 0,
                 }}
               >
                 {step.num}
@@ -178,22 +179,29 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
                 {step.title}
               </h5>
               {/* Description */}
-              <p style={{ fontSize: 9, color: "#777", lineHeight: 1.4, marginTop: 4, marginBottom: 4 }}>{step.desc}</p>
+              <p style={{ fontSize: 9, color: "#777", lineHeight: 1.4, marginTop: 4, marginBottom: 4, minHeight: 28 }}>{step.desc}</p>
               {/* Days badge */}
-              {step.days && (
+              {step.days ? (
                 <span
                   style={{
                     display: "inline-block",
+                    minWidth: 52,
+                    height: 22,
+                    lineHeight: "22px",
+                    textAlign: "center",
                     fontSize: 9,
+                    fontWeight: 500,
                     color: COLORS.roseMauve,
                     border: `1px solid ${COLORS.roseMauve}`,
-                    borderRadius: 10,
-                    padding: "1px 6px",
-                    fontWeight: 500,
+                    borderRadius: 11,
+                    padding: "0 8px",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {step.days}
                 </span>
+              ) : (
+                <span style={{ display: "inline-block", height: 22 }} />
               )}
             </div>
           ))}
