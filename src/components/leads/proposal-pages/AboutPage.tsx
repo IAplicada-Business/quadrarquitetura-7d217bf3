@@ -15,7 +15,7 @@ export function ProposalAboutPage({ aboutText, logoUrl }: ProposalPageProps) {
         }}
       >
         {/* Left: photo column */}
-        <div style={{ overflow: "hidden", height: PAGE_H, flexShrink: 0 }}>
+        <div style={{ overflow: "hidden", height: PAGE_H, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <img
             src={foundersPhoto}
             alt="Camilla e Mariana"
@@ -23,7 +23,6 @@ export function ProposalAboutPage({ aboutText, logoUrl }: ProposalPageProps) {
               width: "100%",
               height: "auto",
               display: "block",
-              marginTop: -40,
             }}
           />
         </div>
