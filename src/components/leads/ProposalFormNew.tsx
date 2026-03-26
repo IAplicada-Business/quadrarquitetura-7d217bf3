@@ -31,7 +31,18 @@ export interface ProposalFormData {
   feedback_items: string[];
   ambientes: string[];
   total_area: number | null;
+  etapas_ativas: string[];
 }
+
+const ALL_ETAPAS = [
+  "Briefing",
+  "Estudo Preliminar",
+  "Anteprojeto",
+  "Orçamento Executivo",
+  "Reunião de Prioridades",
+  "Mobilização de Obra",
+  "Conferência e Fiscalização de Obra",
+];
 
 const DEFAULT_SCOPE = `Nosso papel será desenvolver o **projeto executivo** dos espaços definidos com todos os desenhos necessários para a realização da obra, considerando todas as ideias discutidas e aprovadas pelo cliente. Dando seguimento com **o gerenciamento**, que inclui a administração de todos os fornecedores envolvidos, cronograma, gestão de pagamentos, vistorias e conferências. Damos assistência no pós obra para garantir que tudo segue funcionando como entregue ou se necessário algum ajuste.`;
 
@@ -70,6 +81,7 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
     feedback_items: initialData?.feedback_items || [],
     ambientes: initialData?.ambientes || [],
     total_area: initialData?.total_area ?? null,
+    etapas_ativas: initialData?.etapas_ativas || [...ALL_ETAPAS],
   });
 
   const set = <K extends keyof ProposalFormData>(key: K, val: ProposalFormData[K]) =>
@@ -205,9 +217,38 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
         </CardContent>
       </Card>
 
-      {/* Section 4: Timeline */}
+      {/* Section 4: Etapas */}
       <Card>
-        <CardHeader><CardTitle className="text-base">4. Prazos</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">4. Etapas do Projeto</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">Selecione as etapas que compõem esta proposta.</p>
+          <Button variant="outline" size="sm" onClick={() => set("etapas_ativas", [...ALL_ETAPAS])}>
+            Selecionar todas
+          </Button>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {ALL_ETAPAS.map(etapa => (
+              <div key={etapa} className="flex items-center gap-2 p-2 border rounded">
+                <Checkbox
+                  checked={data.etapas_ativas.includes(etapa)}
+                  onCheckedChange={() => {
+                    setData(prev => ({
+                      ...prev,
+                      etapas_ativas: prev.etapas_ativas.includes(etapa)
+                        ? prev.etapas_ativas.filter(e => e !== etapa)
+                        : [...prev.etapas_ativas, etapa],
+                    }));
+                  }}
+                />
+                <span className="text-sm">{etapa}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section 5: Timeline */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">5. Prazos</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="space-y-1.5">
             <Label>Briefing (dias)</Label>
@@ -228,7 +269,7 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
         </CardContent>
       </Card>
 
-      {/* Section 5: Values */}
+      {/* Section 6: Values */}
       <Card>
         <CardHeader><CardTitle className="text-base">5. Valores</CardTitle></CardHeader>
         <CardContent className="space-y-4">
@@ -262,10 +303,10 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
         </CardContent>
       </Card>
 
-      {/* Section 6: Portfolio & Feedbacks */}
+      {/* Section 7: Portfolio & Feedbacks */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">6. Portfólio e Feedbacks</CardTitle>
+          <CardTitle className="text-base">7. Portfólio e Feedbacks</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {portfolioGroups.size > 0 && (

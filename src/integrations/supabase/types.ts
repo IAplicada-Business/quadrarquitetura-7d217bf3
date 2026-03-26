@@ -1591,6 +1591,7 @@ export type Database = {
           discount_value: number | null
           estimated_area: number | null
           estimated_duration: string | null
+          etapas_ativas: Json | null
           feedback_items: Json | null
           final_value: number | null
           id: string
@@ -1645,6 +1646,7 @@ export type Database = {
           discount_value?: number | null
           estimated_area?: number | null
           estimated_duration?: string | null
+          etapas_ativas?: Json | null
           feedback_items?: Json | null
           final_value?: number | null
           id?: string
@@ -1699,6 +1701,7 @@ export type Database = {
           discount_value?: number | null
           estimated_area?: number | null
           estimated_duration?: string | null
+          etapas_ativas?: Json | null
           feedback_items?: Json | null
           final_value?: number | null
           id?: string

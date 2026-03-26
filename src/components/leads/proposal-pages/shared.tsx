@@ -46,6 +46,7 @@ export interface ProposalPageProps {
   contactPhone2?: string;
   ambientes?: string[];
   totalArea?: number | null;
+  etapasAtivas?: string[];
 }
 
 export function PageContainer({ bg, children }: { bg: string; children: React.ReactNode }) {

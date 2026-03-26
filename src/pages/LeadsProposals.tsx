@@ -99,6 +99,7 @@ export default function LeadsProposals() {
       contactPhone2: phone2,
       ambientes: formData.ambientes,
       totalArea: formData.total_area,
+      etapasAtivas: formData.etapas_ativas,
     };
   }, [logos, founderPhotos, texts, contacts]);
 
@@ -135,6 +136,7 @@ export default function LeadsProposals() {
       feedback_items: formData.feedback_items,
       ambientes: formData.ambientes,
       total_area: formData.total_area,
+      etapas_ativas: formData.etapas_ativas,
       value: formData.price_full,
       final_value: formData.price_cash || formData.price_full,
       status,
@@ -270,6 +272,7 @@ export default function LeadsProposals() {
       feedback_items: p.feedback_items || [],
       ambientes: (p as any).ambientes || [],
       total_area: (p as any).total_area ?? null,
+      etapas_ativas: (p as any).etapas_ativas || [],
     };
   }, [editingProposal]);
 

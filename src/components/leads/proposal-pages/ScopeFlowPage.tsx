@@ -1,17 +1,19 @@
 import { PageContainer, COLORS, FONT_TITLE, type ProposalPageProps } from "./shared";
 
-const FLOW_STEPS = [
-  { num: 1, title: "Levantamento\n& Briefing", desc: "Alinhamento de conceito e necessidades", days: "4 dias" },
-  { num: 2, title: "Estudo\nPreliminar", desc: "Aprovação do layout", days: "15 dias" },
-  { num: 3, title: "Orçamento\nExecutivo", desc: "Valor total definido", days: "7 dias" },
-  { num: 4, title: "Reunião de\nPrioridades", desc: "Budget x escopo", days: "~25 dias" },
-  { num: 5, title: "Início\nda Obra", desc: "Gerenciamento pleno", days: "" },
+const ALL_FLOW_STEPS = [
+  { id: "Briefing", title: "Levantamento\n& Briefing", desc: "Alinhamento de conceito e necessidades", daysKey: "briefing" as const },
+  { id: "Estudo Preliminar", title: "Estudo\nPreliminar", desc: "Aprovação do layout", daysKey: "study" as const },
+  { id: "Anteprojeto", title: "Anteprojeto", desc: "Detalhamento do projeto", daysKey: null },
+  { id: "Orçamento Executivo", title: "Orçamento\nExecutivo", desc: "Valor total definido", daysKey: null },
+  { id: "Reunião de Prioridades", title: "Reunião de\nPrioridades", desc: "Budget x escopo", daysKey: "priorities" as const },
+  { id: "Mobilização de Obra", title: "Mobilização\nde Obra", desc: "Preparação para início", daysKey: null },
+  { id: "Conferência e Fiscalização de Obra", title: "Conferência\ne Fiscalização", desc: "Gerenciamento pleno", daysKey: "construction" as const },
 ];
 
 const DEFAULT_SCOPE =
   "Desenvolvemos o **projeto executivo** com todos os desenhos necessários à obra, considerando cada ideia discutida com o cliente. Em seguida, conduzimos o **gerenciamento completo** — administração de fornecedores, cronograma, pagamentos, vistorias e conferências. Acompanhamos também o **pós-obra**, garantindo que tudo funcione como entregue.";
 
-export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelinePriorities, ambientes, totalArea }: ProposalPageProps) {
+export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelinePriorities, timelineConstruction, ambientes, totalArea, etapasAtivas }: ProposalPageProps) {
   const text = scopeDescription || DEFAULT_SCOPE;
 
   const renderText = (t: string) => {
@@ -27,10 +29,19 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
     );
   };
 
-  const steps = [...FLOW_STEPS];
-  if (timelineBriefing) steps[0].days = `${timelineBriefing} dias`;
-  if (timelineStudy) steps[1].days = `${timelineStudy} dias`;
-  if (timelinePriorities) steps[3].days = `~${timelinePriorities} dias`;
+  const activeEtapas = etapasAtivas || ALL_FLOW_STEPS.map(s => s.id);
+  const steps = ALL_FLOW_STEPS.filter(s => activeEtapas.includes(s.id)).map((s, i) => {
+    const daysMap: Record<string, number | undefined> = {
+      briefing: timelineBriefing,
+      study: timelineStudy,
+      priorities: timelinePriorities,
+      construction: timelineConstruction,
+    };
+    const daysVal = s.daysKey ? daysMap[s.daysKey] : undefined;
+    return { ...s, num: i + 1, days: daysVal ? `${s.daysKey === "priorities" ? "~" : ""}${daysVal} dias` : "" };
+  });
+  const stepCount = steps.length;
+  const compact = stepCount > 5;
 
   return (
     <PageContainer bg={COLORS.begeClaro}>
@@ -128,15 +139,15 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
         </h3>
 
         {/* Flow grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 0, alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${stepCount}, 1fr)`, gap: 0, alignItems: "start" }}>
           {steps.map((step, i) => (
-            <div key={i} style={{ textAlign: "center", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", minHeight: 120 }}>
+            <div key={step.id} style={{ textAlign: "center", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", minHeight: compact ? 100 : 120 }}>
               {/* Connecting lines */}
               {i > 0 && (
                 <div
                   style={{
                     position: "absolute",
-                    top: 18,
+                    top: compact ? 15 : 18,
                     left: -2,
                     width: "50%",
                     height: 1,
@@ -149,7 +160,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
                 <div
                   style={{
                     position: "absolute",
-                    top: 18,
+                    top: compact ? 15 : 18,
                     right: -2,
                     width: "50%",
                     height: 1,
@@ -161,15 +172,15 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
               {/* Circle */}
               <div
                 style={{
-                  width: 36,
-                  height: 36,
+                  width: compact ? 30 : 36,
+                  height: compact ? 30 : 36,
                   borderRadius: "50%",
                   margin: "0 auto 10px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontFamily: FONT_TITLE,
-                  fontSize: 16,
+                  fontSize: compact ? 13 : 16,
                   fontWeight: 700,
                   position: "relative",
                   zIndex: 1,
@@ -183,7 +194,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
               {/* Title */}
               <h5
                 style={{
-                  fontSize: 9,
+                  fontSize: compact ? 8 : 9,
                   fontWeight: 600,
                   letterSpacing: 1,
                   textTransform: "uppercase",
@@ -196,7 +207,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
                 {step.title}
               </h5>
               {/* Description */}
-              <p style={{ fontSize: 9, color: "#777", lineHeight: 1.4, marginTop: 4, marginBottom: 4, minHeight: 28 }}>{step.desc}</p>
+              <p style={{ fontSize: compact ? 8 : 9, color: "#777", lineHeight: 1.4, marginTop: 4, marginBottom: 4, minHeight: compact ? 22 : 28 }}>{step.desc}</p>
               {/* Days badge */}
               {step.days ? (
                 <span
@@ -206,7 +217,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
                     height: 22,
                     lineHeight: "22px",
                     textAlign: "center",
-                    fontSize: 9,
+                    fontSize: compact ? 8 : 9,
                     fontWeight: 500,
                     color: COLORS.roseMauve,
                     border: `1px solid ${COLORS.roseMauve}`,
