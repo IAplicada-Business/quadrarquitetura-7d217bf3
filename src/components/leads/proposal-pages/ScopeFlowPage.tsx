@@ -16,18 +16,11 @@ const DEFAULT_SCOPE =
 export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelineBudget, timelinePriorities, timelineConstruction, timelineMobilization, timelineFiscalization, ambientes, totalArea, etapasAtivas, pageWidth, pageHeight }: ProposalPageProps) {
   const text = scopeDescription || DEFAULT_SCOPE;
 
-  const renderText = (t: string) => {
-    const parts = t.split(/\*\*(.*?)\*\*/g);
-    return parts.map((part, i) =>
-      i % 2 === 1 ? (
-        <strong key={i} style={{ fontWeight: 600, color: COLORS.textoTituloVinho }}>
-          {part}
-        </strong>
-      ) : (
-        <span key={i}>{part}</span>
-      )
-    );
-  };
+  function parseSimpleMarkdown(t: string): string {
+    return t
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>');
+  }
 
   const activeEtapas = etapasAtivas || ALL_FLOW_STEPS.map(s => s.id);
   const steps = ALL_FLOW_STEPS.filter(s => activeEtapas.includes(s.id)).map((s, i) => {
@@ -78,7 +71,9 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
           >
             Nosso Escopo
           </h2>
-          <p
+          <style>{`.scope-markdown strong { font-weight: 600; color: #8B4557; } .scope-markdown em { font-style: italic; }`}</style>
+          <div
+            className="scope-markdown"
             style={{
               fontSize: 13,
               color: COLORS.azulMarinho,
@@ -87,9 +82,8 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
               maxWidth: 440,
               margin: "0 auto",
             }}
-          >
-            {renderText(text)}
-          </p>
+            dangerouslySetInnerHTML={{ __html: parseSimpleMarkdown(text) }}
+          />
 
           {/* Ambientes */}
           {ambientes && ambientes.length > 0 && (
