@@ -358,10 +358,75 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
         </CardContent>
       </Card>
 
-      {/* Section 7: Portfolio & Feedbacks */}
+      {/* Section 7: Portfolio Cards (for PDF page) */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">7. Portfólio no PDF</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground">Selecione até 4 projetos para exibir na página "Nossos Projetos" do PDF. Adicione uma legenda opcional.</p>
+          {userProjects.length > 0 ? (
+            <div className="space-y-3">
+              {userProjects.map(proj => {
+                const isSelected = data.portfolio_cards.some(c => c.id === proj.id);
+                const cardIndex = data.portfolio_cards.findIndex(c => c.id === proj.id);
+                return (
+                  <div key={proj.id} className="flex items-start gap-2 p-2 border rounded">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => {
+                        setData(prev => {
+                          if (isSelected) {
+                            return { ...prev, portfolio_cards: prev.portfolio_cards.filter(c => c.id !== proj.id) };
+                          }
+                          if (prev.portfolio_cards.length >= 4) return prev;
+                          return { ...prev, portfolio_cards: [...prev.portfolio_cards, { id: proj.id, nome: proj.name, foto_url: "", legenda: "" }] };
+                        });
+                      }}
+                    />
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium">{proj.name}</p>
+                      {isSelected && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            placeholder="URL da foto"
+                            value={data.portfolio_cards[cardIndex]?.foto_url || ""}
+                            onChange={e => {
+                              setData(prev => {
+                                const cards = [...prev.portfolio_cards];
+                                cards[cardIndex] = { ...cards[cardIndex], foto_url: e.target.value };
+                                return { ...prev, portfolio_cards: cards };
+                              });
+                            }}
+                            className="text-xs"
+                          />
+                          <Input
+                            placeholder="Legenda (opcional)"
+                            value={data.portfolio_cards[cardIndex]?.legenda || ""}
+                            onChange={e => {
+                              setData(prev => {
+                                const cards = [...prev.portfolio_cards];
+                                cards[cardIndex] = { ...cards[cardIndex], legenda: e.target.value };
+                                return { ...prev, portfolio_cards: cards };
+                              });
+                            }}
+                            className="text-xs"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Nenhum projeto cadastrado.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Section 8: Portfolio Assets & Feedbacks */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">7. Portfólio e Feedbacks</CardTitle>
+          <CardTitle className="text-base">8. Portfólio de Assets e Feedbacks</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {portfolioGroups.size > 0 && (

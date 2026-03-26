@@ -103,6 +103,7 @@ export default function LeadsProposals() {
       ambientes: formData.ambientes,
       totalArea: formData.total_area,
       etapasAtivas: formData.etapas_ativas,
+      portfolioCards: formData.portfolio_cards?.filter(c => c.foto_url) || [],
     };
   }, [logos, founderPhotos, texts, contacts]);
 
@@ -140,6 +141,7 @@ export default function LeadsProposals() {
       installment_value: formData.installment_value,
       price_note: formData.price_note,
       portfolio_projects: formData.portfolio_projects,
+      feedback_items: formData.feedback_items,
       feedback_items: formData.feedback_items,
       ambientes: formData.ambientes,
       total_area: formData.total_area,
