@@ -19,6 +19,7 @@ export interface ProposalFormData {
   services_included: string;
   timeline_briefing: number;
   timeline_study: number;
+  timeline_budget: number;
   timeline_priorities: number;
   timeline_construction: number;
   price_full: number | null;
@@ -71,6 +72,7 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
     services_included: initialData?.services_included || "ambos",
     timeline_briefing: initialData?.timeline_briefing ?? 4,
     timeline_study: initialData?.timeline_study ?? 15,
+    timeline_budget: initialData?.timeline_budget ?? 7,
     timeline_priorities: initialData?.timeline_priorities ?? 7,
     timeline_construction: initialData?.timeline_construction ?? 25,
     price_full: initialData?.price_full ?? null,
@@ -267,6 +269,10 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
           <div className="space-y-1.5">
             <Label>Estudo preliminar (dias)</Label>
             <Input type="number" value={data.timeline_study} onChange={e => set("timeline_study", Number(e.target.value))} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Orçamento executivo (dias)</Label>
+            <Input type="number" value={data.timeline_budget} onChange={e => set("timeline_budget", Number(e.target.value))} />
           </div>
           <div className="space-y-1.5">
             <Label>Reunião prioridades (dias)</Label>

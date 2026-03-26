@@ -31,6 +31,7 @@ export interface ProposalPageProps {
   timelineBriefing?: number;
   timelineStudy?: number;
   timelinePriorities?: number;
+  timelineBudget?: number;
   timelineConstruction?: number;
   priceFull?: number | null;
   priceCash?: number | null;
