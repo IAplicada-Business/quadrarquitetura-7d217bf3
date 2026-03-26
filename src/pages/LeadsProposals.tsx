@@ -199,8 +199,8 @@ export default function LeadsProposals() {
         )
       );
 
-      // Small extra delay for layout
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for fonts to be fully loaded before capture
+      await waitForFonts();
 
       const blob = await generateProposalPdf(pages, (_page, index) => {
         return pageElements[index]?.firstElementChild as HTMLElement || null;
@@ -278,7 +278,8 @@ export default function LeadsProposals() {
         )
       );
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for fonts to be fully loaded before capture
+      await waitForFonts();
 
       const blob = await generateProposalPdf(pages, (_page, index) => {
         return pageElements[index]?.firstElementChild as HTMLElement || null;

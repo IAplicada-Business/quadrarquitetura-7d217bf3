@@ -10,6 +10,25 @@ const PDF_H_PT = 841.89;
 const PDF_W_16_9_PT = 960;
 const PDF_H_16_9_PT = 540;
 
+/**
+ * Pre-loads all font weights used in proposal pages.
+ * Must be called before html2canvas capture to avoid missing glyphs.
+ */
+export async function waitForFonts(): Promise<void> {
+  const fontFaces = [
+    "300 16px 'Cormorant Garamond'",
+    "400 16px 'Cormorant Garamond'",
+    "600 16px 'Cormorant Garamond'",
+    "700 16px 'Cormorant Garamond'",
+    "300 16px 'Jost'",
+    "400 16px 'Jost'",
+    "500 16px 'Jost'",
+    "600 16px 'Jost'",
+  ];
+  await Promise.all(fontFaces.map(f => document.fonts.load(f)));
+  await document.fonts.ready;
+}
+
 export async function generateProposalPdf(
   pages: React.ReactElement[],
   renderPage: (page: React.ReactElement, index: number) => HTMLElement | null,
@@ -20,6 +39,9 @@ export async function generateProposalPdf(
   const pdfH = isPresentation ? PDF_H_16_9_PT : PDF_H_PT;
   const canvasW = isPresentation ? PAGE_W_16_9 : PAGE_W;
   const canvasH = isPresentation ? PAGE_H_16_9 : PAGE_H;
+
+  // Ensure fonts are loaded before capturing
+  await waitForFonts();
 
   const pdf = new jsPDF({
     orientation: isPresentation ? "landscape" : "portrait",
@@ -34,16 +56,15 @@ export async function generateProposalPdf(
     const canvas = await html2canvas(el, {
       width: canvasW,
       height: canvasH,
-      scale: 2,
+      scale: 3,
       useCORS: true,
-      allowTaint: true,
       logging: false,
     });
 
-    const imgData = canvas.toDataURL("image/jpeg", 0.92);
+    const imgData = canvas.toDataURL("image/png");
 
     if (i > 0) pdf.addPage([pdfW, pdfH], isPresentation ? "landscape" : "portrait");
-    pdf.addImage(imgData, "JPEG", 0, 0, pdfW, pdfH);
+    pdf.addImage(imgData, "PNG", 0, 0, pdfW, pdfH);
   }
 
   return pdf.output("blob");
