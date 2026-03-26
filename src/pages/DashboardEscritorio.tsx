@@ -69,6 +69,12 @@ const receitaDespesaConfig: ChartConfig = {
   despesa: { label: "Despesas", color: ROSA.fill3 },
 };
 
+const leadsMetricasConfig: ChartConfig = {
+  convertido: { label: "Convertido", color: "hsl(152, 60%, 40%)" },
+  perdido: { label: "Perdido", color: "hsl(0, 70%, 50%)" },
+  em_andamento: { label: "Em andamento", color: "hsl(210, 70%, 50%)" },
+};
+
 const propostaStatusConfig: Record<string, { label: string; color: string }> = {
   rascunho: { label: "Rascunho", color: ROSA.fill3 },
   enviada: { label: "Enviada", color: ROSA.fill2 },
@@ -127,7 +133,16 @@ export default function DashboardEscritorio() {
   const { data: leads = [] } = useQuery({
     queryKey: ["dash-esc-leads"],
     queryFn: async () => {
-      const { data } = await supabase.from("leads").select("id, status, name").eq("user_id", user!.id);
+      const { data } = await supabase.from("leads").select("id, status, name, created_at").eq("user_id", user!.id);
+      return data ?? [];
+    },
+    enabled: !!user,
+  });
+
+  const { data: allProposals = [] } = useQuery({
+    queryKey: ["dash-esc-proposals-metrics"],
+    queryFn: async () => {
+      const { data } = await supabase.from("proposals").select("id, status, price_full, created_at").eq("user_id", user!.id);
       return data ?? [];
     },
     enabled: !!user,
@@ -216,6 +231,30 @@ export default function DashboardEscritorio() {
       color: [ROSA.fill1, ROSA.fill2, ROSA.fill3, "hsl(152, 60%, 40%)"][i % 4],
     }));
 
+    // ── Métricas Comerciais ──
+    const leadsNoMes = leads.filter((l) => l.created_at && l.created_at.slice(0, 7) === format(today, "yyyy-MM")).length;
+    const totalLeads = leads.length;
+    const leadsConvertidos = leads.filter((l) => l.status === "fechado").length;
+    const taxaConversao = totalLeads > 0 ? Math.round((leadsConvertidos / totalLeads) * 100) : 0;
+
+    const proposalsMesAtual = allProposals.filter((p) => p.created_at && p.created_at.slice(0, 7) === format(today, "yyyy-MM") && p.price_full);
+    const ticketMedio = proposalsMesAtual.length > 0 ? proposalsMesAtual.reduce((s, p) => s + (p.price_full ?? 0), 0) / proposalsMesAtual.length : 0;
+
+    const propostasAguardando = allProposals.filter((p) => p.status === "enviada").length;
+
+    // Gráfico leads 6 meses empilhado
+    const leadsChartData = monthLabels.map((label, i) => {
+      const m = subMonths(today, 5 - i);
+      const ms = format(startOfMonth(m), "yyyy-MM");
+      const monthLeads = leads.filter((l) => l.created_at?.startsWith(ms));
+      return {
+        month: label.charAt(0).toUpperCase() + label.slice(1),
+        convertido: monthLeads.filter((l) => l.status === "fechado").length,
+        perdido: monthLeads.filter((l) => l.status === "perdido").length,
+        em_andamento: monthLeads.filter((l) => l.status !== "fechado" && l.status !== "perdido").length,
+      };
+    });
+
     return {
       activeProjects: activeProjects.length,
       pagoMesAtual,
@@ -230,8 +269,13 @@ export default function DashboardEscritorio() {
       budgetStatusData,
       receitaDespesaData,
       leadsDoMes,
+      leadsNoMes,
+      taxaConversao,
+      ticketMedio,
+      propostasAguardando,
+      leadsChartData,
     };
-  }, [projects, payments, budgetQuotes, leads, monthStart, monthEnd, weekStart, weekEnd, todayStr, today]);
+  }, [projects, payments, budgetQuotes, leads, allProposals, monthStart, monthEnd, weekStart, weekEnd, todayStr, today]);
 
   const stats = [
     { label: "Fluxo de Caixa", value: fmt(computed.pagoMesAtual), icon: TrendingUp, description: "recebido este mês" },
@@ -450,6 +494,93 @@ export default function DashboardEscritorio() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Métricas Comerciais ── */}
+      <div>
+        <h2 className="text-xl font-bold font-display mb-1">Métricas Comerciais</h2>
+        <p className="text-muted-foreground text-sm mb-4">Indicadores de desempenho comercial</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(210, 70%, 50%)" }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Leads no Mês</CardTitle>
+            <UserPlus className="h-5 w-5" style={{ color: "hsl(210, 70%, 50%)" }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: "hsl(210, 50%, 35%)" }}>{computed.leadsNoMes}</p>
+            <p className="text-xs text-muted-foreground mt-1">novos leads este mês</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(152, 60%, 40%)" }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Taxa de Conversão</CardTitle>
+            <ArrowUpRight className="h-5 w-5" style={{ color: "hsl(152, 60%, 40%)" }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: "hsl(152, 40%, 30%)" }}>{computed.taxaConversao}%</p>
+            <p className="text-xs text-muted-foreground mt-1">leads convertidos / total</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: ROSA.destaque }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Ticket Médio</CardTitle>
+            <TrendingUp className="h-5 w-5" style={{ color: ROSA.destaque }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: ROSA.textoDestaque }}>{fmt(computed.ticketMedio)}</p>
+            <p className="text-xs text-muted-foreground mt-1">propostas do mês</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(35, 80%, 50%)" }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Aguardando Resposta</CardTitle>
+            <Send className="h-5 w-5" style={{ color: "hsl(35, 80%, 50%)" }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: "hsl(35, 60%, 35%)" }}>{computed.propostasAguardando}</p>
+            <p className="text-xs text-muted-foreground mt-1">propostas enviadas</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Gráfico Leads por Status — Últimos 6 meses */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-display">Leads por Status</CardTitle>
+          <CardDescription>Últimos 6 meses — empilhado</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={leadsMetricasConfig} className="h-[280px] w-full">
+            <BarChart data={computed.leadsChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis dataKey="month" className="text-xs" />
+              <YAxis allowDecimals={false} className="text-xs" />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar dataKey="convertido" stackId="a" fill="hsl(152, 60%, 40%)" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="perdido" stackId="a" fill="hsl(0, 70%, 50%)" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="em_andamento" stackId="a" fill="hsl(210, 70%, 50%)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ChartContainer>
+          <div className="flex justify-center gap-6 mt-4">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "hsl(152, 60%, 40%)" }} />
+              <span className="text-xs text-muted-foreground">Convertido</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "hsl(0, 70%, 50%)" }} />
+              <span className="text-xs text-muted-foreground">Perdido</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "hsl(210, 70%, 50%)" }} />
+              <span className="text-xs text-muted-foreground">Em andamento</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Resumo Financeiro */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
