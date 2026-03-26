@@ -3,6 +3,7 @@ import { ProposalPageProps } from "./proposal-pages/shared";
 import { ProposalCoverPage } from "./proposal-pages/CoverPage";
 import { ProposalAboutPage } from "./proposal-pages/AboutPage";
 import { ProposalScopeFlowPage } from "./proposal-pages/ScopeFlowPage";
+import { ProposalInterioresPage } from "./proposal-pages/InterioresPage";
 import { ProposalManagementFullPage } from "./proposal-pages/ManagementFullPage";
 import { ProposalWhyHireValuesPage } from "./proposal-pages/WhyHireValuesPage";
 import { ProposalContactPage } from "./proposal-pages/ContactPage";
