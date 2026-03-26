@@ -18,12 +18,23 @@ interface RendererProps {
 }
 
 export function buildProposalPages({ data }: RendererProps): React.ReactElement[] {
-  return [
+  const showInteriores = !data.servicesIncluded || data.servicesIncluded === "ambos" || data.servicesIncluded === "projeto";
+
+  const pages: React.ReactElement[] = [
     <ProposalCoverPage key="cover" {...data} />,
     <ProposalAboutPage key="about" {...data} />,
     <ProposalScopeFlowPage key="scope-flow" {...data} />,
+  ];
+
+  if (showInteriores) {
+    pages.push(<ProposalInterioresPage key="interiores" {...data} />);
+  }
+
+  pages.push(
     <ProposalManagementFullPage key="management" {...data} />,
     <ProposalWhyHireValuesPage key="whyhire-values" {...data} />,
     <ProposalContactPage key="contact" {...data} />,
-  ];
+  );
+
+  return pages;
 }
