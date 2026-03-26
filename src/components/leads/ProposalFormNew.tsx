@@ -266,34 +266,26 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
       {/* Section 5: Timeline */}
       <Card>
         <CardHeader><CardTitle className="text-base">5. Prazos</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="space-y-1.5">
-            <Label>Briefing (dias)</Label>
-            <Input type="number" value={data.timeline_briefing} onChange={e => set("timeline_briefing", Number(e.target.value))} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Estudo preliminar (dias)</Label>
-            <Input type="number" value={data.timeline_study} onChange={e => set("timeline_study", Number(e.target.value))} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Orçamento executivo (dias)</Label>
-            <Input type="number" value={data.timeline_budget} onChange={e => set("timeline_budget", Number(e.target.value))} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Reunião prioridades (dias)</Label>
-            <Input type="number" value={data.timeline_priorities} onChange={e => set("timeline_priorities", Number(e.target.value))} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Mobilização de obra (dias)</Label>
-            <Input type="number" value={data.timeline_mobilization ?? ""} onChange={e => set("timeline_mobilization", e.target.value ? Number(e.target.value) : null)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Obra (dias trabalhados)</Label>
-            <Input type="number" value={data.timeline_construction} onChange={e => set("timeline_construction", Number(e.target.value))} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Conferência e fiscalização (dias)</Label>
-            <Input type="number" value={data.timeline_fiscalization ?? ""} onChange={e => set("timeline_fiscalization", e.target.value ? Number(e.target.value) : null)} />
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">Os campos exibidos seguem as etapas selecionadas acima.</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {ETAPA_TIMELINE_MAP.filter(item => data.etapas_ativas.includes(item.etapa)).map(item => {
+              const isNullable = item.field === "timeline_mobilization" || item.field === "timeline_fiscalization";
+              return (
+                <div key={item.field} className="space-y-1.5">
+                  <Label>{item.label}</Label>
+                  <Input
+                    type="number"
+                    value={isNullable ? (data[item.field] ?? "") : data[item.field]}
+                    onChange={e => set(item.field, isNullable && !e.target.value ? null : Number(e.target.value))}
+                  />
+                </div>
+              );
+            })}
+            <div className="space-y-1.5">
+              <Label>Obra (dias trabalhados)</Label>
+              <Input type="number" value={data.timeline_construction} onChange={e => set("timeline_construction", Number(e.target.value))} />
+            </div>
           </div>
         </CardContent>
       </Card>
