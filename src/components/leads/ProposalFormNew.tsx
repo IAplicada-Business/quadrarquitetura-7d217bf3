@@ -24,6 +24,7 @@ export interface ProposalFormData {
   timeline_budget: number;
   timeline_priorities: number;
   timeline_construction: number;
+  timeline_anteprojeto: number | null;
   timeline_mobilization: number | null;
   timeline_fiscalization: number | null;
   price_full: number | null;
@@ -54,6 +55,7 @@ const ALL_ETAPAS = [
 const ETAPA_TIMELINE_MAP: { etapa: string; field: keyof ProposalFormData; label: string }[] = [
   { etapa: "Briefing", field: "timeline_briefing", label: "Briefing (dias)" },
   { etapa: "Estudo Preliminar", field: "timeline_study", label: "Estudo preliminar (dias)" },
+  { etapa: "Anteprojeto", field: "timeline_anteprojeto", label: "Anteprojeto (dias)" },
   { etapa: "Orçamento Executivo", field: "timeline_budget", label: "Orçamento executivo (dias)" },
   { etapa: "Reunião de Prioridades", field: "timeline_priorities", label: "Reunião prioridades (dias)" },
   { etapa: "Mobilização de Obra", field: "timeline_mobilization", label: "Mobilização de obra (dias)" },
@@ -102,6 +104,7 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
     timeline_budget: initialData?.timeline_budget ?? 7,
     timeline_priorities: initialData?.timeline_priorities ?? 7,
     timeline_construction: initialData?.timeline_construction ?? 25,
+    timeline_anteprojeto: initialData?.timeline_anteprojeto ?? null,
     timeline_mobilization: initialData?.timeline_mobilization ?? null,
     timeline_fiscalization: initialData?.timeline_fiscalization ?? null,
     price_full: initialData?.price_full ?? null,
@@ -296,7 +299,7 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
           <p className="text-xs text-muted-foreground">Os campos exibidos seguem as etapas selecionadas acima.</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {ETAPA_TIMELINE_MAP.filter(item => data.etapas_ativas.includes(item.etapa)).map(item => {
-              const isNullable = item.field === "timeline_mobilization" || item.field === "timeline_fiscalization";
+              const isNullable = item.field === "timeline_anteprojeto" || item.field === "timeline_mobilization" || item.field === "timeline_fiscalization";
               return (
                 <div key={item.field} className="space-y-1.5">
                   <Label>{item.label}</Label>

@@ -30,6 +30,7 @@ export interface ProposalPageProps {
   servicesIncluded?: string;
   timelineBriefing?: number;
   timelineStudy?: number;
+  timelineAnteprojeto?: number;
   timelinePriorities?: number;
   timelineBudget?: number;
   timelineConstruction?: number;
