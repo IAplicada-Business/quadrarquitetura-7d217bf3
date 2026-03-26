@@ -6,6 +6,7 @@ import { ProposalScopeFlowPage } from "./proposal-pages/ScopeFlowPage";
 import { ProposalInterioresPage } from "./proposal-pages/InterioresPage";
 import { ProposalManagementFullPage } from "./proposal-pages/ManagementFullPage";
 import { ProposalWhyHireValuesPage } from "./proposal-pages/WhyHireValuesPage";
+import { ProposalValuesPage } from "./proposal-pages/ValuesPage";
 import { ProposalContactPage } from "./proposal-pages/ContactPage";
 import { ProposalAsset } from "@/hooks/useProposalAssets";
 
@@ -32,7 +33,8 @@ export function buildProposalPages({ data }: RendererProps): React.ReactElement[
 
   pages.push(
     <ProposalManagementFullPage key="management" {...data} />,
-    <ProposalWhyHireValuesPage key="whyhire-values" {...data} />,
+    <ProposalWhyHireValuesPage key="whyhire" {...data} />,
+    <ProposalValuesPage key="values" {...data} />,
     <ProposalContactPage key="contact" {...data} />,
   );
 

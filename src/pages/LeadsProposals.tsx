@@ -264,6 +264,9 @@ export default function LeadsProposals() {
       timeline_construction: p.timeline_construction ?? 25,
       price_full: p.price_full || p.value,
       price_cash: p.price_cash,
+      discount_cash_percent: p.price_full && p.price_cash && p.price_cash < p.price_full
+        ? Math.round((1 - p.price_cash / p.price_full) * 100)
+        : null,
       installments_count: p.installments_count,
       installment_entry: p.installment_entry,
       installment_value: p.installment_value,
