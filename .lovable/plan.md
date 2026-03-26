@@ -1,19 +1,37 @@
 
 
-## Centralizar foto na Página 2 (Quem Somos)
+## Adicionar seção "Ambientes" no formulário e no PDF
 
-### Problema
-A foto está com `marginTop: -40` que a desloca para cima, cortando parte da imagem e desalinhando-a em relação ao texto da coluna direita.
+### Contexto
 
-### Solução
+Não existe tabela `pipeline_rooms` no banco. Os ambientes serão inseridos manualmente via campo de texto livre (um por linha). A tabela `proposals` já tem campos flexíveis — precisamos adicionar `ambientes` (jsonb array) e `total_area` (numeric) via migration.
 
-No container da coluna esquerda (linha 18), usar `display: "flex"`, `alignItems: "center"`, `justifyContent: "center"` para centralizar a imagem verticalmente em relação ao conteúdo da coluna direita. Remover o `marginTop: -40` da imagem.
+### Edições
 
-A imagem continuará com `width: "100%"` e `height: "auto"` (compatível com html2canvas), e o `overflow: hidden` no container cortará qualquer excesso mantendo a proporção.
+**1. Migration — adicionar colunas na tabela `proposals`**
+```sql
+ALTER TABLE public.proposals ADD COLUMN ambientes jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE public.proposals ADD COLUMN total_area numeric;
+```
 
-### Arquivo editado
+**2. `src/components/leads/ProposalFormNew.tsx`**
+- Adicionar `ambientes: string[]` e `total_area: number | null` ao `ProposalFormData`
+- Nova seção "4. Ambientes" entre Escopo (seção 2) e Prazos (seção 3, que vira 5)
+- Renumerar seções: 3→Ambientes, 4→Prazos, 5→Valores, 6→Portfólio
+- Campo: `<Textarea>` com placeholder "Digite os ambientes, um por linha" — ao salvar, faz `.split("\n").filter(Boolean)`
+- Campo: `<Input type="number">` para "Metragem total (m²)"
 
-| Arquivo | Mudança |
-|---|---|
-| `src/components/leads/proposal-pages/AboutPage.tsx` | Container esquerdo: adicionar flex centering. Imagem: remover marginTop negativo. |
+**3. `src/components/leads/proposal-pages/shared.tsx`**
+- Adicionar `ambientes?: string[]` e `totalArea?: number | null` ao `ProposalPageProps`
+
+**4. `src/components/leads/proposal-pages/ScopeFlowPage.tsx`**
+- Após o parágrafo de escopo e antes do fluxo de steps, renderizar:
+  - Label "Ambientes contemplados:" em negrito (cor vinho)
+  - Lista simples dos ambientes separados por vírgula ou bullet
+  - Se `totalArea`, mostrar "Metragem total: X m²"
+
+**5. `src/pages/LeadsProposals.tsx`** (ou onde `onSave` persiste)
+- Passar `ambientes` e `total_area` no insert/update do Supabase
+
+Nenhuma rota ou aba será alterada.
 
