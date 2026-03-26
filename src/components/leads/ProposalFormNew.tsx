@@ -104,6 +104,7 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
     timeline_budget: initialData?.timeline_budget ?? 7,
     timeline_priorities: initialData?.timeline_priorities ?? 7,
     timeline_construction: initialData?.timeline_construction ?? 25,
+    timeline_anteprojeto: initialData?.timeline_anteprojeto ?? null,
     timeline_mobilization: initialData?.timeline_mobilization ?? null,
     timeline_fiscalization: initialData?.timeline_fiscalization ?? null,
     price_full: initialData?.price_full ?? null,
