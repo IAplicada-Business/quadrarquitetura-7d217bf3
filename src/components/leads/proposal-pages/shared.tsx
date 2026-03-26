@@ -51,6 +51,8 @@ export interface ProposalPageProps {
   ambientes?: string[];
   totalArea?: number | null;
   etapasAtivas?: string[];
+  pageWidth?: number;
+  pageHeight?: number;
 }
 
 export function PageContainer({ bg, children, pageWidth, pageHeight }: { bg: string; children: React.ReactNode; pageWidth?: number; pageHeight?: number }) {
