@@ -13,7 +13,7 @@ const ALL_FLOW_STEPS = [
 const DEFAULT_SCOPE =
   "Desenvolvemos o **projeto executivo** com todos os desenhos necessários à obra, considerando cada ideia discutida com o cliente. Em seguida, conduzimos o **gerenciamento completo** — administração de fornecedores, cronograma, pagamentos, vistorias e conferências. Acompanhamos também o **pós-obra**, garantindo que tudo funcione como entregue.";
 
-export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelinePriorities, timelineConstruction, ambientes, totalArea, etapasAtivas }: ProposalPageProps) {
+export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelinePriorities, timelineConstruction, ambientes, totalArea, etapasAtivas, pageWidth, pageHeight }: ProposalPageProps) {
   const text = scopeDescription || DEFAULT_SCOPE;
 
   const renderText = (t: string) => {
@@ -44,7 +44,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
   const compact = stepCount > 5;
 
   return (
-    <PageContainer bg={COLORS.begeClaro} pageWidth={props.pageWidth} pageHeight={props.pageHeight}>
+    <PageContainer bg={COLORS.begeClaro} pageWidth={pageWidth} pageHeight={pageHeight}>
       <div style={{ padding: "52px 52px 44px", height: "100%", display: "flex", flexDirection: "column" }}>
         {/* Scope section */}
         <div style={{ marginBottom: 40 }}>
