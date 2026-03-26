@@ -1,45 +1,41 @@
 
 
-## Adicionar Página de Portfólio (8B) ao PDF da Proposta
+## Adicionar seção "Métricas Comerciais" ao Dashboard Escritório
 
 ### Resumo
-Criar uma página condicional "NOSSOS PROJETOS" entre WhyHire e Values no PDF, com grid 2x2 de projetos selecionados. No formulário, permitir selecionar até 4 projetos da tabela `projects` com legenda opcional. Salvar como JSONB array de objetos `{ id, nome, foto_url, legenda }`.
+Adicionar ao final (ou antes do resumo financeiro) uma nova seção com 4 KPI cards e 1 gráfico de barras empilhado, usando dados de `leads` e `proposals`. Tudo dentro do mesmo componente `DashboardEscritorio.tsx`, aproveitando as queries existentes (expandindo-as quando necessário).
 
-### Edições
+### Edições em `src/pages/DashboardEscritorio.tsx`
 
-**1. `src/components/leads/proposal-pages/shared.tsx`**
-- Adicionar `portfolioCards?: { id: string; nome: string; foto_url: string; legenda?: string }[]` ao `ProposalPageProps`
+**1. Expandir queries existentes**
+- Query `dash-esc-leads`: já busca `id, status, name` — adicionar `created_at` para filtrar por mês
+- Query `dash-esc-proposals`: atualmente limita a 4 e busca poucos campos — criar uma segunda query `dash-esc-proposals-metrics` sem limit, buscando `id, status, price_full, created_at` para cálculos de métricas
 
-**2. Criar `src/components/leads/proposal-pages/PortfolioCardsPage.tsx`**
-- Nova página com fundo `#F5E0D0`
-- Titulo "NOSSOS PROJETOS" centralizado em Cormorant Garamond
-- Grid 2x2 com cards: foto (objectFit cover, borderRadius 8), nome em Jost 11px uppercase, legenda em Cormorant Garamond 13px itálico
-- Recebe `portfolioCards` e `pageWidth/pageHeight` do `ProposalPageProps`
+**2. Adicionar computações no `useMemo`**
+- `leadsNoMes`: filtrar leads com `created_at` no mês atual → `.length`
+- `taxaConversao`: leads com `status === "fechado"` / total leads × 100
+- `ticketMedio`: proposals do mês atual com `price_full` → AVG
+- `propostasAguardando`: proposals com status `enviada` (entre proposta enviada e convertido/perdido)
+- Gráfico 6 meses: para cada mês, contar leads agrupados em 3 categorias (convertido=fechado, perdido, em andamento=resto)
 
-**3. `src/components/leads/ProposalPageRenderer.tsx`**
-- Importar `ProposalPortfolioCardsPage`
-- Inserir condicionalmente entre WhyHire e Values: `if (pageData.portfolioCards?.length) pages.push(<ProposalPortfolioCardsPage .../>)`
+**3. Adicionar config do gráfico**
+```typescript
+const leadsMetricasConfig: ChartConfig = {
+  convertido: { label: "Convertido", color: "hsl(152, 60%, 40%)" },
+  perdido: { label: "Perdido", color: "hsl(0, 70%, 50%)" },
+  em_andamento: { label: "Em andamento", color: "hsl(210, 70%, 50%)" },
+};
+```
 
-**4. `src/components/leads/ProposalFormNew.tsx`**
-- Alterar `portfolio_projects` de `string[]` para `{ id: string; nome: string; foto_url: string; legenda: string }[]` na interface
-- Na seção 7, buscar projetos da tabela `projects` via query (`id, name`) com `useQuery`
-- Renderizar lista de projetos com checkbox (máx 4 seleções) + campo de legenda opcional para cada selecionado
-- Manter a seção de portfólio de assets existente separada (ou substituir conforme a nova lógica)
-
-**5. `src/pages/LeadsProposals.tsx`**
-- Em `buildPageProps`: mapear `portfolioCards` a partir de `formData.portfolio_projects`
-- No payload de save/load: manter `portfolio_projects` como JSONB (já é jsonb no banco, compatível com objetos)
-
-### Compatibilidade
-O campo `portfolio_projects` no banco já é `jsonb` com default `'[]'`. A mudança de `string[]` para `object[]` é compatível sem migration.
+**4. Renderizar seção no JSX**
+Inserir antes do "Resumo Financeiro" (linha ~454):
+- Titulo "Métricas Comerciais"
+- Grid 4 KPI cards: Leads no Mês, Taxa de Conversão, Ticket Médio, Propostas Aguardando
+- Card com gráfico de barras empilhado (Recharts `BarChart` com `stackId`)
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| `shared.tsx` | Nova prop `portfolioCards` |
-| `PortfolioCardsPage.tsx` | Novo componente de página |
-| `ProposalPageRenderer.tsx` | Inserir página condicional |
-| `ProposalFormNew.tsx` | Seção de seleção de projetos com legenda |
-| `LeadsProposals.tsx` | Mapear e persistir dados |
+| `src/pages/DashboardEscritorio.tsx` | Expandir queries, adicionar computações e seção de métricas comerciais |
 
