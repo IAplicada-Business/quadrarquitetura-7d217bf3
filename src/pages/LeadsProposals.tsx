@@ -331,6 +331,8 @@ export default function LeadsProposals() {
       timeline_budget: p.timeline_budget ?? 7,
       timeline_priorities: p.timeline_priorities ?? 7,
       timeline_construction: p.timeline_construction ?? 25,
+      timeline_mobilization: (p as any).timeline_mobilization ?? null,
+      timeline_fiscalization: (p as any).timeline_fiscalization ?? null,
       price_full: p.price_full || p.value,
       price_cash: p.price_cash,
       discount_cash_percent: p.price_full && p.price_cash && p.price_cash < p.price_full
