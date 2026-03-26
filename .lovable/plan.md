@@ -1,40 +1,19 @@
 
 
-## Adicionar campo "Orçamento Executivo (dias)" ao formulário e PDF
+## Fix ValuesPage clipping in 16:9 format
 
-### Resumo
-Adicionar `timeline_budget` (integer, default 7) ao formulário, interface, banco, página PDF e mapeamento de dados.
+### Root Cause
+The `PageContainer` scales the 595×842 content to 1280×720 using `transform: scale()` with `overflow: hidden`. The grid container has `maxWidth: 480` which constrains the boxes. Combined with the vertical compression (scaleY ≈ 0.855), the boxes get clipped.
 
-### Edições
+### Edit
 
-**1. Migration — nova coluna**
-```sql
-ALTER TABLE public.proposals ADD COLUMN IF NOT EXISTS timeline_budget integer DEFAULT 7;
-```
-
-**2. `src/components/leads/proposal-pages/shared.tsx`**
-- Adicionar `timelineBudget?: number` ao `ProposalPageProps`
-
-**3. `src/components/leads/ProposalFormNew.tsx`**
-- Adicionar `timeline_budget: number` ao `ProposalFormData` (default 7)
-- Adicionar campo "Orçamento executivo (dias)" na seção de Prazos, entre "Estudo preliminar" e "Reunião de prioridades"
-
-**4. `src/components/leads/proposal-pages/ScopeFlowPage.tsx`**
-- No `ALL_FLOW_STEPS`, alterar "Orçamento Executivo" de `daysKey: null` para `daysKey: "budget"`
-- Adicionar `budget: timelineBudget` ao `daysMap`
-
-**5. `src/pages/LeadsProposals.tsx`**
-- Em `buildPageProps`: mapear `timelineBudget: formData.timeline_budget`
-- No `handleSave`: incluir `timeline_budget` no payload de insert/update
-- Na edição: carregar `timeline_budget` do registro existente
-
-### Arquivos
+**`src/components/leads/proposal-pages/ValuesPage.tsx`** (single file change)
+- Replace the grid container (lines 54-61) with `display: flex; flexDirection: row; gap: 32; width: "100%"` — remove `maxWidth: 480` and `gridTemplateColumns`
+- Each box gets `flex: 1` instead of being sized by grid
+- Reduce vertical padding from `60px` to `40px` to give more breathing room in the compressed vertical space
+- Keep A4 format unchanged since flex row works for both
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | Nova coluna `timeline_budget` |
-| `shared.tsx` | Adicionar prop `timelineBudget` |
-| `ProposalFormNew.tsx` | Novo campo no form + interface |
-| `ScopeFlowPage.tsx` | Conectar daysKey "budget" |
-| `LeadsProposals.tsx` | Mapear e persistir o campo |
+| `src/components/leads/proposal-pages/ValuesPage.tsx` | Replace grid with flex row, remove maxWidth, add flex:1 to boxes |
 
