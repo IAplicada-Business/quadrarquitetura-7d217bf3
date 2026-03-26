@@ -88,7 +88,9 @@ export default function LeadsProposals() {
       timelineMobilization: formData.timeline_mobilization ?? undefined,
       timelineFiscalization: formData.timeline_fiscalization ?? undefined,
       priceFull: formData.price_full,
-      priceCash: formData.price_cash,
+      priceCash: formData.price_full && formData.discount_cash_percent
+        ? formData.price_full * (1 - formData.discount_cash_percent / 100)
+        : null,
       installmentsCount: formData.installments_count,
       installmentEntry: formData.installment_entry,
       installmentValue: formData.installment_value,
@@ -137,7 +139,7 @@ export default function LeadsProposals() {
       timeline_mobilization: formData.timeline_mobilization,
       timeline_fiscalization: formData.timeline_fiscalization,
       price_full: formData.price_full,
-      price_cash: formData.price_cash,
+      discount_percent: formData.discount_cash_percent,
       installments_count: formData.installments_count,
       installment_entry: formData.installment_entry,
       installment_value: formData.installment_value,
@@ -148,7 +150,9 @@ export default function LeadsProposals() {
       total_area: formData.total_area,
       etapas_ativas: formData.etapas_ativas,
       value: formData.price_full,
-      final_value: formData.price_cash || formData.price_full,
+      final_value: formData.price_full && formData.discount_cash_percent
+        ? formData.price_full * (1 - formData.discount_cash_percent / 100)
+        : formData.price_full,
       status,
     };
 
@@ -338,10 +342,7 @@ export default function LeadsProposals() {
       timeline_mobilization: (p as any).timeline_mobilization ?? null,
       timeline_fiscalization: (p as any).timeline_fiscalization ?? null,
       price_full: p.price_full || p.value,
-      price_cash: p.price_cash,
-      discount_cash_percent: p.price_full && p.price_cash && p.price_cash < p.price_full
-        ? Math.round((1 - p.price_cash / p.price_full) * 100)
-        : null,
+      discount_cash_percent: p.discount_percent ?? null,
       installments_count: p.installments_count,
       installment_entry: p.installment_entry,
       installment_value: p.installment_value,

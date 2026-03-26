@@ -1,0 +1,1 @@
+ALTER TABLE public.proposals DROP COLUMN IF EXISTS price_cash;

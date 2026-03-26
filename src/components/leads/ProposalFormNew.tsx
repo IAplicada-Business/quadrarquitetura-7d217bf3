@@ -28,7 +28,6 @@ export interface ProposalFormData {
   timeline_mobilization: number | null;
   timeline_fiscalization: number | null;
   price_full: number | null;
-  price_cash: number | null;
   discount_cash_percent: number | null;
   installments_count: number | null;
   installment_entry: number | null;
@@ -108,7 +107,6 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
     timeline_mobilization: initialData?.timeline_mobilization ?? null,
     timeline_fiscalization: initialData?.timeline_fiscalization ?? null,
     price_full: initialData?.price_full ?? null,
-    price_cash: initialData?.price_cash ?? null,
     discount_cash_percent: initialData?.discount_cash_percent ?? null,
     installments_count: initialData?.installments_count ?? null,
     installment_entry: initialData?.installment_entry ?? null,
@@ -482,17 +480,17 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
 
       {/* Section 6: Actions */}
       <div className="flex gap-3 justify-end sticky bottom-0 bg-background py-4 border-t">
-        <Button variant="outline" onClick={() => onSave({ ...data, price_cash: calcPriceCash ?? data.price_cash, installment_value: calcInstallmentValue ?? data.installment_value }, "rascunho")} disabled={saving}>
+        <Button variant="outline" onClick={() => onSave({ ...data, installment_value: calcInstallmentValue ?? data.installment_value }, "rascunho")} disabled={saving}>
           <Save className="h-4 w-4 mr-1" /> Salvar Rascunho
         </Button>
-        <Button variant="secondary" onClick={() => onPreview({ ...data, price_cash: calcPriceCash ?? data.price_cash, installment_value: calcInstallmentValue ?? data.installment_value })}>
+        <Button variant="secondary" onClick={() => onPreview({ ...data, installment_value: calcInstallmentValue ?? data.installment_value })}>
           <Eye className="h-4 w-4 mr-1" /> Preview
         </Button>
-        <Button onClick={() => onGeneratePdf({ ...data, price_cash: calcPriceCash ?? data.price_cash, installment_value: calcInstallmentValue ?? data.installment_value })} disabled={saving}>
+        <Button onClick={() => onGeneratePdf({ ...data, installment_value: calcInstallmentValue ?? data.installment_value })} disabled={saving}>
           <FileText className="h-4 w-4 mr-1" /> Gerar PDF
         </Button>
         {onGeneratePdfApresentacao && (
-          <Button variant="secondary" onClick={() => onGeneratePdfApresentacao({ ...data, price_cash: calcPriceCash ?? data.price_cash, installment_value: calcInstallmentValue ?? data.installment_value })} disabled={saving}>
+          <Button variant="secondary" onClick={() => onGeneratePdfApresentacao({ ...data, installment_value: calcInstallmentValue ?? data.installment_value })} disabled={saving}>
             <Monitor className="h-4 w-4 mr-1" /> Gerar Apresentação (16:9)
           </Button>
         )}
