@@ -54,6 +54,7 @@ export interface ProposalPageProps {
   ambientes?: string[];
   totalArea?: number | null;
   etapasAtivas?: string[];
+  portfolioCards?: { id: string; nome: string; foto_url: string; legenda?: string }[];
   pageWidth?: number;
   pageHeight?: number;
 }
