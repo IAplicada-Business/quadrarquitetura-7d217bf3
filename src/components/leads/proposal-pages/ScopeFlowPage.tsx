@@ -147,7 +147,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
                 <div
                   style={{
                     position: "absolute",
-                    top: 18,
+                    top: compact ? 15 : 18,
                     left: -2,
                     width: "50%",
                     height: 1,
@@ -160,7 +160,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
                 <div
                   style={{
                     position: "absolute",
-                    top: 18,
+                    top: compact ? 15 : 18,
                     right: -2,
                     width: "50%",
                     height: 1,
