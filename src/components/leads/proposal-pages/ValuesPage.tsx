@@ -13,9 +13,9 @@ export function ProposalValuesPage(props: ProposalPageProps) {
       ? `${installmentsCount}x de ${formatBRL(installmentValue)}`
       : "Boleto ou Pix";
   const paymentSub =
-    installmentsCount && installmentEntry
+    installmentsCount && installmentEntry && installmentEntry > 0
       ? `Entrada: ${formatBRL(installmentEntry)}`
-      : "Parcelamento disponível";
+      : installmentsCount ? "" : "Parcelamento disponível";
 
   return (
     <PageContainer bg={COLORS.azulMarinho} pageWidth={props.pageWidth} pageHeight={props.pageHeight}>
