@@ -1626,6 +1626,8 @@ export type Database = {
           timeline_briefing: number | null
           timeline_budget: number | null
           timeline_construction: number | null
+          timeline_fiscalization: number | null
+          timeline_mobilization: number | null
           timeline_priorities: number | null
           timeline_study: number | null
           title: string | null
@@ -1682,6 +1684,8 @@ export type Database = {
           timeline_briefing?: number | null
           timeline_budget?: number | null
           timeline_construction?: number | null
+          timeline_fiscalization?: number | null
+          timeline_mobilization?: number | null
           timeline_priorities?: number | null
           timeline_study?: number | null
           title?: string | null
@@ -1738,6 +1742,8 @@ export type Database = {
           timeline_briefing?: number | null
           timeline_budget?: number | null
           timeline_construction?: number | null
+          timeline_fiscalization?: number | null
+          timeline_mobilization?: number | null
           timeline_priorities?: number | null
           timeline_study?: number | null
           title?: string | null

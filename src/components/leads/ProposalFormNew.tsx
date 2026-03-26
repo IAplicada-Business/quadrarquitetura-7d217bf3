@@ -22,6 +22,8 @@ export interface ProposalFormData {
   timeline_budget: number;
   timeline_priorities: number;
   timeline_construction: number;
+  timeline_mobilization: number | null;
+  timeline_fiscalization: number | null;
   price_full: number | null;
   price_cash: number | null;
   discount_cash_percent: number | null;
@@ -75,6 +77,8 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
     timeline_budget: initialData?.timeline_budget ?? 7,
     timeline_priorities: initialData?.timeline_priorities ?? 7,
     timeline_construction: initialData?.timeline_construction ?? 25,
+    timeline_mobilization: initialData?.timeline_mobilization ?? null,
+    timeline_fiscalization: initialData?.timeline_fiscalization ?? null,
     price_full: initialData?.price_full ?? null,
     price_cash: initialData?.price_cash ?? null,
     discount_cash_percent: initialData?.discount_cash_percent ?? null,
@@ -280,8 +284,16 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
             <Input type="number" value={data.timeline_priorities} onChange={e => set("timeline_priorities", Number(e.target.value))} />
           </div>
           <div className="space-y-1.5">
+            <Label>Mobilização de obra (dias)</Label>
+            <Input type="number" value={data.timeline_mobilization ?? ""} onChange={e => set("timeline_mobilization", e.target.value ? Number(e.target.value) : null)} />
+          </div>
+          <div className="space-y-1.5">
             <Label>Obra (dias trabalhados)</Label>
             <Input type="number" value={data.timeline_construction} onChange={e => set("timeline_construction", Number(e.target.value))} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Conferência e fiscalização (dias)</Label>
+            <Input type="number" value={data.timeline_fiscalization ?? ""} onChange={e => set("timeline_fiscalization", e.target.value ? Number(e.target.value) : null)} />
           </div>
         </CardContent>
       </Card>

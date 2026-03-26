@@ -33,6 +33,8 @@ export interface ProposalPageProps {
   timelinePriorities?: number;
   timelineBudget?: number;
   timelineConstruction?: number;
+  timelineMobilization?: number;
+  timelineFiscalization?: number;
   priceFull?: number | null;
   priceCash?: number | null;
   installmentsCount?: number | null;
