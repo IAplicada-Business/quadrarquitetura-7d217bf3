@@ -18,7 +18,7 @@ export function ProposalValuesPage(props: ProposalPageProps) {
       : "Parcelamento disponível";
 
   return (
-    <PageContainer bg={COLORS.azulMarinho}>
+    <PageContainer bg={COLORS.azulMarinho} pageWidth={props.pageWidth} pageHeight={props.pageHeight}>
       <div style={{
         padding: "60px 52px",
         height: "100%",

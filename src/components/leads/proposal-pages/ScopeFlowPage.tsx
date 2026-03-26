@@ -44,7 +44,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
   const compact = stepCount > 5;
 
   return (
-    <PageContainer bg={COLORS.begeClaro}>
+    <PageContainer bg={COLORS.begeClaro} pageWidth={props.pageWidth} pageHeight={props.pageHeight}>
       <div style={{ padding: "52px 52px 44px", height: "100%", display: "flex", flexDirection: "column" }}>
         {/* Scope section */}
         <div style={{ marginBottom: 40 }}>

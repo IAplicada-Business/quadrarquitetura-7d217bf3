@@ -1,8 +1,8 @@
 import { PageContainer, COLORS, FONT_TITLE, type ProposalPageProps } from "./shared";
 
-export function ProposalContactPage({ contactInstagram, contactPhone1, contactPhone2 }: ProposalPageProps) {
+export function ProposalContactPage({ contactInstagram, contactPhone1, contactPhone2, pageWidth, pageHeight }: ProposalPageProps) {
   return (
-    <PageContainer bg={COLORS.roseMauve}>
+    <PageContainer bg={COLORS.roseMauve} pageWidth={pageWidth} pageHeight={pageHeight}>
       <div
         style={{
           display: "flex",
