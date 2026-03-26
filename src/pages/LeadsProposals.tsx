@@ -103,7 +103,7 @@ export default function LeadsProposals() {
     };
   }, [logos, founderPhotos, texts, contacts]);
 
-  const buildPages = useCallback((formData: ProposalFormData) => {
+  const buildPages = useCallback((formData: ProposalFormData, formato: "a4" | "apresentacao" = "a4") => {
     const pageProps = buildPageProps(formData);
     return buildProposalPages({
       data: pageProps,
@@ -111,6 +111,7 @@ export default function LeadsProposals() {
       feedbackImages: feedbacks,
       selectedPortfolioProjects: formData.portfolio_projects,
       selectedFeedbackIds: formData.feedback_items,
+      formato,
     });
   }, [buildPageProps, portfolio, feedbacks]);
 
