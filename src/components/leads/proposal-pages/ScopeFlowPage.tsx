@@ -172,15 +172,15 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
               {/* Circle */}
               <div
                 style={{
-                  width: 36,
-                  height: 36,
+                  width: compact ? 30 : 36,
+                  height: compact ? 30 : 36,
                   borderRadius: "50%",
                   margin: "0 auto 10px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontFamily: FONT_TITLE,
-                  fontSize: 16,
+                  fontSize: compact ? 13 : 16,
                   fontWeight: 700,
                   position: "relative",
                   zIndex: 1,
