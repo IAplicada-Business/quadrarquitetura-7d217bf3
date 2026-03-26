@@ -302,8 +302,8 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
                   <Label>{item.label}</Label>
                   <Input
                     type="number"
-                    value={isNullable ? (data[item.field] ?? "") : data[item.field]}
-                    onChange={e => set(item.field, isNullable && !e.target.value ? null : Number(e.target.value))}
+                    value={isNullable ? ((data[item.field] as number | null) ?? "") : (data[item.field] as number)}
+                    onChange={e => set(item.field, isNullable && !e.target.value ? null : Number(e.target.value) as any)}
                   />
                 </div>
               );
