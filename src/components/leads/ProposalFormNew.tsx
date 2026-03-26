@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useProposalAssets } from "@/hooks/useProposalAssets";
 import { useLeads } from "@/hooks/useLeads";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { Eye, FileText, Save, Monitor } from "lucide-react";
 
 export interface ProposalFormData {
@@ -32,6 +34,7 @@ export interface ProposalFormData {
   installment_value: number | null;
   price_note: string;
   portfolio_projects: string[];
+  portfolio_cards: { id: string; nome: string; foto_url: string; legenda: string }[];
   feedback_items: string[];
   ambientes: string[];
   total_area: number | null;
@@ -74,6 +77,19 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
   const { leads } = useLeads();
   const { portfolio, feedbacks } = useProposalAssets();
 
+  // Fetch user's projects for portfolio cards
+  const { data: userProjects = [] } = useQuery({
+    queryKey: ["projects-for-portfolio"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const [data, setData] = useState<ProposalFormData>({
     lead_id: initialData?.lead_id || "",
     client_name: initialData?.client_name || "",
@@ -96,6 +112,7 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
     installment_value: initialData?.installment_value ?? null,
     price_note: initialData?.price_note || DEFAULT_PRICE_NOTE,
     portfolio_projects: initialData?.portfolio_projects || [],
+    portfolio_cards: initialData?.portfolio_cards || [],
     feedback_items: initialData?.feedback_items || [],
     ambientes: initialData?.ambientes || [],
     total_area: initialData?.total_area ?? null,
