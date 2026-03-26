@@ -1,50 +1,55 @@
 
 
-## Corrigir cálculo e separar Valores em página independente
+## Formato 16:9 para apresentação
 
-### Problema 1 — Cálculo
-Atualmente `priceFull` e `priceCash` são campos independentes no formulário. O usuário digita ambos manualmente. A correção: `priceCash` deve ser calculado automaticamente como `priceFull * (1 - desconto/100)`. Precisa adicionar um campo `discount_percent` ao formulário e calcular `priceCash` derivado.
-
-Porém, olhando o formulário, já existem `price_full` e `price_cash` como campos separados. A correção mais simples: substituir o campo `price_cash` por um campo "Desconto à vista (%)" e calcular o valor à vista automaticamente.
-
-### Problema 2 — Separação de páginas
-Remover a seção de valores do `WhyHireValuesPage` (que passa a ser só `WhyHirePage`) e criar um novo componente `ValuesPage` como página independente.
+### Contexto
+A geração de PDF é client-side com html2canvas + jsPDF. Não há Edge Function envolvida. A solução requer que os componentes de página aceitem dimensões variáveis e que o `generateProposalPdf` suporte modo landscape.
 
 ### Edições
 
-**1. `src/components/leads/ProposalFormNew.tsx`**
-- Substituir o campo `price_cash` por `discount_cash_percent` (número, 0-100)
-- Calcular `price_cash` derivado: `price_full * (1 - discount/100)` e passá-lo no formData
-- Exibir o valor à vista calculado como texto informativo abaixo do campo de desconto
+**1. `src/components/leads/proposal-pages/shared.tsx`**
+- Adicionar constantes `PAGE_W_16_9 = 1280` e `PAGE_H_16_9 = 720`
+- Atualizar `PageContainer` para aceitar props opcionais `width` e `height` (default: PAGE_W, PAGE_H)
 
-**2. `src/components/leads/proposal-pages/WhyHireValuesPage.tsx` → renomear para `WhyHirePage.tsx` (já existe, reutilizar)**
-- Remover toda a seção de valores (linhas 109-196) do componente atual
-- Manter apenas os 4 cards "Por que contratar"
-- Renomear export para `ProposalWhyHirePage`
+**2. `src/lib/generateProposalPdf.ts`**
+- Adicionar parâmetro `formato?: "a4" | "apresentacao"` à função
+- Quando `"apresentacao"`: usar orientação landscape, dimensões 1280×720 no html2canvas e PDF em pontos proporcionais (960×540pt ou similar ratio)
+- Default continua A4 portrait
 
-**3. Novo `src/components/leads/proposal-pages/ValuesPage.tsx`** (já existe no codebase mas não está em uso)
-- Redesign com as specs solicitadas:
-  - Fundo azul `#1B2A4A`
-  - Título "VALORES" — Cormorant Garamond, 52px, letter-spacing 8px, cor `#F0DCC8`
-  - Linha divisória `#C4756E`, 48px, centralizada
-  - Dois boxes lado a lado com padding generoso, valor principal em Cormorant Garamond 36px
-  - Nota de rodapé em itálico, opacity 0.5
+**3. `src/components/leads/ProposalFormNew.tsx`**
+- Adicionar segundo callback `onGeneratePdfApresentacao` ao interface
+- Novo botão "Gerar Apresentação (16:9)" ao lado do botão existente, com ícone diferente (ex: Monitor)
 
-**4. `src/components/leads/ProposalPageRenderer.tsx`**
-- Importar `ProposalWhyHirePage` (sem valores) e `ProposalValuesPage`
-- Inserir ambas como páginas separadas: WhyHire → Values → Contact
-- Remover import do antigo `WhyHireValuesPage`
+**4. `src/pages/LeadsProposals.tsx`**
+- Nova função `handleGeneratePdf16x9` que:
+  - Chama `buildPages` com um flag/prop indicando formato 16:9
+  - Renderiza os componentes com dimensões 1280×720 (passando width/height ao PageContainer)
+  - Chama `generateProposalPdf` com `formato: "apresentacao"`
+- Passar `onGeneratePdfApresentacao` ao form
 
-**5. `src/pages/LeadsProposals.tsx`**
-- Ajustar `buildPageProps` para calcular `priceCash` a partir de `price_full` e `discount_cash_percent` se necessário
+**5. `src/components/leads/ProposalPageRenderer.tsx`**
+- `buildProposalPages` aceita parâmetro opcional `formato`
+- Passa `pageWidth` e `pageHeight` como props aos componentes de página
 
-### Arquivos
+**6. Componentes de página (CoverPage, AboutPage, ScopeFlowPage, etc.)**
+- Atualizar `PageContainer` usage para respeitar `width`/`height` das props
+- Como todos usam `PageContainer` centralmente, a maioria das páginas não precisa de mudanças manuais — o container se adapta
+- Fontes e espaçamentos escalam via `scale = width / PAGE_W` (~2.15× para 1280/595)
+
+### Abordagem de escala
+Em vez de alterar cada componente individualmente, usar CSS `transform: scale()` no PageContainer quando em modo 16:9. Renderizar o conteúdo nas dimensões originais (595×842) dentro de um container 1280×720 com `transform: scale(X) translate(...)` e `transformOrigin: "top left"`. Isso mantém todos os layouts e fontes proporcionais sem tocar em cada página.
+
+Alternativa mais simples: manter os componentes em 595×842 e usar `html2canvas` com `width: 1280, height: 720` + CSS transform no container wrapper. O html2canvas captura o resultado escalado.
+
+### Arquivos editados
 
 | Arquivo | Ação |
 |---|---|
-| `src/components/leads/ProposalFormNew.tsx` | Editar — campo de desconto % em vez de valor à vista manual |
-| `src/components/leads/proposal-pages/WhyHireValuesPage.tsx` | Editar — remover seção de valores, manter só "Por que contratar" |
-| `src/components/leads/proposal-pages/ValuesPage.tsx` | Editar — redesign com specs solicitadas |
-| `src/components/leads/ProposalPageRenderer.tsx` | Editar — adicionar ValuesPage como página separada |
-| `src/pages/LeadsProposals.tsx` | Editar — ajustar cálculo de priceCash |
+| `src/lib/generateProposalPdf.ts` | Adicionar suporte a formato landscape 16:9 |
+| `src/components/leads/proposal-pages/shared.tsx` | Constantes 16:9, PageContainer adaptável |
+| `src/components/leads/ProposalFormNew.tsx` | Novo botão "Gerar Apresentação" |
+| `src/pages/LeadsProposals.tsx` | Handler para gerar PDF 16:9 |
+| `src/components/leads/ProposalPageRenderer.tsx` | Aceitar formato e passar dimensões |
+
+Nenhuma rota ou funcionalidade existente será alterada.
 
