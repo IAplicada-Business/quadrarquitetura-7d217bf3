@@ -100,8 +100,9 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
 
   // Auto-calc installment value
   const calcInstallmentValue = useMemo(() => {
-    if (!data.price_full || !data.installments_count || !data.installment_entry || data.installments_count <= 1) return null;
-    return (data.price_full - data.installment_entry) / (data.installments_count - 1);
+    if (!data.price_full || !data.installments_count) return null;
+    const entry = data.installment_entry || 0;
+    return (data.price_full - entry) / data.installments_count;
   }, [data.price_full, data.installments_count, data.installment_entry]);
 
   // Auto-fill client name from lead
@@ -312,7 +313,12 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
             <div className="space-y-1.5">
               <Label>Valor parcela (R$)</Label>
               <Input type="number" value={calcInstallmentValue?.toFixed(2) ?? data.installment_value ?? ""} readOnly className="bg-muted" />
-              {calcInstallmentValue && <p className="text-xs text-muted-foreground">Calculado automaticamente</p>}
+              {calcInstallmentValue && data.installments_count && (
+                <p className="text-xs text-muted-foreground">
+                  Parcelas: {data.installments_count}x de R$ {calcInstallmentValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  {(data.installment_entry ?? 0) > 0 && ` | Entrada: R$ ${data.installment_entry!.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+                </p>
+              )}
             </div>
           </div>
           <div className="space-y-1.5">
