@@ -28,7 +28,6 @@ export interface ProposalFormData {
   timeline_mobilization: number | null;
   timeline_fiscalization: number | null;
   price_full: number | null;
-  price_cash: number | null;
   discount_cash_percent: number | null;
   installments_count: number | null;
   installment_entry: number | null;
@@ -108,7 +107,6 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
     timeline_mobilization: initialData?.timeline_mobilization ?? null,
     timeline_fiscalization: initialData?.timeline_fiscalization ?? null,
     price_full: initialData?.price_full ?? null,
-    price_cash: initialData?.price_cash ?? null,
     discount_cash_percent: initialData?.discount_cash_percent ?? null,
     installments_count: initialData?.installments_count ?? null,
     installment_entry: initialData?.installment_entry ?? null,

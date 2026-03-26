@@ -1608,7 +1608,6 @@ export type Database = {
           payment_method: string | null
           pdf_url: string | null
           portfolio_projects: Json | null
-          price_cash: number | null
           price_full: number | null
           price_note: string | null
           project_description: string | null
@@ -1667,7 +1666,6 @@ export type Database = {
           payment_method?: string | null
           pdf_url?: string | null
           portfolio_projects?: Json | null
-          price_cash?: number | null
           price_full?: number | null
           price_note?: string | null
           project_description?: string | null
@@ -1726,7 +1724,6 @@ export type Database = {
           payment_method?: string | null
           pdf_url?: string | null
           portfolio_projects?: Json | null
-          price_cash?: number | null
           price_full?: number | null
           price_note?: string | null
           project_description?: string | null
