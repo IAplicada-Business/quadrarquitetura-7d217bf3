@@ -287,8 +287,11 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
               <Input type="number" value={data.price_full ?? ""} onChange={e => set("price_full", e.target.value ? Number(e.target.value) : null)} />
             </div>
             <div className="space-y-1.5">
-              <Label>Valor à vista (R$)</Label>
-              <Input type="number" value={data.price_cash ?? ""} onChange={e => set("price_cash", e.target.value ? Number(e.target.value) : null)} />
+              <Label>Desconto à vista (%)</Label>
+              <Input type="number" value={data.discount_cash_percent ?? ""} onChange={e => set("discount_cash_percent", e.target.value ? Number(e.target.value) : null)} placeholder="Ex: 10" />
+              {calcPriceCash != null && (
+                <p className="text-xs text-muted-foreground">Valor à vista: {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(calcPriceCash)}</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Nº de parcelas</Label>
@@ -367,13 +370,13 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
 
       {/* Section 6: Actions */}
       <div className="flex gap-3 justify-end sticky bottom-0 bg-background py-4 border-t">
-        <Button variant="outline" onClick={() => onSave({ ...data, installment_value: calcInstallmentValue ?? data.installment_value }, "rascunho")} disabled={saving}>
+        <Button variant="outline" onClick={() => onSave({ ...data, price_cash: calcPriceCash ?? data.price_cash, installment_value: calcInstallmentValue ?? data.installment_value }, "rascunho")} disabled={saving}>
           <Save className="h-4 w-4 mr-1" /> Salvar Rascunho
         </Button>
-        <Button variant="secondary" onClick={() => onPreview({ ...data, installment_value: calcInstallmentValue ?? data.installment_value })}>
+        <Button variant="secondary" onClick={() => onPreview({ ...data, price_cash: calcPriceCash ?? data.price_cash, installment_value: calcInstallmentValue ?? data.installment_value })}>
           <Eye className="h-4 w-4 mr-1" /> Preview
         </Button>
-        <Button onClick={() => onGeneratePdf({ ...data, installment_value: calcInstallmentValue ?? data.installment_value })} disabled={saving}>
+        <Button onClick={() => onGeneratePdf({ ...data, price_cash: calcPriceCash ?? data.price_cash, installment_value: calcInstallmentValue ?? data.installment_value })} disabled={saving}>
           <FileText className="h-4 w-4 mr-1" /> Gerar PDF
         </Button>
       </div>
