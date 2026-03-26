@@ -1,27 +1,42 @@
 
 
-## Corrigir cálculo da Entrada em Formas de Pagamento
+## Vincular prazos de Mobilização e Fiscalização ao fluxo do PDF
 
-### Problema
-A fórmula atual em `calcInstallmentValue` (linha 103-104) calcula `(price_full - installment_entry) / (installments_count - 1)`, dividindo por `parcelas - 1` (tratando a entrada como uma das parcelas). O correto é `(price_full - installment_entry) / installments_count`.
+### Resumo
+Adicionar 2 novas colunas no banco (`timeline_mobilization`, `timeline_fiscalization`), 2 campos no formulário, e mapear no `ScopeFlowPage` para que os badges de dias apareçam nessas etapas.
 
 ### Edições
 
-**1. `src/components/leads/ProposalFormNew.tsx`**
-- Corrigir `calcInstallmentValue`: `(price_full - (installment_entry || 0)) / installments_count`
-- Remover a condição `installments_count <= 1` — permitir 1 parcela
-- Não exigir `installment_entry` para calcular (se vazio, tratar como 0)
-- Adicionar preview calculado abaixo dos campos: `"Parcelas: [n]x de R$ [valor]"` quando os valores existirem
-- Se `installment_entry` for 0 ou null, não exibir texto de entrada no preview
+**1. Migration SQL**
+```sql
+ALTER TABLE public.proposals ADD COLUMN IF NOT EXISTS timeline_mobilization integer DEFAULT NULL;
+ALTER TABLE public.proposals ADD COLUMN IF NOT EXISTS timeline_fiscalization integer DEFAULT NULL;
+```
 
-**2. `src/components/leads/proposal-pages/ValuesPage.tsx`**
-- A lógica de exibição já está correta: mostra `installmentsCount x installmentValue` e `Entrada: installmentEntry` condicionalmente
-- Apenas garantir que `installmentEntry` de 0 ou null não exibe a linha "Entrada"
+**2. `src/components/leads/proposal-pages/shared.tsx`**
+- Adicionar `timelineMobilization?: number` e `timelineFiscalization?: number` ao `ProposalPageProps`
+
+**3. `src/components/leads/proposal-pages/ScopeFlowPage.tsx`**
+- Alterar `ALL_FLOW_STEPS`: Mobilização recebe `daysKey: "mobilization"`, Conferência recebe `daysKey: "fiscalization"`
+- No `daysMap`, adicionar `mobilization: timelineMobilization` e `fiscalization: timelineFiscalization`
+- Receber `timelineMobilization` e `timelineFiscalization` nas props destructured
+
+**4. `src/components/leads/ProposalFormNew.tsx`**
+- Adicionar `timeline_mobilization` e `timeline_fiscalization` à interface e ao state (default `null`)
+- Na seção "5. Prazos", adicionar 2 campos: "Mobilização de obra (dias)" e "Conferência e fiscalização (dias trabalhados)"
+
+**5. `src/pages/LeadsProposals.tsx`**
+- Em `buildPageProps`: mapear `timelineMobilization` e `timelineFiscalization`
+- No payload de save: incluir `timeline_mobilization` e `timeline_fiscalization`
+- Na carga de dados existentes: carregar ambos campos com default `null`
 
 ### Arquivos
 
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---|---|
-| `src/components/leads/ProposalFormNew.tsx` | Corrigir fórmula de parcela, adicionar preview calculado |
-| `src/components/leads/proposal-pages/ValuesPage.tsx` | Garantir que entrada 0 não exibe linha |
+| Migration SQL | 2 novas colunas |
+| `shared.tsx` | 2 props novas |
+| `ScopeFlowPage.tsx` | daysKey para mobilização e fiscalização |
+| `ProposalFormNew.tsx` | 2 campos no formulário |
+| `LeadsProposals.tsx` | Mapear e persistir |
 
