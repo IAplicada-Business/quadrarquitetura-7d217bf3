@@ -185,6 +185,7 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
           <div className="space-y-1.5">
             <Label>Descrição do escopo</Label>
             <Textarea value={data.scope_description} onChange={e => set("scope_description", e.target.value)} rows={5} />
+            <p className="text-xs text-muted-foreground">Use **texto** para <strong>negrito</strong>.</p>
           </div>
           <div className="space-y-1.5">
             <Label>Serviços inclusos</Label>
