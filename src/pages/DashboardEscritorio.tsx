@@ -231,6 +231,30 @@ export default function DashboardEscritorio() {
       color: [ROSA.fill1, ROSA.fill2, ROSA.fill3, "hsl(152, 60%, 40%)"][i % 4],
     }));
 
+    // ── Métricas Comerciais ──
+    const leadsNoMes = leads.filter((l) => l.created_at && l.created_at.slice(0, 7) === format(today, "yyyy-MM")).length;
+    const totalLeads = leads.length;
+    const leadsConvertidos = leads.filter((l) => l.status === "fechado").length;
+    const taxaConversao = totalLeads > 0 ? Math.round((leadsConvertidos / totalLeads) * 100) : 0;
+
+    const proposalsMesAtual = allProposals.filter((p) => p.created_at && p.created_at.slice(0, 7) === format(today, "yyyy-MM") && p.price_full);
+    const ticketMedio = proposalsMesAtual.length > 0 ? proposalsMesAtual.reduce((s, p) => s + (p.price_full ?? 0), 0) / proposalsMesAtual.length : 0;
+
+    const propostasAguardando = allProposals.filter((p) => p.status === "enviada").length;
+
+    // Gráfico leads 6 meses empilhado
+    const leadsChartData = monthLabels.map((label, i) => {
+      const m = subMonths(today, 5 - i);
+      const ms = format(startOfMonth(m), "yyyy-MM");
+      const monthLeads = leads.filter((l) => l.created_at?.startsWith(ms));
+      return {
+        month: label.charAt(0).toUpperCase() + label.slice(1),
+        convertido: monthLeads.filter((l) => l.status === "fechado").length,
+        perdido: monthLeads.filter((l) => l.status === "perdido").length,
+        em_andamento: monthLeads.filter((l) => l.status !== "fechado" && l.status !== "perdido").length,
+      };
+    });
+
     return {
       activeProjects: activeProjects.length,
       pagoMesAtual,
@@ -245,8 +269,13 @@ export default function DashboardEscritorio() {
       budgetStatusData,
       receitaDespesaData,
       leadsDoMes,
+      leadsNoMes,
+      taxaConversao,
+      ticketMedio,
+      propostasAguardando,
+      leadsChartData,
     };
-  }, [projects, payments, budgetQuotes, leads, monthStart, monthEnd, weekStart, weekEnd, todayStr, today]);
+  }, [projects, payments, budgetQuotes, leads, allProposals, monthStart, monthEnd, weekStart, weekEnd, todayStr, today]);
 
   const stats = [
     { label: "Fluxo de Caixa", value: fmt(computed.pagoMesAtual), icon: TrendingUp, description: "recebido este mês" },
