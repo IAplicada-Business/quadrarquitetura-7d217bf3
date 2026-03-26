@@ -495,6 +495,93 @@ export default function DashboardEscritorio() {
         </Card>
       </div>
 
+      {/* ── Métricas Comerciais ── */}
+      <div>
+        <h2 className="text-xl font-bold font-display mb-1">Métricas Comerciais</h2>
+        <p className="text-muted-foreground text-sm mb-4">Indicadores de desempenho comercial</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(210, 70%, 50%)" }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Leads no Mês</CardTitle>
+            <UserPlus className="h-5 w-5" style={{ color: "hsl(210, 70%, 50%)" }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: "hsl(210, 50%, 35%)" }}>{computed.leadsNoMes}</p>
+            <p className="text-xs text-muted-foreground mt-1">novos leads este mês</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(152, 60%, 40%)" }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Taxa de Conversão</CardTitle>
+            <ArrowUpRight className="h-5 w-5" style={{ color: "hsl(152, 60%, 40%)" }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: "hsl(152, 40%, 30%)" }}>{computed.taxaConversao}%</p>
+            <p className="text-xs text-muted-foreground mt-1">leads convertidos / total</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: ROSA.destaque }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Ticket Médio</CardTitle>
+            <TrendingUp className="h-5 w-5" style={{ color: ROSA.destaque }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: ROSA.textoDestaque }}>{fmt(computed.ticketMedio)}</p>
+            <p className="text-xs text-muted-foreground mt-1">propostas do mês</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(35, 80%, 50%)" }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Aguardando Resposta</CardTitle>
+            <Send className="h-5 w-5" style={{ color: "hsl(35, 80%, 50%)" }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: "hsl(35, 60%, 35%)" }}>{computed.propostasAguardando}</p>
+            <p className="text-xs text-muted-foreground mt-1">propostas enviadas</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Gráfico Leads por Status — Últimos 6 meses */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-display">Leads por Status</CardTitle>
+          <CardDescription>Últimos 6 meses — empilhado</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={leadsMetricasConfig} className="h-[280px] w-full">
+            <BarChart data={computed.leadsChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis dataKey="month" className="text-xs" />
+              <YAxis allowDecimals={false} className="text-xs" />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar dataKey="convertido" stackId="a" fill="hsl(152, 60%, 40%)" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="perdido" stackId="a" fill="hsl(0, 70%, 50%)" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="em_andamento" stackId="a" fill="hsl(210, 70%, 50%)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ChartContainer>
+          <div className="flex justify-center gap-6 mt-4">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "hsl(152, 60%, 40%)" }} />
+              <span className="text-xs text-muted-foreground">Convertido</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "hsl(0, 70%, 50%)" }} />
+              <span className="text-xs text-muted-foreground">Perdido</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "hsl(210, 70%, 50%)" }} />
+              <span className="text-xs text-muted-foreground">Em andamento</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Resumo Financeiro */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card style={{ backgroundColor: ROSA.fundoSuave, borderColor: ROSA.fill3 }}>
