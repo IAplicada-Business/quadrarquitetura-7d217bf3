@@ -1,51 +1,27 @@
 
 
-## Melhorar qualidade do PDF — fontes, escala e imagens
+## Corrigir cálculo da Entrada em Formas de Pagamento
 
-### Problemas identificados
-
-1. **Sem preload de fontes**: O `html2canvas` captura o DOM offscreen, mas não há garantia de que Cormorant Garamond e Jost estejam carregadas. O delay de 500ms é um palpite — pode não ser suficiente.
-
-2. **Scale 2x pode ser insuficiente para texto fino**: No formato 16:9, o `transform: scale()` comprime texto verticalmente, e a captura a 2x pode gerar artefatos em fontes serifadas pequenas.
-
-3. **Imagens CORS**: `useCORS: true` + `allowTaint: true` são contraditórios — `allowTaint` desabilita a proteção CORS do canvas, o que pode causar falhas silenciosas em alguns browsers.
+### Problema
+A fórmula atual em `calcInstallmentValue` (linha 103-104) calcula `(price_full - installment_entry) / (installments_count - 1)`, dividindo por `parcelas - 1` (tratando a entrada como uma das parcelas). O correto é `(price_full - installment_entry) / installments_count`.
 
 ### Edições
 
-**1. `src/lib/generateProposalPdf.ts`**
-- Adicionar função `waitForFonts()` que usa `document.fonts.ready` + carrega explicitamente "Cormorant Garamond" e "Jost" via `document.fonts.load()`
-- Chamar `waitForFonts()` antes do loop de captura
-- Aumentar `scale` de 2 para 3 para melhor nitidez
-- Remover `allowTaint: true` (conflita com `useCORS`)
-- Usar PNG em vez de JPEG para texto mais nítido (troca `toDataURL("image/jpeg", 0.92)` por `toDataURL("image/png")`)
+**1. `src/components/leads/ProposalFormNew.tsx`**
+- Corrigir `calcInstallmentValue`: `(price_full - (installment_entry || 0)) / installments_count`
+- Remover a condição `installments_count <= 1` — permitir 1 parcela
+- Não exigir `installment_entry` para calcular (se vazio, tratar como 0)
+- Adicionar preview calculado abaixo dos campos: `"Parcelas: [n]x de R$ [valor]"` quando os valores existirem
+- Se `installment_entry` for 0 ou null, não exibir texto de entrada no preview
 
-**2. `src/pages/LeadsProposals.tsx`**
-- Substituir o `setTimeout(500ms)` fixo por chamada a `waitForFonts()` exportada + `document.fonts.ready`
-- Manter o wait de imagens existente
-
-### Detalhes técnicos da função `waitForFonts`
-
-```typescript
-async function waitForFonts() {
-  const fontFaces = [
-    "300 16px 'Cormorant Garamond'",
-    "400 16px 'Cormorant Garamond'",
-    "600 16px 'Cormorant Garamond'",
-    "700 16px 'Cormorant Garamond'",
-    "300 16px 'Jost'",
-    "400 16px 'Jost'",
-    "500 16px 'Jost'",
-    "600 16px 'Jost'",
-  ];
-  await Promise.all(fontFaces.map(f => document.fonts.load(f)));
-  await document.fonts.ready;
-}
-```
+**2. `src/components/leads/proposal-pages/ValuesPage.tsx`**
+- A lógica de exibição já está correta: mostra `installmentsCount x installmentValue` e `Entrada: installmentEntry` condicionalmente
+- Apenas garantir que `installmentEntry` de 0 ou null não exibe a linha "Entrada"
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| `src/lib/generateProposalPdf.ts` | Font preload, scale 3x, PNG, remover allowTaint |
-| `src/pages/LeadsProposals.tsx` | Substituir setTimeout por waitForFonts em ambos handlers |
+| `src/components/leads/ProposalFormNew.tsx` | Corrigir fórmula de parcela, adicionar preview calculado |
+| `src/components/leads/proposal-pages/ValuesPage.tsx` | Garantir que entrada 0 não exibe linha |
 
