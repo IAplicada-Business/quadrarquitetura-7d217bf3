@@ -1624,6 +1624,7 @@ export type Database = {
           template_id: string | null
           template_name: string | null
           timeline_briefing: number | null
+          timeline_budget: number | null
           timeline_construction: number | null
           timeline_priorities: number | null
           timeline_study: number | null
@@ -1679,6 +1680,7 @@ export type Database = {
           template_id?: string | null
           template_name?: string | null
           timeline_briefing?: number | null
+          timeline_budget?: number | null
           timeline_construction?: number | null
           timeline_priorities?: number | null
           timeline_study?: number | null
@@ -1734,6 +1736,7 @@ export type Database = {
           template_id?: string | null
           template_name?: string | null
           timeline_briefing?: number | null
+          timeline_budget?: number | null
           timeline_construction?: number | null
           timeline_priorities?: number | null
           timeline_study?: number | null
