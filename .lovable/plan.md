@@ -1,35 +1,34 @@
 
 
-## Controle de etapas visíveis na proposta
+## Adicionar página "Projeto de Interiores" condicional
 
 ### Resumo
-Adicionar campo `etapas_ativas` (array de strings) na tabela `proposals` e no formulário, com checkboxes para 7 etapas. Na Página 3 do PDF, renderizar apenas as etapas marcadas com grid dinâmico.
+Criar uma nova página que aparece entre Escopo/Processo (pág 3) e Gerenciamento (pág 4), apenas quando `servicesIncluded` for "ambos" ou "projeto". A página exibe 4 colunas com ícones SVG inline e descrições das etapas de interiores.
 
 ### Edições
 
-**1. Migration — nova coluna**
-```sql
-ALTER TABLE public.proposals ADD COLUMN IF NOT EXISTS etapas_ativas jsonb DEFAULT '["Briefing","Estudo Preliminar","Anteprojeto","Orçamento Executivo","Reunião de Prioridades","Mobilização de Obra","Conferência e Fiscalização de Obra"]'::jsonb;
-```
+**1. Novo arquivo `src/components/leads/proposal-pages/InterioresPage.tsx`**
+- Fundo: `COLORS.begeClaro` (#F5E0D0)
+- Título centralizado: "PROJETO DE INTERIORES" — Cormorant Garamond, 36px, bold, cor azulMarinho
+- Subtítulo: texto descritivo em Jost, 11px, uppercase, letter-spacing 1.5px, cor textoTituloVinho
+- Grid horizontal 4 colunas, cada uma com:
+  - Ícone SVG inline (outline, cor roseMauve, ~64px): Briefing (pessoas), Estudo Preliminar (planta), Anteprojeto (sofá/3D), Projeto Executivo (computador)
+  - Nome da etapa em bold uppercase
+  - Descrição em texto menor
+- Logo Quadra no canto inferior direito
 
-**2. `ProposalFormData` — `src/components/leads/ProposalFormNew.tsx`**
-- Adicionar `etapas_ativas: string[]` ao interface
-- Default: todas as 7 etapas
-- Nova seção "5. Etapas do Projeto" (entre Prazos e Valores, renumerando 5→6 e 6→7)
-- 7 checkboxes com label de cada etapa + botão "Selecionar todas"
+**2. `src/components/leads/ProposalPageRenderer.tsx`**
+- Importar `ProposalInterioresPage`
+- No `buildProposalPages`, inserir condicionalmente entre ScopeFlowPage e ManagementFullPage:
+  - Se `data.servicesIncluded === "ambos"` ou `data.servicesIncluded === "projeto"`, incluir a página
+  - Se `data.servicesIncluded === "gerenciamento"`, não incluir
 
-**3. `shared.tsx`**
-- Adicionar `etapasAtivas?: string[]` ao `ProposalPageProps`
+Nenhuma outra página, rota ou seção do formulário será alterada. O campo `services_included` já existe no formulário com valores "ambos", "projeto" e "gerenciamento".
 
-**4. `ScopeFlowPage.tsx`**
-- Substituir `FLOW_STEPS` fixo por mapeamento das 7 etapas possíveis (cada uma com título, descrição e campo de dias)
-- Filtrar apenas as que estão em `etapasAtivas`
-- Grid dinâmico: `gridTemplateColumns: repeat(N, 1fr)` onde N = número de etapas ativas
-- Renumerar círculos sequencialmente (1, 2, 3...)
-- Ajustar tamanho dos círculos e fontes quando N > 5 (compactar proporcionalmente)
+### Arquivos
 
-**5. `LeadsProposals.tsx`**
-- Passar `etapas_ativas` no payload de save
-- Passar `etapasAtivas` no `buildPageProps`
-- Carregar do banco ao editar
+| Arquivo | Ação |
+|---|---|
+| `src/components/leads/proposal-pages/InterioresPage.tsx` | Criar — nova página com grid de 4 colunas e ícones SVG |
+| `src/components/leads/ProposalPageRenderer.tsx` | Editar — inserir página condicionalmente |
 
