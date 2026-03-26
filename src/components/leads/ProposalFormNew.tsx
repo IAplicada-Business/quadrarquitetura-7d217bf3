@@ -74,6 +74,7 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
     timeline_construction: initialData?.timeline_construction ?? 25,
     price_full: initialData?.price_full ?? null,
     price_cash: initialData?.price_cash ?? null,
+    discount_cash_percent: initialData?.discount_cash_percent ?? null,
     installments_count: initialData?.installments_count ?? null,
     installment_entry: initialData?.installment_entry ?? null,
     installment_value: initialData?.installment_value ?? null,
@@ -87,6 +88,12 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
 
   const set = <K extends keyof ProposalFormData>(key: K, val: ProposalFormData[K]) =>
     setData(prev => ({ ...prev, [key]: val }));
+
+  // Auto-calc cash price from discount
+  const calcPriceCash = useMemo(() => {
+    if (!data.price_full || !data.discount_cash_percent) return null;
+    return data.price_full * (1 - data.discount_cash_percent / 100);
+  }, [data.price_full, data.discount_cash_percent]);
 
   // Auto-calc installment value
   const calcInstallmentValue = useMemo(() => {
