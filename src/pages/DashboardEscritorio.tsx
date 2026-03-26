@@ -69,6 +69,12 @@ const receitaDespesaConfig: ChartConfig = {
   despesa: { label: "Despesas", color: ROSA.fill3 },
 };
 
+const leadsMetricasConfig: ChartConfig = {
+  convertido: { label: "Convertido", color: "hsl(152, 60%, 40%)" },
+  perdido: { label: "Perdido", color: "hsl(0, 70%, 50%)" },
+  em_andamento: { label: "Em andamento", color: "hsl(210, 70%, 50%)" },
+};
+
 const propostaStatusConfig: Record<string, { label: string; color: string }> = {
   rascunho: { label: "Rascunho", color: ROSA.fill3 },
   enviada: { label: "Enviada", color: ROSA.fill2 },
