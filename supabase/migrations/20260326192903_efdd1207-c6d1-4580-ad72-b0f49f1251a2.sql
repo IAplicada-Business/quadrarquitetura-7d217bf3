@@ -1,0 +1,1 @@
+ALTER TABLE public.proposals ADD COLUMN IF NOT EXISTS etapas_ativas jsonb DEFAULT '["Briefing","Estudo Preliminar","Anteprojeto","Orçamento Executivo","Reunião de Prioridades","Mobilização de Obra","Conferência e Fiscalização de Obra"]'::jsonb;

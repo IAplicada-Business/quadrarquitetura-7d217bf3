@@ -31,7 +31,18 @@ export interface ProposalFormData {
   feedback_items: string[];
   ambientes: string[];
   total_area: number | null;
+  etapas_ativas: string[];
 }
+
+const ALL_ETAPAS = [
+  "Briefing",
+  "Estudo Preliminar",
+  "Anteprojeto",
+  "Orçamento Executivo",
+  "Reunião de Prioridades",
+  "Mobilização de Obra",
+  "Conferência e Fiscalização de Obra",
+];
 
 const DEFAULT_SCOPE = `Nosso papel será desenvolver o **projeto executivo** dos espaços definidos com todos os desenhos necessários para a realização da obra, considerando todas as ideias discutidas e aprovadas pelo cliente. Dando seguimento com **o gerenciamento**, que inclui a administração de todos os fornecedores envolvidos, cronograma, gestão de pagamentos, vistorias e conferências. Damos assistência no pós obra para garantir que tudo segue funcionando como entregue ou se necessário algum ajuste.`;
 
