@@ -29,6 +29,8 @@ export interface ProposalFormData {
   price_note: string;
   portfolio_projects: string[];
   feedback_items: string[];
+  ambientes: string[];
+  total_area: number | null;
 }
 
 const DEFAULT_SCOPE = `Nosso papel será desenvolver o **projeto executivo** dos espaços definidos com todos os desenhos necessários para a realização da obra, considerando todas as ideias discutidas e aprovadas pelo cliente. Dando seguimento com **o gerenciamento**, que inclui a administração de todos os fornecedores envolvidos, cronograma, gestão de pagamentos, vistorias e conferências. Damos assistência no pós obra para garantir que tudo segue funcionando como entregue ou se necessário algum ajuste.`;
@@ -66,6 +68,8 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
     price_note: initialData?.price_note || DEFAULT_PRICE_NOTE,
     portfolio_projects: initialData?.portfolio_projects || [],
     feedback_items: initialData?.feedback_items || [],
+    ambientes: initialData?.ambientes || [],
+    total_area: initialData?.total_area ?? null,
   });
 
   const set = <K extends keyof ProposalFormData>(key: K, val: ProposalFormData[K]) =>
@@ -175,9 +179,35 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
         </CardContent>
       </Card>
 
-      {/* Section 3: Timeline */}
+      {/* Section 3: Ambientes */}
       <Card>
-        <CardHeader><CardTitle className="text-base">3. Prazos</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">3. Ambientes</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Ambientes contemplados</Label>
+            <Textarea
+              value={data.ambientes.join("\n")}
+              onChange={e => set("ambientes", e.target.value.split("\n").filter(Boolean))}
+              rows={5}
+              placeholder="Digite os ambientes, um por linha&#10;Ex: Sala de estar&#10;Cozinha&#10;Suíte master"
+            />
+            <p className="text-xs text-muted-foreground">Um ambiente por linha</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Metragem total (m²)</Label>
+            <Input
+              type="number"
+              value={data.total_area ?? ""}
+              onChange={e => set("total_area", e.target.value ? Number(e.target.value) : null)}
+              placeholder="Ex: 180"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section 4: Timeline */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">4. Prazos</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="space-y-1.5">
             <Label>Briefing (dias)</Label>
@@ -198,9 +228,9 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
         </CardContent>
       </Card>
 
-      {/* Section 4: Values */}
+      {/* Section 5: Values */}
       <Card>
-        <CardHeader><CardTitle className="text-base">4. Valores</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">5. Valores</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="space-y-1.5">
@@ -232,10 +262,10 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
         </CardContent>
       </Card>
 
-      {/* Section 5: Portfolio & Feedbacks */}
+      {/* Section 6: Portfolio & Feedbacks */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">5. Portfólio e Feedbacks</CardTitle>
+          <CardTitle className="text-base">6. Portfólio e Feedbacks</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {portfolioGroups.size > 0 && (

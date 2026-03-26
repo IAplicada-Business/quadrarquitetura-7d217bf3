@@ -1579,6 +1579,7 @@ export type Database = {
       }
       proposals: {
         Row: {
+          ambientes: Json | null
           approved_at: string | null
           client_id: string | null
           client_name: string | null
@@ -1626,11 +1627,13 @@ export type Database = {
           timeline_priorities: number | null
           timeline_study: number | null
           title: string | null
+          total_area: number | null
           updated_at: string
           user_id: string
           value: number | null
         }
         Insert: {
+          ambientes?: Json | null
           approved_at?: string | null
           client_id?: string | null
           client_name?: string | null
@@ -1678,11 +1681,13 @@ export type Database = {
           timeline_priorities?: number | null
           timeline_study?: number | null
           title?: string | null
+          total_area?: number | null
           updated_at?: string
           user_id: string
           value?: number | null
         }
         Update: {
+          ambientes?: Json | null
           approved_at?: string | null
           client_id?: string | null
           client_name?: string | null
@@ -1730,6 +1735,7 @@ export type Database = {
           timeline_priorities?: number | null
           timeline_study?: number | null
           title?: string | null
+          total_area?: number | null
           updated_at?: string
           user_id?: string
           value?: number | null

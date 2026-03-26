@@ -11,7 +11,7 @@ const FLOW_STEPS = [
 const DEFAULT_SCOPE =
   "Desenvolvemos o **projeto executivo** com todos os desenhos necessários à obra, considerando cada ideia discutida com o cliente. Em seguida, conduzimos o **gerenciamento completo** — administração de fornecedores, cronograma, pagamentos, vistorias e conferências. Acompanhamos também o **pós-obra**, garantindo que tudo funcione como entregue.";
 
-export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelinePriorities }: ProposalPageProps) {
+export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelinePriorities, ambientes, totalArea }: ProposalPageProps) {
   const text = scopeDescription || DEFAULT_SCOPE;
 
   const renderText = (t: string) => {
@@ -76,6 +76,23 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
           >
             {renderText(text)}
           </p>
+
+          {/* Ambientes */}
+          {ambientes && ambientes.length > 0 && (
+            <div style={{ marginTop: 16, textAlign: "center" }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: COLORS.textoTituloVinho, marginBottom: 4 }}>
+                Ambientes contemplados:
+              </p>
+              <p style={{ fontSize: 11, color: COLORS.azulMarinho, lineHeight: 1.6 }}>
+                {ambientes.join(" · ")}
+              </p>
+              {totalArea && (
+                <p style={{ fontSize: 10, color: COLORS.roseMauve, marginTop: 4 }}>
+                  Metragem total: {totalArea} m²
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Divider */}

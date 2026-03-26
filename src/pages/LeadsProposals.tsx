@@ -97,6 +97,8 @@ export default function LeadsProposals() {
       contactInstagram: instagram,
       contactPhone1: phone1,
       contactPhone2: phone2,
+      ambientes: formData.ambientes,
+      totalArea: formData.total_area,
     };
   }, [logos, founderPhotos, texts, contacts]);
 
@@ -131,6 +133,8 @@ export default function LeadsProposals() {
       price_note: formData.price_note,
       portfolio_projects: formData.portfolio_projects,
       feedback_items: formData.feedback_items,
+      ambientes: formData.ambientes,
+      total_area: formData.total_area,
       value: formData.price_full,
       final_value: formData.price_cash || formData.price_full,
       status,
@@ -264,6 +268,8 @@ export default function LeadsProposals() {
       price_note: p.price_note || "*Neste valor, não está incluso execução de obra (mão de obra e materiais)",
       portfolio_projects: p.portfolio_projects || [],
       feedback_items: p.feedback_items || [],
+      ambientes: (p as any).ambientes || [],
+      total_area: (p as any).total_area ?? null,
     };
   }, [editingProposal]);
 
