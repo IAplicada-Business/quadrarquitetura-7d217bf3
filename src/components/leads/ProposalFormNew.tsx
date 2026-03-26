@@ -23,6 +23,7 @@ export interface ProposalFormData {
   timeline_construction: number;
   price_full: number | null;
   price_cash: number | null;
+  discount_cash_percent: number | null;
   installments_count: number | null;
   installment_entry: number | null;
   installment_value: number | null;

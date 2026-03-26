@@ -1,56 +1,154 @@
-import { PageContainer, COLORS, LogoSmall, formatBRL, type ProposalPageProps } from "./shared";
+import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, LogoSmall, formatBRL, type ProposalPageProps } from "./shared";
 
 export function ProposalValuesPage(props: ProposalPageProps) {
   const { priceFull, priceCash, installmentsCount, installmentEntry, installmentValue, priceNote, logoUrl } = props;
-  const hasCashDiscount = priceCash != null && priceFull != null && priceCash < priceFull;
-  const mainPrice = priceCash ?? priceFull;
+
+  const investmentLabel = priceFull ? formatBRL(priceFull) : "A consultar";
+  const investmentSub = priceCash && priceFull && priceCash < priceFull
+    ? `À vista: ${formatBRL(priceCash)}`
+    : "";
+
+  const paymentLabel =
+    installmentsCount && installmentValue
+      ? `${installmentsCount}x de ${formatBRL(installmentValue)}`
+      : "Boleto ou Pix";
+  const paymentSub =
+    installmentsCount && installmentEntry
+      ? `Entrada: ${formatBRL(installmentEntry)}`
+      : "Parcelamento disponível";
 
   return (
     <PageContainer bg={COLORS.azulMarinho}>
-      <div style={{ padding: "60px 60px", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
-        <h2 style={{ color: COLORS.textoClaro, fontSize: 36, fontWeight: 700, textTransform: "uppercase", marginBottom: 40 }}>VALORES</h2>
+      <div style={{
+        padding: "60px 52px",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        textAlign: "center",
+        color: COLORS.textoClaro,
+      }}>
+        {/* Title */}
+        <h2 style={{
+          fontFamily: FONT_TITLE,
+          fontSize: 52,
+          fontWeight: 600,
+          letterSpacing: 8,
+          textTransform: "uppercase",
+          marginBottom: 24,
+          color: COLORS.textoClaro,
+        }}>
+          Valores
+        </h2>
 
-        <div style={{ marginBottom: 28 }}>
-          {priceFull != null && (
-            <p style={{
-              color: COLORS.textoClaro,
-              fontSize: hasCashDiscount ? 26 : 36,
-              fontWeight: hasCashDiscount ? 500 : 700,
-              opacity: hasCashDiscount ? 0.7 : 1,
-              textDecoration: hasCashDiscount ? "line-through" : "none",
-              textDecorationColor: COLORS.linhaDestaque,
-              textDecorationThickness: 3,
-              marginBottom: hasCashDiscount ? 8 : 0,
+        {/* Divider */}
+        <div style={{
+          width: 48,
+          height: 3,
+          background: COLORS.linhaDestaque,
+          marginBottom: 48,
+        }} />
+
+        {/* Two boxes */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 24,
+          width: "100%",
+          maxWidth: 480,
+          marginBottom: 40,
+        }}>
+          {/* Investment box */}
+          <div style={{
+            background: "rgba(255,255,255,0.06)",
+            borderRadius: 8,
+            padding: "28px 20px",
+            textAlign: "center",
+          }}>
+            <span style={{
+              fontFamily: FONT_BODY,
+              fontSize: 9,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              color: COLORS.linhaDestaque,
+              marginBottom: 14,
+              display: "block",
             }}>
-              {formatBRL(priceFull)}
-            </p>
-          )}
-          {hasCashDiscount && (
-            <>
-              <p style={{ color: COLORS.textoClaro, fontSize: 36, fontWeight: 700 }}>{formatBRL(priceCash)}</p>
-              <p style={{ color: COLORS.textoClaro, fontSize: 16, opacity: 0.8, marginTop: 4 }}>à vista</p>
-            </>
-          )}
-          <div style={{ width: 160, height: 3, background: COLORS.linhaDestaque, margin: "14px auto" }} />
-        </div>
+              Investimento Total
+            </span>
+            <div style={{
+              fontFamily: FONT_TITLE,
+              fontSize: 36,
+              fontWeight: 600,
+              color: COLORS.textoClaro,
+              lineHeight: 1.2,
+            }}>
+              {investmentLabel}
+            </div>
+            {investmentSub && (
+              <div style={{
+                fontSize: 11,
+                opacity: 0.55,
+                marginTop: 8,
+                color: COLORS.textoClaro,
+              }}>
+                {investmentSub}
+              </div>
+            )}
+          </div>
 
-        {(installmentsCount || hasCashDiscount) && (
-          <div style={{ marginBottom: 28 }}>
-            <h3 style={{ color: COLORS.textoClaro, fontSize: 18, fontWeight: 700, textTransform: "uppercase", marginBottom: 14 }}>Formas de Pagamento:</h3>
-            <div style={{ color: COLORS.textoClaro, fontSize: 15, lineHeight: 2 }}>
-              {hasCashDiscount && <p>• à vista: {formatBRL(priceCash)}</p>}
-              {installmentsCount && <p>• parcelado em até {installmentsCount}x</p>}
-              {installmentEntry != null && <p>• entrada (assinatura do contrato) de {formatBRL(installmentEntry)}</p>}
-              {installmentValue != null && installmentsCount && installmentsCount > 1 && (
-                <p>• + {installmentsCount - 1} parcelas mensais de {formatBRL(installmentValue)}</p>
-              )}
+          {/* Payment box */}
+          <div style={{
+            background: "rgba(255,255,255,0.06)",
+            borderRadius: 8,
+            padding: "28px 20px",
+            textAlign: "center",
+          }}>
+            <span style={{
+              fontFamily: FONT_BODY,
+              fontSize: 9,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              color: COLORS.linhaDestaque,
+              marginBottom: 14,
+              display: "block",
+            }}>
+              Formas de Pagamento
+            </span>
+            <div style={{
+              fontFamily: FONT_TITLE,
+              fontSize: 20,
+              fontWeight: 600,
+              color: COLORS.textoClaro,
+              lineHeight: 1.3,
+            }}>
+              {paymentLabel}
+            </div>
+            <div style={{
+              fontSize: 11,
+              opacity: 0.55,
+              marginTop: 8,
+              color: COLORS.textoClaro,
+            }}>
+              {paymentSub}
             </div>
           </div>
-        )}
+        </div>
 
-        {priceNote && <p style={{ color: COLORS.textoClaro, fontSize: 13, opacity: 0.7, fontStyle: "italic" }}>{priceNote}</p>}
+        {/* Footnote */}
+        <p style={{
+          fontSize: 10,
+          opacity: 0.5,
+          fontStyle: "italic",
+          lineHeight: 1.5,
+          color: COLORS.textoClaro,
+          maxWidth: 400,
+        }}>
+          {priceNote || "* Mão de obra e materiais de execução não estão inclusos neste valor."}
+        </p>
       </div>
-      <LogoSmall url={logoUrl} position="bl" />
+      <LogoSmall url={logoUrl} position="br" />
     </PageContainer>
   );
 }
