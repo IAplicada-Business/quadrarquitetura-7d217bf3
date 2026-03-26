@@ -1623,6 +1623,7 @@ export type Database = {
           status: string
           template_id: string | null
           template_name: string | null
+          timeline_anteprojeto: number | null
           timeline_briefing: number | null
           timeline_budget: number | null
           timeline_construction: number | null
@@ -1681,6 +1682,7 @@ export type Database = {
           status?: string
           template_id?: string | null
           template_name?: string | null
+          timeline_anteprojeto?: number | null
           timeline_briefing?: number | null
           timeline_budget?: number | null
           timeline_construction?: number | null
@@ -1739,6 +1741,7 @@ export type Database = {
           status?: string
           template_id?: string | null
           template_name?: string | null
+          timeline_anteprojeto?: number | null
           timeline_briefing?: number | null
           timeline_budget?: number | null
           timeline_construction?: number | null

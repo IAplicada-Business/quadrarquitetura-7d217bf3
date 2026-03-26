@@ -3,7 +3,7 @@ import { PageContainer, COLORS, FONT_TITLE, type ProposalPageProps } from "./sha
 const ALL_FLOW_STEPS = [
   { id: "Briefing", title: "Levantamento\n& Briefing", desc: "Alinhamento de conceito e necessidades", daysKey: "briefing" as const },
   { id: "Estudo Preliminar", title: "Estudo\nPreliminar", desc: "Aprovação do layout", daysKey: "study" as const },
-  { id: "Anteprojeto", title: "Anteprojeto", desc: "Detalhamento do projeto", daysKey: null },
+  { id: "Anteprojeto", title: "Anteprojeto", desc: "Detalhamento do projeto", daysKey: "anteprojeto" as const },
   { id: "Orçamento Executivo", title: "Orçamento\nExecutivo", desc: "Valor total definido", daysKey: "budget" as const },
   { id: "Reunião de Prioridades", title: "Reunião de\nPrioridades", desc: "Budget x escopo", daysKey: "priorities" as const },
   { id: "Mobilização de Obra", title: "Mobilização\nde Obra", desc: "Preparação para início", daysKey: "mobilization" as const },
@@ -13,7 +13,7 @@ const ALL_FLOW_STEPS = [
 const DEFAULT_SCOPE =
   "Desenvolvemos o **projeto executivo** com todos os desenhos necessários à obra, considerando cada ideia discutida com o cliente. Em seguida, conduzimos o **gerenciamento completo** — administração de fornecedores, cronograma, pagamentos, vistorias e conferências. Acompanhamos também o **pós-obra**, garantindo que tudo funcione como entregue.";
 
-export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelineBudget, timelinePriorities, timelineConstruction, timelineMobilization, timelineFiscalization, ambientes, totalArea, etapasAtivas, pageWidth, pageHeight }: ProposalPageProps) {
+export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelineAnteprojeto, timelineBudget, timelinePriorities, timelineConstruction, timelineMobilization, timelineFiscalization, ambientes, totalArea, etapasAtivas, pageWidth, pageHeight }: ProposalPageProps) {
   const text = scopeDescription || DEFAULT_SCOPE;
 
   function parseSimpleMarkdown(t: string): string {
@@ -27,6 +27,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
     const daysMap: Record<string, number | undefined> = {
       briefing: timelineBriefing,
       study: timelineStudy,
+      anteprojeto: timelineAnteprojeto,
       budget: timelineBudget,
       priorities: timelinePriorities,
       construction: timelineConstruction,
