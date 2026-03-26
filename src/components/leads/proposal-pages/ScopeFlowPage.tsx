@@ -6,14 +6,14 @@ const ALL_FLOW_STEPS = [
   { id: "Anteprojeto", title: "Anteprojeto", desc: "Detalhamento do projeto", daysKey: null },
   { id: "Orçamento Executivo", title: "Orçamento\nExecutivo", desc: "Valor total definido", daysKey: "budget" as const },
   { id: "Reunião de Prioridades", title: "Reunião de\nPrioridades", desc: "Budget x escopo", daysKey: "priorities" as const },
-  { id: "Mobilização de Obra", title: "Mobilização\nde Obra", desc: "Preparação para início", daysKey: null },
-  { id: "Conferência e Fiscalização de Obra", title: "Conferência\ne Fiscalização", desc: "Gerenciamento pleno", daysKey: "construction" as const },
+  { id: "Mobilização de Obra", title: "Mobilização\nde Obra", desc: "Preparação para início", daysKey: "mobilization" as const },
+  { id: "Conferência e Fiscalização de Obra", title: "Conferência\ne Fiscalização", desc: "Gerenciamento pleno", daysKey: "fiscalization" as const },
 ];
 
 const DEFAULT_SCOPE =
   "Desenvolvemos o **projeto executivo** com todos os desenhos necessários à obra, considerando cada ideia discutida com o cliente. Em seguida, conduzimos o **gerenciamento completo** — administração de fornecedores, cronograma, pagamentos, vistorias e conferências. Acompanhamos também o **pós-obra**, garantindo que tudo funcione como entregue.";
 
-export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelineBudget, timelinePriorities, timelineConstruction, ambientes, totalArea, etapasAtivas, pageWidth, pageHeight }: ProposalPageProps) {
+export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelineBudget, timelinePriorities, timelineConstruction, timelineMobilization, timelineFiscalization, ambientes, totalArea, etapasAtivas, pageWidth, pageHeight }: ProposalPageProps) {
   const text = scopeDescription || DEFAULT_SCOPE;
 
   const renderText = (t: string) => {
@@ -37,6 +37,8 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
       budget: timelineBudget,
       priorities: timelinePriorities,
       construction: timelineConstruction,
+      mobilization: timelineMobilization,
+      fiscalization: timelineFiscalization,
     };
     const daysVal = s.daysKey ? daysMap[s.daysKey] : undefined;
     return { ...s, num: i + 1, days: daysVal ? `${s.daysKey === "priorities" ? "~" : ""}${daysVal} dias` : "" };
