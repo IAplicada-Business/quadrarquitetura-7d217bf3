@@ -480,17 +480,17 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
 
       {/* Section 6: Actions */}
       <div className="flex gap-3 justify-end sticky bottom-0 bg-background py-4 border-t">
-        <Button variant="outline" onClick={() => onSave({ ...data, price_cash: calcPriceCash ?? data.price_cash, installment_value: calcInstallmentValue ?? data.installment_value }, "rascunho")} disabled={saving}>
+        <Button variant="outline" onClick={() => onSave({ ...data, installment_value: calcInstallmentValue ?? data.installment_value }, "rascunho")} disabled={saving}>
           <Save className="h-4 w-4 mr-1" /> Salvar Rascunho
         </Button>
-        <Button variant="secondary" onClick={() => onPreview({ ...data, price_cash: calcPriceCash ?? data.price_cash, installment_value: calcInstallmentValue ?? data.installment_value })}>
+        <Button variant="secondary" onClick={() => onPreview({ ...data, installment_value: calcInstallmentValue ?? data.installment_value })}>
           <Eye className="h-4 w-4 mr-1" /> Preview
         </Button>
-        <Button onClick={() => onGeneratePdf({ ...data, price_cash: calcPriceCash ?? data.price_cash, installment_value: calcInstallmentValue ?? data.installment_value })} disabled={saving}>
+        <Button onClick={() => onGeneratePdf({ ...data, installment_value: calcInstallmentValue ?? data.installment_value })} disabled={saving}>
           <FileText className="h-4 w-4 mr-1" /> Gerar PDF
         </Button>
         {onGeneratePdfApresentacao && (
-          <Button variant="secondary" onClick={() => onGeneratePdfApresentacao({ ...data, price_cash: calcPriceCash ?? data.price_cash, installment_value: calcInstallmentValue ?? data.installment_value })} disabled={saving}>
+          <Button variant="secondary" onClick={() => onGeneratePdfApresentacao({ ...data, installment_value: calcInstallmentValue ?? data.installment_value })} disabled={saving}>
             <Monitor className="h-4 w-4 mr-1" /> Gerar Apresentação (16:9)
           </Button>
         )}
