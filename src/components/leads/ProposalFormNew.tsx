@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useProposalAssets } from "@/hooks/useProposalAssets";
 import { useLeads } from "@/hooks/useLeads";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { Eye, FileText, Save, Monitor } from "lucide-react";
 
 export interface ProposalFormData {
@@ -32,6 +34,7 @@ export interface ProposalFormData {
   installment_value: number | null;
   price_note: string;
   portfolio_projects: string[];
+  portfolio_cards: { id: string; nome: string; foto_url: string; legenda: string }[];
   feedback_items: string[];
   ambientes: string[];
   total_area: number | null;
@@ -74,6 +77,19 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
   const { leads } = useLeads();
   const { portfolio, feedbacks } = useProposalAssets();
 
+  // Fetch user's projects for portfolio cards
+  const { data: userProjects = [] } = useQuery({
+    queryKey: ["projects-for-portfolio"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const [data, setData] = useState<ProposalFormData>({
     lead_id: initialData?.lead_id || "",
     client_name: initialData?.client_name || "",
@@ -96,6 +112,7 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
     installment_value: initialData?.installment_value ?? null,
     price_note: initialData?.price_note || DEFAULT_PRICE_NOTE,
     portfolio_projects: initialData?.portfolio_projects || [],
+    portfolio_cards: initialData?.portfolio_cards || [],
     feedback_items: initialData?.feedback_items || [],
     ambientes: initialData?.ambientes || [],
     total_area: initialData?.total_area ?? null,
@@ -285,8 +302,8 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
                   <Label>{item.label}</Label>
                   <Input
                     type="number"
-                    value={isNullable ? (data[item.field] ?? "") : data[item.field]}
-                    onChange={e => set(item.field, isNullable && !e.target.value ? null : Number(e.target.value))}
+                    value={isNullable ? ((data[item.field] as number | null) ?? "") : (data[item.field] as number)}
+                    onChange={e => set(item.field, isNullable && !e.target.value ? null : Number(e.target.value) as any)}
                   />
                 </div>
               );
@@ -341,10 +358,75 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
         </CardContent>
       </Card>
 
-      {/* Section 7: Portfolio & Feedbacks */}
+      {/* Section 7: Portfolio Cards (for PDF page) */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">7. Portfólio no PDF</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground">Selecione até 4 projetos para exibir na página "Nossos Projetos" do PDF. Adicione uma legenda opcional.</p>
+          {userProjects.length > 0 ? (
+            <div className="space-y-3">
+              {userProjects.map(proj => {
+                const isSelected = data.portfolio_cards.some(c => c.id === proj.id);
+                const cardIndex = data.portfolio_cards.findIndex(c => c.id === proj.id);
+                return (
+                  <div key={proj.id} className="flex items-start gap-2 p-2 border rounded">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => {
+                        setData(prev => {
+                          if (isSelected) {
+                            return { ...prev, portfolio_cards: prev.portfolio_cards.filter(c => c.id !== proj.id) };
+                          }
+                          if (prev.portfolio_cards.length >= 4) return prev;
+                          return { ...prev, portfolio_cards: [...prev.portfolio_cards, { id: proj.id, nome: proj.name, foto_url: "", legenda: "" }] };
+                        });
+                      }}
+                    />
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium">{proj.name}</p>
+                      {isSelected && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            placeholder="URL da foto"
+                            value={data.portfolio_cards[cardIndex]?.foto_url || ""}
+                            onChange={e => {
+                              setData(prev => {
+                                const cards = [...prev.portfolio_cards];
+                                cards[cardIndex] = { ...cards[cardIndex], foto_url: e.target.value };
+                                return { ...prev, portfolio_cards: cards };
+                              });
+                            }}
+                            className="text-xs"
+                          />
+                          <Input
+                            placeholder="Legenda (opcional)"
+                            value={data.portfolio_cards[cardIndex]?.legenda || ""}
+                            onChange={e => {
+                              setData(prev => {
+                                const cards = [...prev.portfolio_cards];
+                                cards[cardIndex] = { ...cards[cardIndex], legenda: e.target.value };
+                                return { ...prev, portfolio_cards: cards };
+                              });
+                            }}
+                            className="text-xs"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Nenhum projeto cadastrado.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Section 8: Portfolio Assets & Feedbacks */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">7. Portfólio e Feedbacks</CardTitle>
+          <CardTitle className="text-base">8. Portfólio de Assets e Feedbacks</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {portfolioGroups.size > 0 && (

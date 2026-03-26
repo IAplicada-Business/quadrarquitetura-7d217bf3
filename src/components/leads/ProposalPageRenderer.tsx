@@ -8,6 +8,7 @@ import { ProposalManagementFullPage } from "./proposal-pages/ManagementFullPage"
 import { ProposalWhyHireValuesPage } from "./proposal-pages/WhyHireValuesPage";
 import { ProposalValuesPage } from "./proposal-pages/ValuesPage";
 import { ProposalContactPage } from "./proposal-pages/ContactPage";
+import { ProposalPortfolioCardsPage } from "./proposal-pages/PortfolioCardsPage";
 import { ProposalAsset } from "@/hooks/useProposalAssets";
 
 interface RendererProps {
@@ -40,6 +41,13 @@ export function buildProposalPages({ data, formato }: RendererProps): React.Reac
   pages.push(
     <ProposalManagementFullPage key="management" {...pageData} />,
     <ProposalWhyHireValuesPage key="whyhire" {...pageData} />,
+  );
+
+  if (pageData.portfolioCards && pageData.portfolioCards.length > 0) {
+    pages.push(<ProposalPortfolioCardsPage key="portfolio-cards" {...pageData} />);
+  }
+
+  pages.push(
     <ProposalValuesPage key="values" {...pageData} />,
     <ProposalContactPage key="contact" {...pageData} />,
   );

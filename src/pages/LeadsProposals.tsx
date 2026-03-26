@@ -103,6 +103,7 @@ export default function LeadsProposals() {
       ambientes: formData.ambientes,
       totalArea: formData.total_area,
       etapasAtivas: formData.etapas_ativas,
+      portfolioCards: formData.portfolio_cards?.filter(c => c.foto_url) || [],
     };
   }, [logos, founderPhotos, texts, contacts]);
 
@@ -139,7 +140,7 @@ export default function LeadsProposals() {
       installment_entry: formData.installment_entry,
       installment_value: formData.installment_value,
       price_note: formData.price_note,
-      portfolio_projects: formData.portfolio_projects,
+      portfolio_projects: formData.portfolio_cards?.length ? formData.portfolio_cards : formData.portfolio_projects,
       feedback_items: formData.feedback_items,
       ambientes: formData.ambientes,
       total_area: formData.total_area,
@@ -342,7 +343,8 @@ export default function LeadsProposals() {
       installment_entry: p.installment_entry,
       installment_value: p.installment_value,
       price_note: p.price_note || "*Neste valor, não está incluso execução de obra (mão de obra e materiais)",
-      portfolio_projects: p.portfolio_projects || [],
+      portfolio_projects: Array.isArray(p.portfolio_projects) && p.portfolio_projects.length > 0 && typeof p.portfolio_projects[0] === "string" ? (p.portfolio_projects as string[]) : [],
+      portfolio_cards: Array.isArray(p.portfolio_projects) && p.portfolio_projects.length > 0 && typeof p.portfolio_projects[0] === "object" ? (p.portfolio_projects as any) : [],
       feedback_items: p.feedback_items || [],
       ambientes: (p as any).ambientes || [],
       total_area: (p as any).total_area ?? null,
