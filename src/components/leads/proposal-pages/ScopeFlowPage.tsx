@@ -194,7 +194,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
               {/* Title */}
               <h5
                 style={{
-                  fontSize: 9,
+                  fontSize: compact ? 8 : 9,
                   fontWeight: 600,
                   letterSpacing: 1,
                   textTransform: "uppercase",
@@ -207,7 +207,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
                 {step.title}
               </h5>
               {/* Description */}
-              <p style={{ fontSize: 9, color: "#777", lineHeight: 1.4, marginTop: 4, marginBottom: 4, minHeight: 28 }}>{step.desc}</p>
+              <p style={{ fontSize: compact ? 8 : 9, color: "#777", lineHeight: 1.4, marginTop: 4, marginBottom: 4, minHeight: compact ? 22 : 28 }}>{step.desc}</p>
               {/* Days badge */}
               {step.days ? (
                 <span
