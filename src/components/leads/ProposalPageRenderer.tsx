@@ -16,26 +16,32 @@ interface RendererProps {
   feedbackImages: ProposalAsset[];
   selectedPortfolioProjects: string[];
   selectedFeedbackIds: string[];
+  formato?: "a4" | "apresentacao";
 }
 
-export function buildProposalPages({ data }: RendererProps): React.ReactElement[] {
+export function buildProposalPages({ data, formato }: RendererProps): React.ReactElement[] {
   const showInteriores = !data.servicesIncluded || data.servicesIncluded === "ambos" || data.servicesIncluded === "projeto";
 
+  // Add page dimensions for presentation format
+  const pageData = formato === "apresentacao"
+    ? { ...data, pageWidth: 1280, pageHeight: 720 }
+    : data;
+
   const pages: React.ReactElement[] = [
-    <ProposalCoverPage key="cover" {...data} />,
-    <ProposalAboutPage key="about" {...data} />,
-    <ProposalScopeFlowPage key="scope-flow" {...data} />,
+    <ProposalCoverPage key="cover" {...pageData} />,
+    <ProposalAboutPage key="about" {...pageData} />,
+    <ProposalScopeFlowPage key="scope-flow" {...pageData} />,
   ];
 
   if (showInteriores) {
-    pages.push(<ProposalInterioresPage key="interiores" {...data} />);
+    pages.push(<ProposalInterioresPage key="interiores" {...pageData} />);
   }
 
   pages.push(
-    <ProposalManagementFullPage key="management" {...data} />,
-    <ProposalWhyHireValuesPage key="whyhire" {...data} />,
-    <ProposalValuesPage key="values" {...data} />,
-    <ProposalContactPage key="contact" {...data} />,
+    <ProposalManagementFullPage key="management" {...pageData} />,
+    <ProposalWhyHireValuesPage key="whyhire" {...pageData} />,
+    <ProposalValuesPage key="values" {...pageData} />,
+    <ProposalContactPage key="contact" {...pageData} />,
   );
 
   return pages;

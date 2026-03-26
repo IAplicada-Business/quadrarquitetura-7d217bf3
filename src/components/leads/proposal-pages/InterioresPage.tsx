@@ -65,9 +65,9 @@ const STEPS = [
   },
 ];
 
-export function ProposalInterioresPage(_props: ProposalPageProps) {
+export function ProposalInterioresPage({ pageWidth, pageHeight }: ProposalPageProps) {
   return (
-    <PageContainer bg={COLORS.begeClaro}>
+    <PageContainer bg={COLORS.begeClaro} pageWidth={pageWidth} pageHeight={pageHeight}>
       <div style={{ padding: "60px 44px 44px", height: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
         {/* Title */}
         <h2

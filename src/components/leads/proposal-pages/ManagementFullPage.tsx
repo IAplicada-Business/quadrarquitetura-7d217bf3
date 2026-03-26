@@ -61,9 +61,9 @@ const CARDS = [
   },
 ];
 
-export function ProposalManagementFullPage(_props: ProposalPageProps) {
+export function ProposalManagementFullPage({ pageWidth, pageHeight }: ProposalPageProps) {
   return (
-    <PageContainer bg={COLORS.azulMarinho}>
+    <PageContainer bg={COLORS.azulMarinho} pageWidth={pageWidth} pageHeight={pageHeight}>
       <div style={{ padding: "44px 44px 40px", color: COLORS.textoClaro, height: "100%" }}>
         {/* Tag */}
         <div

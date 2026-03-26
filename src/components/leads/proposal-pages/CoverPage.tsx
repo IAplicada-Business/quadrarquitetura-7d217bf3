@@ -1,9 +1,9 @@
 import { PageContainer, COLORS, LogoQuadra, FONT_TITLE, FONT_BODY, type ProposalPageProps } from "./shared";
 import sociasCover from "@/assets/socias-cover.jpg";
 
-export function ProposalCoverPage({ clientName, projectName, logoUrl }: ProposalPageProps) {
+export function ProposalCoverPage({ clientName, projectName, logoUrl, pageWidth, pageHeight }: ProposalPageProps) {
   return (
-    <PageContainer bg={COLORS.azulMarinho}>
+    <PageContainer bg={COLORS.azulMarinho} pageWidth={pageWidth} pageHeight={pageHeight}>
       {/* Background photo */}
       <div
         style={{

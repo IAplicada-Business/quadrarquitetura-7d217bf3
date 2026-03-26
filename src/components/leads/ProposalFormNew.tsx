@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useProposalAssets } from "@/hooks/useProposalAssets";
 import { useLeads } from "@/hooks/useLeads";
-import { Eye, FileText, Save } from "lucide-react";
+import { Eye, FileText, Save, Monitor } from "lucide-react";
 
 export interface ProposalFormData {
   lead_id: string;
@@ -54,10 +54,11 @@ interface Props {
   onSave: (data: ProposalFormData, status: string) => void;
   onPreview: (data: ProposalFormData) => void;
   onGeneratePdf: (data: ProposalFormData) => void;
+  onGeneratePdfApresentacao?: (data: ProposalFormData) => void;
   saving?: boolean;
 }
 
-export default function ProposalFormNew({ initialData, onSave, onPreview, onGeneratePdf, saving }: Props) {
+export default function ProposalFormNew({ initialData, onSave, onPreview, onGeneratePdf, onGeneratePdfApresentacao, saving }: Props) {
   const { leads } = useLeads();
   const { portfolio, feedbacks } = useProposalAssets();
 
@@ -379,6 +380,11 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
         <Button onClick={() => onGeneratePdf({ ...data, price_cash: calcPriceCash ?? data.price_cash, installment_value: calcInstallmentValue ?? data.installment_value })} disabled={saving}>
           <FileText className="h-4 w-4 mr-1" /> Gerar PDF
         </Button>
+        {onGeneratePdfApresentacao && (
+          <Button variant="secondary" onClick={() => onGeneratePdfApresentacao({ ...data, price_cash: calcPriceCash ?? data.price_cash, installment_value: calcInstallmentValue ?? data.installment_value })} disabled={saving}>
+            <Monitor className="h-4 w-4 mr-1" /> Gerar Apresentação (16:9)
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -4,9 +4,9 @@ import foundersPhoto from "@/assets/founders-photo.png";
 const DEFAULT_ABOUT =
   "A Quadra nasceu em 2022 da seguinte pergunta: como garantir que o cliente tenha, no final da obra, o resultado exatamente igual ao projeto 3D? Desenvolvemos um serviço de gerenciamento completo para que cada detalhe seja executado do jeito que sempre foi sonhado.";
 
-export function ProposalAboutPage({ aboutText, logoUrl }: ProposalPageProps) {
+export function ProposalAboutPage({ aboutText, logoUrl, pageWidth, pageHeight }: ProposalPageProps) {
   return (
-    <PageContainer bg={COLORS.begeClaro}>
+    <PageContainer bg={COLORS.begeClaro} pageWidth={pageWidth} pageHeight={pageHeight}>
       <div
         style={{
           display: "grid",

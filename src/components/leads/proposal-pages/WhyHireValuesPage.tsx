@@ -25,7 +25,7 @@ const WHY_CARDS = [
 
 export function ProposalWhyHireValuesPage(props: ProposalPageProps) {
   return (
-    <PageContainer bg={COLORS.azulMarinho}>
+    <PageContainer bg={COLORS.azulMarinho} pageWidth={props.pageWidth} pageHeight={props.pageHeight}>
       <div style={{ padding: "52px 52px 44px", color: COLORS.textoClaro, height: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
         {/* Title */}
         <h2

@@ -103,7 +103,7 @@ export default function LeadsProposals() {
     };
   }, [logos, founderPhotos, texts, contacts]);
 
-  const buildPages = useCallback((formData: ProposalFormData) => {
+  const buildPages = useCallback((formData: ProposalFormData, formato: "a4" | "apresentacao" = "a4") => {
     const pageProps = buildPageProps(formData);
     return buildProposalPages({
       data: pageProps,
@@ -111,6 +111,7 @@ export default function LeadsProposals() {
       feedbackImages: feedbacks,
       selectedPortfolioProjects: formData.portfolio_projects,
       selectedFeedbackIds: formData.feedback_items,
+      formato,
     });
   }, [buildPageProps, portfolio, feedbacks]);
 
@@ -238,6 +239,66 @@ export default function LeadsProposals() {
     }
   };
 
+  const handleGeneratePdf16x9 = async (formData: ProposalFormData) => {
+    setGenerating(true);
+    const container = document.createElement("div");
+    container.style.position = "fixed";
+    container.style.left = "-9999px";
+    container.style.top = "0";
+    document.body.appendChild(container);
+
+    const roots: ReactDOM.Root[] = [];
+
+    try {
+      const pages = buildPages(formData, "apresentacao");
+      const pageElements: HTMLDivElement[] = [];
+
+      for (let i = 0; i < pages.length; i++) {
+        const pageDiv = document.createElement("div");
+        container.appendChild(pageDiv);
+        const root = ReactDOM.createRoot(pageDiv);
+        flushSync(() => {
+          root.render(pages[i]);
+        });
+        pageElements.push(pageDiv);
+        roots.push(root);
+      }
+
+      const allImages = container.querySelectorAll("img");
+      await Promise.all(
+        Array.from(allImages).map(img =>
+          img.complete
+            ? Promise.resolve()
+            : new Promise(resolve => {
+                img.onload = resolve;
+                img.onerror = resolve;
+              })
+        )
+      );
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const blob = await generateProposalPdf(pages, (_page, index) => {
+        return pageElements[index]?.firstElementChild as HTMLElement || null;
+      }, "apresentacao");
+
+      const fileName = `apresentacao-${formData.client_name?.replace(/\s+/g, "-") || "cliente"}-${Date.now()}.pdf`;
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
+
+      toast({ title: "Apresentação 16:9 gerada com sucesso!" });
+    } catch (err: any) {
+      console.error("Erro ao gerar apresentação:", err);
+      toast({ title: "Erro ao gerar apresentação", description: err.message, variant: "destructive" });
+    } finally {
+      roots.forEach(r => r.unmount());
+      if (container.parentNode) document.body.removeChild(container);
+      setGenerating(false);
+    }
+  };
+
   const openNew = () => {
     setEditingProposal(null);
     setView("form");
@@ -339,6 +400,7 @@ export default function LeadsProposals() {
           onSave={handleSave}
           onPreview={handlePreview}
           onGeneratePdf={handleGeneratePdf}
+          onGeneratePdfApresentacao={handleGeneratePdf16x9}
           saving={create.isPending || update.isPending || generating}
         />
       )}
