@@ -217,7 +217,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
                     height: 22,
                     lineHeight: "22px",
                     textAlign: "center",
-                    fontSize: 9,
+                    fontSize: compact ? 8 : 9,
                     fontWeight: 500,
                     color: COLORS.roseMauve,
                     border: `1px solid ${COLORS.roseMauve}`,
