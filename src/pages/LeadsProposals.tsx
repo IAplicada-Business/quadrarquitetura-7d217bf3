@@ -17,7 +17,7 @@ import ProposalFormNew, { ProposalFormData } from "@/components/leads/ProposalFo
 import { ProposalPreviewModal } from "@/components/leads/ProposalPreviewModal";
 import { buildProposalPages } from "@/components/leads/ProposalPageRenderer";
 import { ProposalPageProps } from "@/components/leads/proposal-pages/shared";
-import { generateProposalPdf } from "@/lib/generateProposalPdf";
+import { generateProposalPdf, waitForFonts } from "@/lib/generateProposalPdf";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
