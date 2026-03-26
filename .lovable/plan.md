@@ -1,42 +1,35 @@
 
 
-## Vincular prazos de Mobilização e Fiscalização ao fluxo do PDF
+## Prazos dinâmicos: exibir apenas campos das etapas ativas
 
-### Resumo
-Adicionar 2 novas colunas no banco (`timeline_mobilization`, `timeline_fiscalization`), 2 campos no formulário, e mapear no `ScopeFlowPage` para que os badges de dias apareçam nessas etapas.
+### Abordagem
+Criar um mapeamento entre nomes de etapas e campos de prazo, então filtrar os campos exibidos na seção 5 com base em `data.etapas_ativas`. Etapas sem prazo (Anteprojeto) não geram campo.
 
-### Edições
+### Edição única: `src/components/leads/ProposalFormNew.tsx`
 
-**1. Migration SQL**
-```sql
-ALTER TABLE public.proposals ADD COLUMN IF NOT EXISTS timeline_mobilization integer DEFAULT NULL;
-ALTER TABLE public.proposals ADD COLUMN IF NOT EXISTS timeline_fiscalization integer DEFAULT NULL;
+1. Adicionar constante de mapeamento etapa → campo de prazo:
+```typescript
+const ETAPA_TIMELINE_MAP: { etapa: string; field: keyof ProposalFormData; label: string }[] = [
+  { etapa: "Briefing", field: "timeline_briefing", label: "Briefing (dias)" },
+  { etapa: "Estudo Preliminar", field: "timeline_study", label: "Estudo preliminar (dias)" },
+  { etapa: "Orçamento Executivo", field: "timeline_budget", label: "Orçamento executivo (dias)" },
+  { etapa: "Reunião de Prioridades", field: "timeline_priorities", label: "Reunião prioridades (dias)" },
+  { etapa: "Mobilização de Obra", field: "timeline_mobilization", label: "Mobilização de obra (dias)" },
+  { etapa: "Conferência e Fiscalização de Obra", field: "timeline_fiscalization", label: "Conferência e fiscalização (dias)" },
+];
 ```
+Note: "Obra (dias trabalhados)" (`timeline_construction`) aparece sempre, pois não corresponde a uma etapa específica do fluxo.
 
-**2. `src/components/leads/proposal-pages/shared.tsx`**
-- Adicionar `timelineMobilization?: number` e `timelineFiscalization?: number` ao `ProposalPageProps`
+2. Substituir os campos hardcoded na seção 5 por iteração filtrada:
+   - Filtrar `ETAPA_TIMELINE_MAP` por `data.etapas_ativas.includes(item.etapa)`
+   - Renderizar cada campo dinamicamente
+   - Manter o campo "Obra (dias trabalhados)" sempre visível (fora do map)
 
-**3. `src/components/leads/proposal-pages/ScopeFlowPage.tsx`**
-- Alterar `ALL_FLOW_STEPS`: Mobilização recebe `daysKey: "mobilization"`, Conferência recebe `daysKey: "fiscalization"`
-- No `daysMap`, adicionar `mobilization: timelineMobilization` e `fiscalization: timelineFiscalization`
-- Receber `timelineMobilization` e `timelineFiscalization` nas props destructured
-
-**4. `src/components/leads/ProposalFormNew.tsx`**
-- Adicionar `timeline_mobilization` e `timeline_fiscalization` à interface e ao state (default `null`)
-- Na seção "5. Prazos", adicionar 2 campos: "Mobilização de obra (dias)" e "Conferência e fiscalização (dias trabalhados)"
-
-**5. `src/pages/LeadsProposals.tsx`**
-- Em `buildPageProps`: mapear `timelineMobilization` e `timelineFiscalization`
-- No payload de save: incluir `timeline_mobilization` e `timeline_fiscalization`
-- Na carga de dados existentes: carregar ambos campos com default `null`
+3. Adicionar aviso no topo da seção: `"Os campos exibidos seguem as etapas selecionadas acima."`
 
 ### Arquivos
 
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---|---|
-| Migration SQL | 2 novas colunas |
-| `shared.tsx` | 2 props novas |
-| `ScopeFlowPage.tsx` | daysKey para mobilização e fiscalização |
-| `ProposalFormNew.tsx` | 2 campos no formulário |
-| `LeadsProposals.tsx` | Mapear e persistir |
+| `src/components/leads/ProposalFormNew.tsx` | Mapeamento etapa→prazo, renderização condicional, aviso |
 
