@@ -16,6 +16,10 @@ export const COLORS = {
 export const PAGE_W = 595;
 export const PAGE_H = 842;
 
+// 16:9 presentation format
+export const PAGE_W_16_9 = 1280;
+export const PAGE_H_16_9 = 720;
+
 export const FONT_TITLE = "'Cormorant Garamond', serif";
 export const FONT_BODY = "'Jost', sans-serif";
 
@@ -49,19 +53,55 @@ export interface ProposalPageProps {
   etapasAtivas?: string[];
 }
 
-export function PageContainer({ bg, children }: { bg: string; children: React.ReactNode }) {
+export function PageContainer({ bg, children, pageWidth, pageHeight }: { bg: string; children: React.ReactNode; pageWidth?: number; pageHeight?: number }) {
+  const targetW = pageWidth || PAGE_W;
+  const targetH = pageHeight || PAGE_H;
+  const needsScale = targetW !== PAGE_W || targetH !== PAGE_H;
+
+  if (!needsScale) {
+    return (
+      <div
+        style={{
+          width: PAGE_W,
+          height: PAGE_H,
+          background: bg,
+          position: "relative",
+          overflow: "hidden",
+          fontFamily: FONT_BODY,
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  // Scale the original 595×842 content to fit the target dimensions
+  const scaleX = targetW / PAGE_W;
+  const scaleY = targetH / PAGE_H;
+
   return (
     <div
       style={{
-        width: PAGE_W,
-        height: PAGE_H,
-        background: bg,
+        width: targetW,
+        height: targetH,
         position: "relative",
         overflow: "hidden",
-        fontFamily: FONT_BODY,
+        background: bg,
       }}
     >
-      {children}
+      <div
+        style={{
+          width: PAGE_W,
+          height: PAGE_H,
+          transform: `scale(${scaleX}, ${scaleY})`,
+          transformOrigin: "top left",
+          fontFamily: FONT_BODY,
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }
