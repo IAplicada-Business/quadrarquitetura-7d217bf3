@@ -20,7 +20,7 @@ export function ProposalValuesPage(props: ProposalPageProps) {
   return (
     <PageContainer bg={COLORS.azulMarinho} pageWidth={props.pageWidth} pageHeight={props.pageHeight}>
       <div style={{
-        padding: "60px 52px",
+        padding: "40px 52px",
         height: "100%",
         display: "flex",
         flexDirection: "column",
@@ -52,15 +52,16 @@ export function ProposalValuesPage(props: ProposalPageProps) {
 
         {/* Two boxes */}
         <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 24,
+          display: "flex",
+          flexDirection: "row",
+          gap: 32,
           width: "100%",
-          maxWidth: 480,
+          alignItems: "stretch",
           marginBottom: 40,
         }}>
           {/* Investment box */}
           <div style={{
+            flex: 1,
             background: "rgba(255,255,255,0.06)",
             borderRadius: 8,
             padding: "28px 20px",
@@ -100,6 +101,7 @@ export function ProposalValuesPage(props: ProposalPageProps) {
 
           {/* Payment box */}
           <div style={{
+            flex: 1,
             background: "rgba(255,255,255,0.06)",
             borderRadius: 8,
             padding: "28px 20px",
