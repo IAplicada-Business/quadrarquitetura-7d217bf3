@@ -127,7 +127,16 @@ export default function DashboardEscritorio() {
   const { data: leads = [] } = useQuery({
     queryKey: ["dash-esc-leads"],
     queryFn: async () => {
-      const { data } = await supabase.from("leads").select("id, status, name").eq("user_id", user!.id);
+      const { data } = await supabase.from("leads").select("id, status, name, created_at").eq("user_id", user!.id);
+      return data ?? [];
+    },
+    enabled: !!user,
+  });
+
+  const { data: allProposals = [] } = useQuery({
+    queryKey: ["dash-esc-proposals-metrics"],
+    queryFn: async () => {
+      const { data } = await supabase.from("proposals").select("id, status, price_full, created_at").eq("user_id", user!.id);
       return data ?? [];
     },
     enabled: !!user,
