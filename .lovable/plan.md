@@ -1,52 +1,54 @@
 
 
-## Duas correções: handleDeleteError para suppliers + RLS de equipe em calculation_rules
+## FKs nas tabelas de suporte — CASCADE → RESTRICT
 
-### 1. Adicionar mensagem de suppliers no handleDeleteError
+### Estado atual (verificado no banco)
 
-**Arquivo:** `src/lib/handleDeleteError.ts`
+| Tabela | FK existente | Ref | Tipo atual | Ação |
+|---|---|---|---|---|
+| `budget_quote_items` | `budget_quote_items_budget_quote_id_fkey` | `budget_quotes` | CASCADE (c) | Alterar para RESTRICT |
+| `discipline_priorities` | `discipline_priorities_project_id_fkey` | `projects` | CASCADE (c) | Alterar para RESTRICT |
+| `discipline_priorities` | `discipline_priorities_scope_item_id_fkey` | `scope_items` | CASCADE (c) | Alterar para RESTRICT |
+| `chat_messages` | `chat_messages_conversation_id_fkey` | `chat_conversations` | CASCADE (c) | Manter CASCADE (faz sentido deletar mensagens ao deletar conversa) |
 
-Adicionar entrada no `FK_MESSAGES`:
-```typescript
-suppliers: "Este fornecedor está alocado em obras e não pode ser excluído. Remova as alocações primeiro.",
-```
+### Decisão sobre `chat_messages`
 
-### 2. Aplicar handleDeleteError no Suppliers.tsx
+A FK já existe com CASCADE. Deletar uma conversa deve deletar suas mensagens — CASCADE é o comportamento correto aqui. Não será alterada.
 
-**Arquivo:** `src/pages/Suppliers.tsx`
-
-A mutation `remove` (linha 65-74) não tem `onError`. Adicionar:
-```typescript
-onError: (error: any) => handleDeleteError(error, "suppliers"),
-```
-
-E importar `handleDeleteError` no topo do arquivo.
-
-### 3. Migration: calculation_rules para RLS de equipe
-
-Drop 4 políticas individuais e criar 4 de equipe:
+### Migration SQL
 
 ```sql
-DROP POLICY IF EXISTS "Users can delete own rules" ON public.calculation_rules;
-DROP POLICY IF EXISTS "Users can insert own rules" ON public.calculation_rules;
-DROP POLICY IF EXISTS "Users can update own rules" ON public.calculation_rules;
-DROP POLICY IF EXISTS "Users can view own rules" ON public.calculation_rules;
+-- budget_quote_items → budget_quotes: CASCADE → RESTRICT
+ALTER TABLE public.budget_quote_items
+  DROP CONSTRAINT budget_quote_items_budget_quote_id_fkey;
+ALTER TABLE public.budget_quote_items
+  ADD CONSTRAINT fk_budget_quote_items_quote
+  FOREIGN KEY (budget_quote_id) REFERENCES public.budget_quotes(id) ON DELETE RESTRICT;
 
-CREATE POLICY "Team can view calculation_rules" ON public.calculation_rules
-  FOR SELECT USING (user_id IN (SELECT get_team_user_ids()));
-CREATE POLICY "Team can create calculation_rules" ON public.calculation_rules
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Team can update calculation_rules" ON public.calculation_rules
-  FOR UPDATE USING (user_id IN (SELECT get_team_user_ids()));
-CREATE POLICY "Team can delete calculation_rules" ON public.calculation_rules
-  FOR DELETE USING (user_id IN (SELECT get_team_user_ids()));
+-- discipline_priorities → projects: CASCADE → RESTRICT
+ALTER TABLE public.discipline_priorities
+  DROP CONSTRAINT discipline_priorities_project_id_fkey;
+ALTER TABLE public.discipline_priorities
+  ADD CONSTRAINT fk_discipline_priorities_project
+  FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
+
+-- discipline_priorities → scope_items: CASCADE → RESTRICT
+ALTER TABLE public.discipline_priorities
+  DROP CONSTRAINT discipline_priorities_scope_item_id_fkey;
+ALTER TABLE public.discipline_priorities
+  ADD CONSTRAINT fk_discipline_priorities_scope_item
+  FOREIGN KEY (scope_item_id) REFERENCES public.scope_items(id) ON DELETE RESTRICT;
 ```
+
+Não é necessário limpar órfãos — as FKs já existem, os dados já são íntegros.
+
+### Código frontend
+
+Nenhuma alteração necessária. O `handleDeleteError` já cobre `projects` com mensagem amigável.
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| `src/lib/handleDeleteError.ts` | Adicionar entrada `suppliers` no `FK_MESSAGES` |
-| `src/pages/Suppliers.tsx` | Importar `handleDeleteError`, adicionar `onError` na mutation `remove` |
-| Migration SQL | Drop 4 políticas individuais + criar 4 de equipe em `calculation_rules` |
+| Migration SQL | Drop 3 FKs CASCADE + criar 3 FKs RESTRICT |
 
