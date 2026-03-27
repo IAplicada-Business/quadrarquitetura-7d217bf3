@@ -63,11 +63,11 @@ export function useCostReferenceTable() {
     mutationFn: async (table: CostTable) => {
       if (!user) throw new Error("Not authenticated");
 
-      // Get existing settings
-      const { data: existing } = await supabase
+      // Get existing team settings
+      const { data: existing } = await (supabase
         .from("settings")
-        .select("id, calculation_params")
-        .eq("user_id", user.id)
+        .select("id, calculation_params") as any)
+        .eq("scope", "team")
         .maybeSingle();
 
       const existingParams = (existing?.calculation_params as Record<string, unknown>) || {};
@@ -76,13 +76,13 @@ export function useCostReferenceTable() {
       if (existing) {
         const { error } = await supabase
           .from("settings")
-          .update({ calculation_params: newParams })
+          .update({ calculation_params: newParams } as any)
           .eq("id", existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("settings")
-          .insert({ user_id: user.id, calculation_params: newParams });
+          .insert({ user_id: user.id, calculation_params: newParams, scope: "team" } as any);
         if (error) throw error;
       }
     },
