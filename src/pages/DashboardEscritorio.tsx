@@ -159,6 +159,19 @@ export default function DashboardEscritorio() {
     enabled: !!user,
   });
 
+  const { data: overdueTasks = [] } = useQuery({
+    queryKey: ["schedule_tasks", "overdue"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("schedule_tasks")
+        .select("id, end_date, status, task_name, project_id")
+        .lt("end_date", todayStr)
+        .not("status", "in", "(concluido,executado)");
+      return data ?? [];
+    },
+    enabled: !!user,
+  });
+
   // ── Computed data ──
   const computed = useMemo(() => {
     const activeProjects = projects.filter((p) => p.status !== "concluido");
