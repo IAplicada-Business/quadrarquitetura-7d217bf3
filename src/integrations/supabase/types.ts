@@ -112,17 +112,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "budget_quotes_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "budget_quotes_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_budget_quotes_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -861,7 +861,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "invoices_project_id_fkey"
+            foreignKeyName: "fk_invoices_project"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -1303,7 +1303,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "pending_items_project_id_fkey"
+            foreignKeyName: "fk_pending_items_project"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -1843,17 +1843,17 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_purchases_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "purchases_material_calc_id_fkey"
             columns: ["material_calc_id"]
             isOneToOne: false
             referencedRelation: "material_calculations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchases_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -1979,7 +1979,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "scenarios_project_id_fkey"
+            foreignKeyName: "fk_scenarios_project"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -2249,7 +2249,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "site_diary_entries_project_id_fkey"
+            foreignKeyName: "fk_site_diary_project"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -2573,17 +2573,17 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_voice_tasks_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "voice_tasks_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "voice_tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "voice_tasks_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
