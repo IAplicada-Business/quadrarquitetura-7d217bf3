@@ -106,7 +106,7 @@ export default function DashboardEscritorio() {
   const { data: projects = [] } = useQuery({
     queryKey: ["dash-esc-projects"],
     queryFn: async () => {
-      const { data } = await supabase.from("projects").select("id, name, status, estimated_budget").eq("user_id", user!.id);
+      const { data } = await supabase.from("projects").select("id, name, status, estimated_budget");
       return data ?? [];
     },
     enabled: !!user,
@@ -133,7 +133,7 @@ export default function DashboardEscritorio() {
   const { data: leads = [] } = useQuery({
     queryKey: ["dash-esc-leads"],
     queryFn: async () => {
-      const { data } = await supabase.from("leads").select("id, status, name, created_at").eq("user_id", user!.id);
+      const { data } = await supabase.from("leads").select("id, status, name, created_at");
       return data ?? [];
     },
     enabled: !!user,
@@ -142,7 +142,7 @@ export default function DashboardEscritorio() {
   const { data: allProposals = [] } = useQuery({
     queryKey: ["dash-esc-proposals-metrics"],
     queryFn: async () => {
-      const { data } = await supabase.from("proposals").select("id, status, price_full, created_at").eq("user_id", user!.id);
+      const { data } = await supabase.from("proposals").select("id, status, price_full, created_at");
       return data ?? [];
     },
     enabled: !!user,
@@ -151,7 +151,7 @@ export default function DashboardEscritorio() {
   const { data: proposals = [] } = useQuery({
     queryKey: ["dash-esc-proposals"],
     queryFn: async () => {
-      const { data } = await supabase.from("proposals").select("id, title, status, value, created_at, leads(name)").eq("user_id", user!.id).order("created_at", { ascending: false }).limit(4);
+      const { data } = await supabase.from("proposals").select("id, title, status, value, created_at, leads(name)").order("created_at", { ascending: false }).limit(4);
       return data ?? [];
     },
     enabled: !!user,
