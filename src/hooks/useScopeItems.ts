@@ -81,7 +81,14 @@ export function useScopeItems(projectId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["scope_items", projectId] });
       toast({ title: "Disciplina atualizada" });
     },
-    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+    onError: (e: any) => {
+      const msg = e?.message || "";
+      if (msg.includes("Status não pode ser revertido")) {
+        toast({ title: "Ação bloqueada", description: "Este item já foi contratado e não pode ter o status revertido.", variant: "destructive" });
+      } else {
+        toast({ title: "Erro", description: msg, variant: "destructive" });
+      }
+    },
   });
 
   const remove = useMutation({
