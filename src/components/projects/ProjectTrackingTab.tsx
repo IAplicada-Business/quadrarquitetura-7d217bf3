@@ -261,6 +261,17 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Weekly Report Modal */}
+      <WeeklyReportModal
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        avgProgress={avgProgress}
+        isPending={createReport.isPending}
+        onSubmit={(data) => {
+          createReport.mutate(data, { onSuccess: () => setReportOpen(false) });
+        }}
+      />
     </div>
   );
 }
