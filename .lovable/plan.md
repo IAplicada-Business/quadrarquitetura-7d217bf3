@@ -1,56 +1,56 @@
 
 
-## Mensagem amigável ao bloquear deleção por FK
+## Alterar FKs de `ON DELETE CASCADE` para `ON DELETE RESTRICT` nas tabelas secundárias de projetos
 
-### Resumo
-Criar função utilitária `handleDeleteError` e usá-la nos `onError` de deleção em `useLeads`, `useProposals` e `useContracts`.
+### Estado atual
 
-### 1. Novo arquivo `src/lib/handleDeleteError.ts`
+Todas as 7 tabelas listadas **já possuem** foreign keys para `projects(id)`, mas com `ON DELETE CASCADE`. Isso significa que deletar um projeto apaga silenciosamente todos os dados vinculados (escopo, cronograma, materiais, pagamentos, etc.).
 
-```typescript
-import { toast } from "@/hooks/use-toast";
+Além das 7 tabelas do prompt, existem outras que também referenciam `projects(id)` com CASCADE:
+- `budget_quotes`, `material_calculations`, `invoices`, `pending_items`, `purchases`, `scenarios`, `site_diary_entries`, `documents`, `reports`, `voice_tasks`, `discipline_priorities`, `discipline_material_estimates`, `plant_analyses`, `site_visits`, `supplier_allocations`
 
-const FK_MESSAGES: Record<string, string> = {
-  leads: "Este lead possui propostas vinculadas e não pode ser excluído. Remova as propostas primeiro.",
-  proposals: "Esta proposta possui um contrato vinculado. Remova o contrato primeiro.",
-};
+### Migration SQL
 
-const GENERIC_FK = "Este registro está vinculado a outros dados e não pode ser excluído.";
+Para cada tabela: dropar a FK existente e recriar com `ON DELETE RESTRICT`.
 
-export function handleDeleteError(error: any, table?: string) {
-  const code = error?.code;
-  if (code === "23503") {
-    toast({
-      title: "Não é possível excluir",
-      description: (table && FK_MESSAGES[table]) || GENERIC_FK,
-      variant: "destructive",
-    });
-  } else {
-    toast({
-      title: "Erro ao remover",
-      description: error?.message || "Erro desconhecido",
-      variant: "destructive",
-    });
-  }
-}
+```sql
+-- Padrão para cada tabela:
+ALTER TABLE public.[tabela] DROP CONSTRAINT [nome_constraint_existente];
+ALTER TABLE public.[tabela] ADD CONSTRAINT fk_[tabela]_project
+  FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
 ```
 
-### 2. Alterações nos hooks
+**Tabelas a migrar (conforme prompt — 7 tabelas):**
+1. `scope_items`
+2. `schedule_tasks`
+3. `budgets`
+4. `payments`
+5. `material_tracking`
+6. `site_tracking`
+7. `supplier_allocations`
 
-Em cada hook, substituir o `onError` do `remove` mutation:
+Não é necessário limpar órfãos — todas as FKs já existem, então não há registros com `project_id` inválido.
 
-- **`useLeads.ts`** linha 109: `onError: (e) => handleDeleteError(e, "leads")`
-- **`useProposals.ts`** linha 91: `onError: (e) => handleDeleteError(e, "proposals")`
-- **`useContracts.ts`** linha 73: `onError: (e) => handleDeleteError(e, "contracts")`
+Os nomes das constraints existentes precisam ser descobertos. A migration usará `DROP CONSTRAINT IF EXISTS` com o nome gerado pelo Postgres (normalmente `[tabela]_project_id_fkey`).
 
-**Nota**: O erro do Supabase JS inclui `.code` no objeto de erro quando é um `PostgrestError`, então a verificação `error.code === "23503"` funciona diretamente.
+### Código frontend
+
+A função `handleDeleteError` já existe em `src/lib/handleDeleteError.ts`. Basta adicionar uma entrada para `projects`:
+
+```typescript
+const FK_MESSAGES: Record<string, string> = {
+  leads: "...",
+  proposals: "...",
+  projects: "Este projeto possui dados vinculados (escopo, cronograma, materiais, etc.) e não pode ser excluído. Remova os dados do projeto primeiro.",
+};
+```
+
+E usar `handleDeleteError(e, "projects")` no hook de deleção de projetos (se existir).
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| `src/lib/handleDeleteError.ts` | Criar função utilitária |
-| `src/hooks/useLeads.ts` | Usar `handleDeleteError` no `onError` do remove |
-| `src/hooks/useProposals.ts` | Usar `handleDeleteError` no `onError` do remove |
-| `src/hooks/useContracts.ts` | Usar `handleDeleteError` no `onError` do remove |
+| Migration SQL | Alterar ON DELETE de CASCADE para RESTRICT em 7 FKs |
+| `src/lib/handleDeleteError.ts` | Adicionar mensagem para `projects` |
 
