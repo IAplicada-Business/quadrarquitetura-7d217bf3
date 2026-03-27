@@ -241,6 +241,7 @@ export default function DashboardEscritorio() {
     const ticketMedio = proposalsMesAtual.length > 0 ? proposalsMesAtual.reduce((s, p) => s + (p.price_full ?? 0), 0) / proposalsMesAtual.length : 0;
 
     const propostasAguardando = allProposals.filter((p) => p.status === "enviada").length;
+    const propostasAprovadasMes = allProposals.filter((p) => p.status === "aprovada" && p.created_at?.slice(0, 7) === format(today, "yyyy-MM")).length;
 
     // Gráfico leads 6 meses empilhado
     const leadsChartData = monthLabels.map((label, i) => {
@@ -273,6 +274,7 @@ export default function DashboardEscritorio() {
       taxaConversao,
       ticketMedio,
       propostasAguardando,
+      propostasAprovadasMes,
       leadsChartData,
     };
   }, [projects, payments, budgetQuotes, leads, allProposals, monthStart, monthEnd, weekStart, weekEnd, todayStr, today]);
@@ -543,6 +545,17 @@ export default function DashboardEscritorio() {
           <CardContent>
             <p className="text-2xl font-bold font-display" style={{ color: "hsl(35, 60%, 35%)" }}>{computed.propostasAguardando}</p>
             <p className="text-xs text-muted-foreground mt-1">propostas enviadas</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(152, 60%, 40%)" }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Aprovadas no Mês</CardTitle>
+            <CheckCircle2 className="h-5 w-5" style={{ color: "hsl(152, 60%, 40%)" }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: "hsl(152, 40%, 30%)" }}>{computed.propostasAprovadasMes}</p>
+            <p className="text-xs text-muted-foreground mt-1">propostas aprovadas</p>
           </CardContent>
         </Card>
       </div>
