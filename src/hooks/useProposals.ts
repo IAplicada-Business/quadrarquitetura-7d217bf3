@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { handleDeleteError } from "@/lib/handleDeleteError";
 
 export interface Proposal {
   id: string;
@@ -88,7 +89,7 @@ export function useProposals() {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
       toast({ title: "Proposta removida" });
     },
-    onError: (e: Error) => toast({ title: "Erro ao remover", description: e.message, variant: "destructive" }),
+    onError: (e: any) => handleDeleteError(e, "proposals"),
   });
 
   return { proposals: proposalsQuery.data ?? [], isLoading: proposalsQuery.isLoading, create, update, remove };
