@@ -182,17 +182,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "budgets_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "budgets_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_budgets_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -1119,7 +1119,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "material_tracking_project_id_fkey"
+            foreignKeyName: "fk_material_tracking_project"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -1232,6 +1232,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_payments_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "payments_budget_quote_id_fkey"
             columns: ["budget_quote_id"]
             isOneToOne: false
@@ -1243,13 +1250,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -2074,17 +2074,17 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_schedule_tasks_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "schedule_tasks_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "schedule_tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "schedule_tasks_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -2153,17 +2153,17 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_scope_items_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "scope_items_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "scope_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scope_items_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -2287,7 +2287,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "site_tracking_project_id_fkey"
+            foreignKeyName: "fk_site_tracking_project"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -2384,7 +2384,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "supplier_allocations_project_id_fkey"
+            foreignKeyName: "fk_supplier_allocations_project"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"

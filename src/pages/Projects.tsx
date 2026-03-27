@@ -5,6 +5,7 @@ import { Plus, Search, Pencil, Trash2, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { handleDeleteError } from "@/lib/handleDeleteError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -111,7 +112,7 @@ export default function Projects() {
       setDeleteId(null);
       toast({ title: "Projeto excluído" });
     },
-    onError: (e: Error) => toast({ title: "Erro ao excluir", description: e.message, variant: "destructive" }),
+    onError: (e: any) => handleDeleteError(e, "projects"),
   });
 
   const filteredProjects = (projects ?? []).filter((p) => {
