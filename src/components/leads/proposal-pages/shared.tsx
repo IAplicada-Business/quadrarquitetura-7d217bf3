@@ -58,6 +58,28 @@ export interface ProposalPageProps {
   portfolioCards?: { id: string; nome: string; foto_url: string; legenda?: string }[];
   pageWidth?: number;
   pageHeight?: number;
+  validUntil?: string | null;
+}
+
+export function ValidityFooter({ validUntil, dark }: { validUntil?: string | null; dark?: boolean }) {
+  if (!validUntil) return null;
+  const parts = validUntil.split("-");
+  const formatted = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : validUntil;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        bottom: 14,
+        left: 24,
+        fontFamily: FONT_BODY,
+        fontSize: 8,
+        opacity: 0.4,
+        color: dark ? "#F0DCC8" : "#1B2A4A",
+      }}
+    >
+      Proposta válida até {formatted}
+    </div>
+  );
 }
 
 export function PageContainer({ bg, children, pageWidth, pageHeight }: { bg: string; children: React.ReactNode; pageWidth?: number; pageHeight?: number }) {

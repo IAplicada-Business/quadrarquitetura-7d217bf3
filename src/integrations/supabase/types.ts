@@ -1634,6 +1634,7 @@ export type Database = {
           total_area: number | null
           updated_at: string
           user_id: string
+          valid_until: string | null
           value: number | null
         }
         Insert: {
@@ -1692,6 +1693,7 @@ export type Database = {
           total_area?: number | null
           updated_at?: string
           user_id: string
+          valid_until?: string | null
           value?: number | null
         }
         Update: {
@@ -1750,6 +1752,7 @@ export type Database = {
           total_area?: number | null
           updated_at?: string
           user_id?: string
+          valid_until?: string | null
           value?: number | null
         }
         Relationships: [
