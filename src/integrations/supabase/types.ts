@@ -44,7 +44,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "budget_quote_items_budget_quote_id_fkey"
+            foreignKeyName: "fk_budget_quote_items_quote"
             columns: ["budget_quote_id"]
             isOneToOne: false
             referencedRelation: "budget_quotes"
@@ -738,14 +738,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "discipline_priorities_project_id_fkey"
+            foreignKeyName: "fk_discipline_priorities_project"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "discipline_priorities_scope_item_id_fkey"
+            foreignKeyName: "fk_discipline_priorities_scope_item"
             columns: ["scope_item_id"]
             isOneToOne: false
             referencedRelation: "scope_items"
