@@ -2178,6 +2178,7 @@ export type Database = {
           created_at: string
           id: string
           message_templates: Json | null
+          scope: string
           supplier_categories: string[] | null
           theme: string | null
           updated_at: string
@@ -2189,6 +2190,7 @@ export type Database = {
           created_at?: string
           id?: string
           message_templates?: Json | null
+          scope?: string
           supplier_categories?: string[] | null
           theme?: string | null
           updated_at?: string
@@ -2200,6 +2202,7 @@ export type Database = {
           created_at?: string
           id?: string
           message_templates?: Json | null
+          scope?: string
           supplier_categories?: string[] | null
           theme?: string | null
           updated_at?: string
