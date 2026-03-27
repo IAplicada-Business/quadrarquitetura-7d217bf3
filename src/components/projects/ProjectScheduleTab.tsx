@@ -108,6 +108,26 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const overdue = items.filter((t: any) => t.status === "atrasado").length;
   const completed = items.filter((t: any) => t.status === "executado").length;
 
+  // Deadline alert tasks
+  const alertTasks = useMemo(() => {
+    const today = new Date();
+    const todayStr = format(today, "yyyy-MM-dd");
+    const soonDate = addDays(today, 3);
+    const finishedStatuses = ["concluido", "executado"];
+    return items
+      .filter((t: any) => {
+        if (!t.end_date || finishedStatuses.includes(t.status || "")) return false;
+        return isBefore(new Date(t.end_date), addDays(today, 4));
+      })
+      .map((t: any) => {
+        const endDate = new Date(t.end_date);
+        const days = differenceInDays(new Date(todayStr), endDate);
+        const isOverdue = days > 0;
+        return { ...t, daysOffset: days, isOverdue, discipline: t.discipline || (t.scope_items as any)?.discipline };
+      })
+      .sort((a: any, b: any) => b.daysOffset - a.daysOffset);
+  }, [items]);
+
   const handleEdit = (task: any) => {
     setEditing(task as Record<string, unknown>);
     setFormOpen(true);
