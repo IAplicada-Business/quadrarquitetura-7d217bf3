@@ -44,10 +44,10 @@ export function useCostReferenceTable() {
     queryKey: ["settings_cost_table", user?.id],
     queryFn: async () => {
       if (!user) return DEFAULT_COST_TABLE;
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("settings")
-        .select("id, calculation_params, user_id")
-        .eq("scope" as any, "team")
+        .select("id, calculation_params, user_id") as any)
+        .eq("scope", "team")
         .maybeSingle();
       if (error) throw error;
       const params = data?.calculation_params as Record<string, unknown> | null;
