@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import {
   CreditCard,
   TrendingUp,
@@ -95,6 +96,7 @@ const statusLabelMap: Record<string, string> = {
 /* ── componente ────────────────────────────────── */
 export default function DashboardEscritorio() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const today = new Date();
   const monthStart = format(startOfMonth(today), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(today), "yyyy-MM-dd");
