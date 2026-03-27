@@ -107,6 +107,7 @@ export default function LeadsProposals() {
       totalArea: formData.total_area,
       etapasAtivas: formData.etapas_ativas,
       portfolioCards: formData.portfolio_cards?.filter(c => c.foto_url) || [],
+      validUntil: formData.valid_until,
     };
   }, [logos, founderPhotos, texts, contacts]);
 
@@ -153,6 +154,7 @@ export default function LeadsProposals() {
       final_value: formData.price_full && formData.discount_cash_percent && formData.discount_cash_percent > 0
         ? formData.price_full * (1 - formData.discount_cash_percent / 100)
         : formData.price_full,
+      valid_until: formData.valid_until,
       status,
     };
 
@@ -353,6 +355,7 @@ export default function LeadsProposals() {
       ambientes: (p as any).ambientes || [],
       total_area: (p as any).total_area ?? null,
       etapas_ativas: (p as any).etapas_ativas || [],
+      valid_until: (p as any).valid_until ?? null,
     };
   }, [editingProposal]);
 

@@ -1,7 +1,7 @@
-import { PageContainer, COLORS, LogoQuadra, FONT_TITLE, FONT_BODY, type ProposalPageProps } from "./shared";
+import { PageContainer, COLORS, LogoQuadra, FONT_TITLE, FONT_BODY, ValidityFooter, type ProposalPageProps } from "./shared";
 import sociasCover from "@/assets/socias-cover.jpg";
 
-export function ProposalCoverPage({ clientName, projectName, logoUrl, pageWidth, pageHeight }: ProposalPageProps) {
+export function ProposalCoverPage({ clientName, projectName, logoUrl, pageWidth, pageHeight, validUntil }: ProposalPageProps) {
   return (
     <PageContainer bg={COLORS.azulMarinho} pageWidth={pageWidth} pageHeight={pageHeight}>
       {/* Background photo */}
@@ -81,6 +81,7 @@ export function ProposalCoverPage({ clientName, projectName, logoUrl, pageWidth,
           Projeto
         </div>
       </div>
+      <ValidityFooter validUntil={validUntil} dark />
       <LogoQuadra />
     </PageContainer>
   );

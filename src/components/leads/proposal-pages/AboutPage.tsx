@@ -1,10 +1,10 @@
-import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, PAGE_H, type ProposalPageProps } from "./shared";
+import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, PAGE_H, ValidityFooter, type ProposalPageProps } from "./shared";
 import foundersPhoto from "@/assets/founders-photo.png";
 
 const DEFAULT_ABOUT =
   "A Quadra nasceu em 2022 da seguinte pergunta: como garantir que o cliente tenha, no final da obra, o resultado exatamente igual ao projeto 3D? Desenvolvemos um serviço de gerenciamento completo para que cada detalhe seja executado do jeito que sempre foi sonhado.";
 
-export function ProposalAboutPage({ aboutText, logoUrl, pageWidth, pageHeight }: ProposalPageProps) {
+export function ProposalAboutPage({ aboutText, logoUrl, pageWidth, pageHeight, validUntil }: ProposalPageProps) {
   return (
     <PageContainer bg={COLORS.begeClaro} pageWidth={pageWidth} pageHeight={pageHeight}>
       <div
@@ -129,6 +129,7 @@ export function ProposalAboutPage({ aboutText, logoUrl, pageWidth, pageHeight }:
           </div>
         </div>
       </div>
+      <ValidityFooter validUntil={validUntil} />
     </PageContainer>
   );
 }

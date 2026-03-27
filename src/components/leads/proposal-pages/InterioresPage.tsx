@@ -1,4 +1,4 @@
-import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, LogoQuadra, type ProposalPageProps } from "./shared";
+import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, LogoQuadra, ValidityFooter, type ProposalPageProps } from "./shared";
 
 const BriefingIcon = () => (
   <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke={COLORS.roseMauve} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -65,7 +65,7 @@ const STEPS = [
   },
 ];
 
-export function ProposalInterioresPage({ pageWidth, pageHeight }: ProposalPageProps) {
+export function ProposalInterioresPage({ pageWidth, pageHeight, validUntil }: ProposalPageProps) {
   return (
     <PageContainer bg={COLORS.begeClaro} pageWidth={pageWidth} pageHeight={pageHeight}>
       <div style={{ padding: "60px 44px 44px", height: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -145,6 +145,7 @@ export function ProposalInterioresPage({ pageWidth, pageHeight }: ProposalPagePr
           ))}
         </div>
       </div>
+      <ValidityFooter validUntil={validUntil} />
       <LogoQuadra />
     </PageContainer>
   );

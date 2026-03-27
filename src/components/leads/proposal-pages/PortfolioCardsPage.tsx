@@ -1,4 +1,4 @@
-import { PageContainer, COLORS, LogoSmall, FONT_TITLE, FONT_BODY, type ProposalPageProps } from "./shared";
+import { PageContainer, COLORS, LogoSmall, FONT_TITLE, FONT_BODY, ValidityFooter, type ProposalPageProps } from "./shared";
 
 interface PortfolioCard {
   id: string;
@@ -83,6 +83,7 @@ export function ProposalPortfolioCardsPage(props: ProposalPageProps) {
           ))}
         </div>
       </div>
+      <ValidityFooter validUntil={props.validUntil} />
       <LogoSmall url={props.logoUrl} />
     </PageContainer>
   );

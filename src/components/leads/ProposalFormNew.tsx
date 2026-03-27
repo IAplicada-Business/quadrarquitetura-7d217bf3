@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { useProposalAssets } from "@/hooks/useProposalAssets";
 import { useLeads } from "@/hooks/useLeads";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +44,7 @@ export interface ProposalFormData {
   ambientes: string[];
   total_area: number | null;
   etapas_ativas: string[];
+  valid_until: string | null;
 }
 
 const ALL_ETAPAS = [
@@ -118,6 +124,7 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
     ambientes: initialData?.ambientes || [],
     total_area: initialData?.total_area ?? null,
     etapas_ativas: initialData?.etapas_ativas || [...ALL_ETAPAS],
+    valid_until: initialData?.valid_until ?? new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
   });
 
   const set = <K extends keyof ProposalFormData>(key: K, val: ProposalFormData[K]) =>
@@ -208,6 +215,29 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
                 <SelectItem value="saude">Saúde</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Validade da proposta</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn("w-full justify-start text-left font-normal", !data.valid_until && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {data.valid_until ? format(new Date(data.valid_until + "T12:00:00"), "dd/MM/yyyy") : "Selecionar data"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={data.valid_until ? new Date(data.valid_until + "T12:00:00") : undefined}
+                  onSelect={(date) => set("valid_until", date ? date.toISOString().slice(0, 10) : null)}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </CardContent>
       </Card>

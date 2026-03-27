@@ -1,4 +1,4 @@
-import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, type ProposalPageProps } from "./shared";
+import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, ValidityFooter, type ProposalPageProps } from "./shared";
 
 const WHY_CARDS = [
   {
@@ -90,6 +90,7 @@ export function ProposalWhyHireValuesPage(props: ProposalPageProps) {
           ))}
         </div>
       </div>
+      <ValidityFooter validUntil={props.validUntil} dark />
     </PageContainer>
   );
 }

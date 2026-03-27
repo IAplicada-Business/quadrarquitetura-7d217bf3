@@ -1,4 +1,4 @@
-import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, LogoSmall, formatBRL, type ProposalPageProps } from "./shared";
+import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, LogoSmall, formatBRL, ValidityFooter, type ProposalPageProps } from "./shared";
 
 export function ProposalValuesPage(props: ProposalPageProps) {
   const { priceFull, priceCash, installmentsCount, installmentEntry, installmentValue, priceNote, logoUrl } = props;
@@ -150,6 +150,7 @@ export function ProposalValuesPage(props: ProposalPageProps) {
           {priceNote || "* Mão de obra e materiais de execução não estão inclusos neste valor."}
         </p>
       </div>
+      <ValidityFooter validUntil={props.validUntil} dark />
       <LogoSmall url={logoUrl} position="br" />
     </PageContainer>
   );
