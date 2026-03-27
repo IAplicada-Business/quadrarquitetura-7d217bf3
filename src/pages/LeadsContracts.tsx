@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Plus, Trash2, Pencil, FileSignature, Send, X, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,6 +33,7 @@ function generateContractNumber(contracts: Contract[]): string {
 
 export default function LeadsContracts() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { contracts, isLoading, create, update, remove, signAndCreateProject } = useContracts();
   const { proposals } = useProposals();
   const { templates, create: createTemplate, update: updateTemplate, remove: removeTemplate } = useContractTemplates();
@@ -143,6 +144,19 @@ export default function LeadsContracts() {
   };
 
   const filtered = statusFilter === "todos" ? contracts : contracts.filter((c) => c.status === statusFilter);
+
+  // Auto-open contract from conversion flow
+  useEffect(() => {
+    const editId = (location.state as any)?.editContractId;
+    if (editId && contracts.length > 0) {
+      const contract = contracts.find((c) => c.id === editId);
+      if (contract) {
+        openEdit(contract);
+        // Clear state to prevent re-opening on navigation
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [contracts, location.state]);
 
   if (isLoading) {
     return <div className="flex justify-center py-20"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
