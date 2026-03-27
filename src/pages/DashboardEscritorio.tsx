@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import {
   CreditCard,
   TrendingUp,
@@ -95,6 +96,7 @@ const statusLabelMap: Record<string, string> = {
 /* ── componente ────────────────────────────────── */
 export default function DashboardEscritorio() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const today = new Date();
   const monthStart = format(startOfMonth(today), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(today), "yyyy-MM-dd");
@@ -152,6 +154,19 @@ export default function DashboardEscritorio() {
     queryKey: ["dash-esc-proposals"],
     queryFn: async () => {
       const { data } = await supabase.from("proposals").select("id, title, status, value, created_at, leads(name)").order("created_at", { ascending: false }).limit(4);
+      return data ?? [];
+    },
+    enabled: !!user,
+  });
+
+  const { data: overdueTasks = [] } = useQuery({
+    queryKey: ["schedule_tasks", "overdue"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("schedule_tasks")
+        .select("id, end_date, status, task_name, project_id")
+        .lt("end_date", todayStr)
+        .not("status", "in", "(concluido,executado)");
       return data ?? [];
     },
     enabled: !!user,
@@ -308,6 +323,24 @@ export default function DashboardEscritorio() {
           </Card>
         ))}
       </div>
+
+      {/* KPI Tarefas Atrasadas */}
+      {overdueTasks.length > 0 && (
+        <Card
+          className="hover:shadow-md transition-shadow border-l-4 cursor-pointer"
+          style={{ borderLeftColor: "#DC2626" }}
+          onClick={() => navigate("/projects")}
+        >
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Tarefas Atrasadas</CardTitle>
+            <AlertTriangle className="h-5 w-5" style={{ color: "#DC2626" }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: "#DC2626" }}>{overdueTasks.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">em todos os projetos ativos</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Alertas */}
       {computed.alertas.length > 0 && (

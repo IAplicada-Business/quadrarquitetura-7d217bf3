@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2, Download } from "lucide-react";
+import { differenceInDays, isBefore, addDays, format } from "date-fns";
+import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import { ProjectPendingTab } from "./ProjectPendingTab";
 import { GanttChart } from "./GanttChart";
 import { ClientScheduleView } from "./ClientScheduleView";
 import { useQueryClient } from "@tanstack/react-query";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 function formatDate(d: string | null) {
   if (!d) return "—";
@@ -105,6 +107,26 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const inProgress = items.filter((t: any) => t.status === "em_execucao").length;
   const overdue = items.filter((t: any) => t.status === "atrasado").length;
   const completed = items.filter((t: any) => t.status === "executado").length;
+
+  // Deadline alert tasks
+  const alertTasks = useMemo(() => {
+    const today = new Date();
+    const todayStr = format(today, "yyyy-MM-dd");
+    const soonDate = addDays(today, 3);
+    const finishedStatuses = ["concluido", "executado"];
+    return items
+      .filter((t: any) => {
+        if (!t.end_date || finishedStatuses.includes(t.status || "")) return false;
+        return isBefore(new Date(t.end_date), addDays(today, 4));
+      })
+      .map((t: any) => {
+        const endDate = new Date(t.end_date);
+        const days = differenceInDays(new Date(todayStr), endDate);
+        const isOverdue = days > 0;
+        return { ...t, daysOffset: days, isOverdue, discipline: t.discipline || (t.scope_items as any)?.discipline };
+      })
+      .sort((a: any, b: any) => b.daysOffset - a.daysOffset);
+  }, [items]);
 
   const handleEdit = (task: any) => {
     setEditing(task as Record<string, unknown>);
@@ -229,6 +251,38 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
               onEdit={handleEdit}
               viewMode={ganttView}
             />
+          )}
+
+          {/* Pendências e Atrasos */}
+          {alertTasks.length > 0 && (
+            <Collapsible defaultOpen={alertTasks.some((t: any) => t.isOverdue)}>
+              <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 text-sm font-semibold text-display hover:opacity-80 transition-opacity">
+                <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                Pendências e Atrasos
+                <Badge variant="destructive" className="ml-1 text-[10px] px-1.5 py-0">{alertTasks.length}</Badge>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="border rounded-lg divide-y mt-1">
+                  {alertTasks.map((t: any) => (
+                    <div key={t.id} className="flex items-center justify-between px-3 py-2 text-xs hover:bg-muted/30 cursor-pointer" onClick={() => handleEdit(t)}>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.isOverdue ? "#DC2626" : "#D97706" }} />
+                        <span className="font-medium truncate">{t.task_name}</span>
+                        {t.discipline && <span className="text-muted-foreground hidden sm:inline">· {t.discipline}</span>}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0 ml-2">
+                        <span className="text-muted-foreground">{t.supplier_name || "—"}</span>
+                        <span className="text-muted-foreground">{t.end_date ? format(new Date(t.end_date), "dd/MM") : "—"}</span>
+                        <span className="font-semibold" style={{ color: t.isOverdue ? "#DC2626" : "#D97706" }}>
+                          {t.isOverdue ? `−${t.daysOffset}d` : `${Math.abs(t.daysOffset)}d`}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           )}
         </TabsContent>
 
