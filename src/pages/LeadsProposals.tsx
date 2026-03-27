@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useMemo } from "react";
-import { ToastAction } from "@/components/ui/toast";
 import { useNavigate } from "react-router-dom";
 import { Plus, Pencil, Trash2, FileText, Check, X, Send, Settings2, Download, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import ReactDOM from "react-dom/client";
 import { flushSync } from "react-dom";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { useContracts } from "@/hooks/useContracts";
 
 const statusLabels: Record<string, string> = {
   rascunho: "Rascunho", enviada: "Enviada", aprovada: "Aprovada", rejeitada: "Rejeitada",
@@ -58,6 +59,8 @@ export default function LeadsProposals() {
   const [previewPages, setPreviewPages] = useState<React.ReactElement[]>([]);
   const [generating, setGenerating] = useState(false);
   const renderContainerRef = useRef<HTMLDivElement>(null);
+  const [convertProposal, setConvertProposal] = useState<Proposal | null>(null);
+  const { contracts } = useContracts();
 
   // Build shared page props from assets
   const buildPageProps = useCallback((formData: ProposalFormData): ProposalPageProps => {
@@ -482,11 +485,7 @@ export default function LeadsProposals() {
                         <>
                           <Button size="sm" variant="default" className="h-7 text-xs ml-auto" onClick={() => {
                             update.mutate({ id: p.id, status: "aprovada", approved_at: new Date().toISOString() });
-                            toast({
-                              title: "Proposta aprovada",
-                              description: "Deseja converter em contrato?",
-                              action: <ToastAction altText="Converter" onClick={() => {}}>Converter</ToastAction>,
-                            });
+                            setConvertProposal(p);
                           }}>
                             <Check className="h-3 w-3 mr-1" /> Aprovar
                           </Button>
@@ -529,6 +528,51 @@ export default function LeadsProposals() {
 
       {/* Hidden render container for PDF */}
       <div ref={renderContainerRef} style={{ position: "fixed", left: "-9999px", top: 0 }} />
+
+      {/* Convert to Contract Dialog */}
+      <AlertDialog open={!!convertProposal} onOpenChange={(open) => { if (!open) setConvertProposal(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Proposta aprovada</AlertDialogTitle>
+            <AlertDialogDescription>Deseja converter esta proposta em contrato?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Depois</AlertDialogCancel>
+            <AlertDialogAction onClick={async () => {
+              if (!convertProposal || !user) return;
+              try {
+                const lead = leads.find(l => l.id === convertProposal.lead_id);
+                const year = new Date().getFullYear();
+                const thisYear = (contracts || []).filter((c: any) => c.contract_number?.startsWith(`CONTR-${year}`));
+                const contractNumber = `CONTR-${year}-${String(thisYear.length + 1).padStart(3, "0")}`;
+
+                const { data, error } = await supabase.from("contracts").insert({
+                  user_id: user.id,
+                  proposal_id: convertProposal.id,
+                  contract_number: contractNumber,
+                  title: (convertProposal as any).project_name || null,
+                  value: (convertProposal as any).price_full || convertProposal.value || null,
+                  payment_conditions: convertProposal.payment_conditions || null,
+                  service_description: (convertProposal as any).scope_description || null,
+                  start_date: (convertProposal as any).valid_until || null,
+                  estimated_duration: (convertProposal as any).estimated_duration || null,
+                  client_name: lead?.name || null,
+                  client_email: lead?.email || null,
+                  client_phone: lead?.phone || null,
+                  status: "rascunho",
+                } as any).select("id").single();
+
+                if (error) throw error;
+                setConvertProposal(null);
+                navigate("/leads/contracts", { state: { editContractId: data.id } });
+                toast({ title: "Contrato criado a partir da proposta. Revise antes de enviar." });
+              } catch (err: any) {
+                toast({ title: "Erro ao criar contrato", description: err.message, variant: "destructive" });
+              }
+            }}>Converter em Contrato</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
