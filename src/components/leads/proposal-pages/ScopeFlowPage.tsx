@@ -13,7 +13,7 @@ const ALL_FLOW_STEPS = [
 const DEFAULT_SCOPE =
   "Desenvolvemos o **projeto executivo** com todos os desenhos necessários à obra, considerando cada ideia discutida com o cliente. Em seguida, conduzimos o **gerenciamento completo** — administração de fornecedores, cronograma, pagamentos, vistorias e conferências. Acompanhamos também o **pós-obra**, garantindo que tudo funcione como entregue.";
 
-export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelineAnteprojeto, timelineBudget, timelinePriorities, timelineConstruction, timelineMobilization, timelineFiscalization, ambientes, totalArea, etapasAtivas, pageWidth, pageHeight }: ProposalPageProps) {
+export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelineAnteprojeto, timelineBudget, timelinePriorities, timelineConstruction, timelineMobilization, timelineFiscalization, ambientes, totalArea, etapasAtivas, pageWidth, pageHeight, validUntil }: ProposalPageProps) {
   const text = scopeDescription || DEFAULT_SCOPE;
 
   function parseSimpleMarkdown(t: string): string {
@@ -233,7 +233,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
           ))}
         </div>
       </div>
-      <ValidityFooter validUntil={props.validUntil} />
+      <ValidityFooter validUntil={validUntil} />
     </PageContainer>
   );
 }
