@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useMemo } from "react";
+import { ToastAction } from "@/components/ui/toast";
 import { useNavigate } from "react-router-dom";
 import { Plus, Pencil, Trash2, FileText, Check, X, Send, Settings2, Download, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -448,7 +449,16 @@ export default function LeadsProposals() {
                         <p className="font-semibold text-sm">{(p as any).client_name || (p as any).title || (p.leads as any)?.name || "Lead"}</p>
                         {(p as any).project_name && <p className="text-xs text-muted-foreground">{(p as any).project_name}</p>}
                       </div>
-                      <Badge variant={p.status === "aprovada" ? "default" : p.status === "rejeitada" ? "destructive" : "secondary"}>
+                      <Badge
+                        variant={p.status === "rejeitada" ? "destructive" : "secondary"}
+                        className={
+                          p.status === "enviada"
+                            ? "bg-[#1B2A4A] text-white border-[#1B2A4A] hover:bg-[#1B2A4A]/90"
+                            : p.status === "aprovada"
+                            ? "bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100/90"
+                            : ""
+                        }
+                      >
                         {statusLabels[p.status] || p.status}
                       </Badge>
                     </div>
@@ -470,7 +480,14 @@ export default function LeadsProposals() {
                       )}
                       {p.status === "enviada" && (
                         <>
-                          <Button size="sm" variant="default" className="h-7 text-xs ml-auto" onClick={() => update.mutate({ id: p.id, status: "aprovada", approved_at: new Date().toISOString() })}>
+                          <Button size="sm" variant="default" className="h-7 text-xs ml-auto" onClick={() => {
+                            update.mutate({ id: p.id, status: "aprovada", approved_at: new Date().toISOString() });
+                            toast({
+                              title: "Proposta aprovada",
+                              description: "Deseja converter em contrato?",
+                              action: <ToastAction altText="Converter" onClick={() => {}}>Converter</ToastAction>,
+                            });
+                          }}>
                             <Check className="h-3 w-3 mr-1" /> Aprovar
                           </Button>
                           <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setRejectOpen(p.id)}>
