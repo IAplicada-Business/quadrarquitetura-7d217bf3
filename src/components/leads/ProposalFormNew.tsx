@@ -216,6 +216,29 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1.5">
+            <Label>Validade da proposta</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn("w-full justify-start text-left font-normal", !data.valid_until && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {data.valid_until ? format(new Date(data.valid_until + "T12:00:00"), "dd/MM/yyyy") : "Selecionar data"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={data.valid_until ? new Date(data.valid_until + "T12:00:00") : undefined}
+                  onSelect={(date) => set("valid_until", date ? date.toISOString().slice(0, 10) : null)}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </CardContent>
       </Card>
 
