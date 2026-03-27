@@ -1,57 +1,52 @@
 
 
-## Conversão de proposta aprovada em contrato
+## Foreign Keys — Ajuste de ON DELETE CASCADE para RESTRICT
 
-### Resumo
-Substituir o toast placeholder do botão "Aprovar" por um modal de confirmação. Ao confirmar, criar contrato pré-preenchido com dados da proposta e redirecionar para `/leads/contracts` com o formulário de edição aberto.
+### Estado atual
 
-### Mapeamento de campos (proposta → contrato)
+As foreign keys **já existem** no banco:
+- `proposals.lead_id → leads(id)` com `ON DELETE CASCADE`
+- `contracts.proposal_id → proposals(id)` com `ON DELETE CASCADE`
 
-| Proposta | Contrato |
-|---|---|
-| `id` | `proposal_id` |
-| `leads.name` | `client_name` |
-| `leads.email` | `client_email` |
-| `leads.phone` | `client_phone` |
-| `price_full` | `value` |
-| `payment_conditions` | `payment_conditions` |
-| `scope_description` | `service_description` |
-| `valid_until` | `start_date` |
-| `project_name` | `title` |
-| `estimated_duration` | `estimated_duration` |
-| — | `status = "rascunho"` |
+O problema: `CASCADE` significa que deletar um lead **apaga silenciosamente todas as propostas** vinculadas, e deletar uma proposta **apaga todos os contratos** vinculados. Isso é exatamente o risco que você quer evitar.
+
+A tabela `projects` **não possui** coluna `lead_id`, então a terceira FK do prompt não se aplica no schema atual.
+
+### Migration
+
+Uma única migration para alterar o comportamento de deleção:
+
+```sql
+-- 1. proposals.lead_id: CASCADE → RESTRICT
+ALTER TABLE public.proposals
+  DROP CONSTRAINT proposals_lead_id_fkey,
+  ADD CONSTRAINT proposals_lead_id_fkey
+    FOREIGN KEY (lead_id) REFERENCES public.leads(id)
+    ON DELETE RESTRICT;
+
+-- 2. contracts.proposal_id: CASCADE → RESTRICT
+ALTER TABLE public.contracts
+  DROP CONSTRAINT contracts_proposal_id_fkey,
+  ADD CONSTRAINT contracts_proposal_id_fkey
+    FOREIGN KEY (proposal_id) REFERENCES public.proposals(id)
+    ON DELETE RESTRICT;
+```
+
+### Impacto no código
+
+Nenhuma alteração de código é necessária. O comportamento muda apenas no banco: tentativas de deletar um lead com propostas ou uma proposta com contratos retornarão um erro do Postgres, que o Supabase SDK já propaga como `error` no retorno da query.
+
+As telas de deleção de leads (pipeline) já tratam erros genéricos com toast — o usuário verá uma mensagem de erro se tentar deletar um lead protegido.
+
+### Sobre `projects.lead_id`
+
+A tabela `projects` não tem coluna `lead_id` no schema atual. Se no futuro quiser vincular projetos a leads, será necessário primeiro criar a coluna e depois a FK. Isso não faz parte desta migration.
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| `src/pages/LeadsProposals.tsx` | Substituir toast por AlertDialog de confirmação; ao confirmar, inserir contrato via `useContracts().create` e redirecionar |
-| `src/pages/LeadDetail.tsx` | Mesma lógica para o botão Aprovar (se existir) |
+| Migration SQL | Alterar ON DELETE de CASCADE para RESTRICT em 2 FKs |
 
-### Detalhes técnicos
-
-**1. `src/pages/LeadsProposals.tsx`**
-- Importar `useContracts` e `AlertDialog` components
-- Adicionar state: `convertProposalId: string | null`
-- No botão "Aprovar" (linha ~483): após `update.mutate`, setar `convertProposalId = p.id` em vez de exibir toast
-- Renderizar `AlertDialog` controlado por `convertProposalId`:
-  - Título: "Proposta aprovada"
-  - Descrição: "Deseja converter em contrato?"
-  - Botão "Converter em Contrato": executa insert no contracts via supabase direto (não via hook, para obter o id de retorno), mapeia campos conforme tabela acima, gera `contract_number` com helper existente, depois navega para `/leads/contracts` com state `{ editContractId: newContract.id }` e toast "Contrato criado a partir da proposta. Revise antes de enviar."
-  - Botão "Depois": fecha o dialog
-
-**2. `src/pages/LeadsContracts.tsx`**
-- No `useEffect` ou inicialização, verificar `location.state?.editContractId`
-- Se presente, encontrar o contrato e chamar `openEdit(contract)` automaticamente
-- Campos não preenchidos pela proposta (CPF/CNPJ, endereço do contratante, endereço da obra, bairro, cidade) ficam vazios — o formulário já aceita isso normalmente
-
-**3. `src/pages/LeadDetail.tsx`**
-- Se houver botão de aprovação na listagem de propostas, aplicar a mesma lógica de conversão
-
-### Fluxo do usuário
-1. Clica "Aprovar" numa proposta enviada
-2. Status muda para "aprovada"
-3. Modal aparece: "Deseja converter em contrato?"
-4. Ao confirmar → contrato criado → redirecionado para `/leads/contracts` com formulário de edição aberto
-5. Campos pendentes ficam vazios para preenchimento manual
+Nenhum arquivo de código precisa ser alterado.
 
