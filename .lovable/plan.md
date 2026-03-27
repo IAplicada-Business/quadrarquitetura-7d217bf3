@@ -1,39 +1,31 @@
 
 
-## Migrar `plant_analyses` para RLS de equipe
+## Fechar lacunas menores de RLS
 
 ### Migration SQL
 
 ```sql
--- Dropar políticas individuais existentes
-DROP POLICY IF EXISTS "Users can view own plant_analyses" ON public.plant_analyses;
-DROP POLICY IF EXISTS "Users can insert own plant_analyses" ON public.plant_analyses;
-DROP POLICY IF EXISTS "plant_analyses_update" ON public.plant_analyses;
-DROP POLICY IF EXISTS "Users can delete own plant_analyses" ON public.plant_analyses;
-
--- Criar políticas de equipe
-CREATE POLICY "plant_analyses_team_select" ON public.plant_analyses
-  FOR SELECT TO authenticated
-  USING (user_id IN (SELECT get_team_user_ids()));
-
-CREATE POLICY "plant_analyses_team_insert" ON public.plant_analyses
-  FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "plant_analyses_team_update" ON public.plant_analyses
-  FOR UPDATE TO authenticated
-  USING (user_id IN (SELECT get_team_user_ids()));
-
-CREATE POLICY "plant_analyses_team_delete" ON public.plant_analyses
+-- 1. DELETE em settings — usuário pode deletar próprios registros
+CREATE POLICY "settings_delete" ON public.settings
   FOR DELETE TO authenticated
-  USING (user_id IN (SELECT get_team_user_ids()));
+  USING (auth.uid() = user_id);
+
+-- 2. lead_form_submissions UPDATE — restringir ao time
+DROP POLICY IF EXISTS "Authenticated users can update submissions" ON public.lead_form_submissions;
+CREATE POLICY "lead_form_submissions_team_update" ON public.lead_form_submissions
+  FOR UPDATE TO authenticated
+  USING (auth.uid() IN (SELECT get_team_user_ids()));
 ```
 
-Usa `get_team_user_ids()` (SECURITY DEFINER) — mesmo padrão de todas as outras tabelas operacionais. Nenhuma alteração no frontend.
+Nota: uso `get_team_user_ids()` em vez de query direta em `team_members` para manter consistência com o padrão do projeto e evitar problemas de RLS recursivo.
+
+### Código frontend
+
+Nenhuma alteração necessária.
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | Drop 4 políticas individuais + criar 4 de equipe em `plant_analyses` |
+| Migration SQL | 1 policy DELETE em `settings` + 1 policy UPDATE substituída em `lead_form_submissions` |
 
