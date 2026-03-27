@@ -1,66 +1,24 @@
 
 
-## Rodapé de validade em todas as páginas do PDF
-
-### Migration SQL
-```sql
-ALTER TABLE public.proposals ADD COLUMN IF NOT EXISTS valid_until date DEFAULT NULL;
-```
+## Capa com nome do projeto dinâmico
 
 ### Edições
 
-**1. `src/components/leads/proposal-pages/shared.tsx`**
-- Adicionar `validUntil?: string | null` à interface `ProposalPageProps`
-- Criar componente reutilizável `ValidityFooter`:
-  - Props: `validUntil?: string | null`, `dark?: boolean`
-  - Se `validUntil` for null/undefined, retorna null
-  - Formata data como dd/mm/aaaa
-  - Estilo: `position: absolute; bottom: 14px; left: 24px; fontFamily: FONT_BODY; fontSize: 8; opacity: 0.4`
-  - Cor: `#1B2A4A` para páginas claras (default), `#F0DCC8` para páginas escuras (`dark={true}`)
-  - Texto: `Proposta válida até [dd/mm/aaaa]`
+**1. `src/components/leads/proposal-pages/CoverPage.tsx`**
+- Substituir o conteúdo do bloco inferior (linhas 58-82) por:
+  - Linha principal (maior): `clientName || "CLIENTE"` — mantém estilo atual (Jost, 16px, letterSpacing 6, uppercase, opacity 0.85)
+  - Linha secundária: `projectName` — fontSize 11, letterSpacing 4, opacity 0.55, uppercase
+  - Se `projectName` for vazio/null/undefined, não renderizar a linha secundária
+- Remover o texto fixo "Projeto" que está hardcoded na linha 81
 
-**2. Cada componente de página — adicionar `<ValidityFooter>`**
-Dentro do `<PageContainer>`, antes do fechamento:
-
-| Página | Fundo | dark? |
-|---|---|---|
-| CoverPage | azulMarinho | `true` |
-| AboutPage | begeClaro | `false` |
-| ScopeFlowPage | begeClaro | `false` |
-| InterioresPage | begeClaro | `false` |
-| ManagementFullPage | azulMarinho | `true` |
-| WhyHireValuesPage | begeClaro | `false` |
-| PortfolioCardsPage | begeClaro | `false` |
-| ValuesPage | begeClaro | `false` |
-| ContactPage | roseMauve | `true` |
-
-Cada componente já recebe `...ProposalPageProps` via spread, então `validUntil` chega automaticamente.
-
-**3. `src/components/leads/ProposalFormNew.tsx`**
-- Adicionar `valid_until: string | null` à interface `ProposalFormData`
-- Inicializar com `initialData?.valid_until ?? new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)`
-- Na seção "1. Dados do Projeto", após o campo "Tipo de projeto", adicionar date picker (Popover + Calendar do shadcn) com label "Validade da proposta"
-
-**4. `src/pages/LeadsProposals.tsx`**
-- Em `buildPageProps`: adicionar `validUntil: formData.valid_until`
-- No payload de save: incluir `valid_until: formData.valid_until`
-- Na carga de dados (edit): ler `valid_until: (p as any).valid_until ?? null`
+**2. `src/components/leads/ProposalFormNew.tsx`**
+- Atualizar o placeholder do campo "Nome do projeto" (linha 206) para `"Ex: Reforma Sala e Cozinha — Apto Vila da Serra"`
+- O campo já está mapeado para `project_name` e já é passado via `buildPageProps` — nenhuma outra alteração necessária
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | Nova coluna `valid_until` |
-| `shared.tsx` | Nova prop + componente `ValidityFooter` |
-| `CoverPage.tsx` | Adicionar `<ValidityFooter dark />` |
-| `AboutPage.tsx` | Adicionar `<ValidityFooter />` |
-| `ScopeFlowPage.tsx` | Adicionar `<ValidityFooter />` |
-| `InterioresPage.tsx` | Adicionar `<ValidityFooter />` |
-| `ManagementFullPage.tsx` | Adicionar `<ValidityFooter dark />` |
-| `WhyHireValuesPage.tsx` | Adicionar `<ValidityFooter />` |
-| `PortfolioCardsPage.tsx` | Adicionar `<ValidityFooter />` |
-| `ValuesPage.tsx` | Adicionar `<ValidityFooter />` |
-| `ContactPage.tsx` | Adicionar `<ValidityFooter dark />` |
-| `ProposalFormNew.tsx` | Novo campo date picker na seção 1 |
-| `LeadsProposals.tsx` | Mapear prop e persistir |
+| `CoverPage.tsx` | Substituir subtítulo fixo por `projectName` dinâmico |
+| `ProposalFormNew.tsx` | Atualizar placeholder |
 
