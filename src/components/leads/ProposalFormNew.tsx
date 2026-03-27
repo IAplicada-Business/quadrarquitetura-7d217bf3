@@ -1,6 +1,16 @@
 import { useState, useMemo } from "react";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,6 +49,7 @@ export interface ProposalFormData {
   ambientes: string[];
   total_area: number | null;
   etapas_ativas: string[];
+  valid_until: string | null;
 }
 
 const ALL_ETAPAS = [
@@ -118,6 +129,7 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
     ambientes: initialData?.ambientes || [],
     total_area: initialData?.total_area ?? null,
     etapas_ativas: initialData?.etapas_ativas || [...ALL_ETAPAS],
+    valid_until: initialData?.valid_until ?? new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
   });
 
   const set = <K extends keyof ProposalFormData>(key: K, val: ProposalFormData[K]) =>
