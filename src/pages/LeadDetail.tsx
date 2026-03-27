@@ -111,22 +111,14 @@ export default function LeadDetail() {
       const pageProps: ProposalPageProps = {
         clientName: proposal.client_name || lead?.name || "",
         projectName: proposal.project_name || "",
-        projectType: proposal.project_type || "",
         scopeDescription: proposal.scope_description || "",
         servicesIncluded: proposal.services_included || "ambos",
         logoUrl: logo,
-        founderPhoto,
-        portfolioItems,
-        feedbackItems,
+        founderPhotos,
         aboutText,
-        contactInfo: contactInfo ? {
-          phone: contactInfo.description || "",
-          email: (contactInfo.metadata as any)?.email || "",
-          instagram: (contactInfo.metadata as any)?.instagram || "",
-          website: (contactInfo.metadata as any)?.website || "",
-          address: (contactInfo.metadata as any)?.address || "",
-        } : undefined,
-        ambientes: (proposal.ambientes as any[]) || [],
+        contactPhone1: contactInfo?.description || "",
+        contactInstagram: (contactInfo?.metadata as any)?.instagram || "",
+        ambientes: (proposal.ambientes as string[]) || [],
         totalArea: proposal.total_area ?? undefined,
         etapasAtivas: (proposal.etapas_ativas as string[]) || [],
         timelineBriefing: proposal.timeline_briefing ?? undefined,
@@ -138,15 +130,24 @@ export default function LeadDetail() {
         timelineConstruction: proposal.timeline_construction ?? undefined,
         timelineFiscalization: proposal.timeline_fiscalization ?? undefined,
         priceFull: priceFull || undefined,
-        priceAtVista: priceAtVista ?? undefined,
+        priceCash: priceAtVista ?? undefined,
         priceNote: proposal.price_note || undefined,
         installmentsCount: proposal.installments_count ?? undefined,
         installmentEntry: proposal.installment_entry ?? undefined,
         installmentValue: proposal.installment_value ?? undefined,
         validUntil: proposal.valid_until || undefined,
+        portfolioCards: portfolioItems.map((p: any) => ({ id: p.image || "", nome: p.title || "", foto_url: p.image || "" })),
+        feedbackImages: feedbacks,
+        portfolioImages: portfolio,
       };
 
-      const pages = buildProposalPages(pageProps);
+      const pages = buildProposalPages({
+        data: pageProps,
+        portfolioImages: portfolio,
+        feedbackImages: feedbacks,
+        selectedPortfolioProjects: portfolio.map(p => p.id),
+        selectedFeedbackIds: feedbacks.map(f => f.id),
+      });
       await waitForFonts();
 
       const container = document.createElement("div");
