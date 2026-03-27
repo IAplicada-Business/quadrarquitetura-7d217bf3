@@ -339,6 +339,7 @@ export type Database = {
           is_active: boolean
           project_id: string
           token: string
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -347,6 +348,7 @@ export type Database = {
           is_active?: boolean
           project_id: string
           token?: string
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -355,6 +357,7 @@ export type Database = {
           is_active?: boolean
           project_id?: string
           token?: string
+          user_id?: string
         }
         Relationships: [
           {
