@@ -22,9 +22,10 @@ export function useClientPortalToken(projectId: string | undefined) {
 
   const create = useMutation({
     mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from("client_portal_tokens" as any)
-        .insert({ project_id: projectId! } as any)
+        .insert({ project_id: projectId!, user_id: user!.id } as any)
         .select()
         .single();
       if (error) throw error;
