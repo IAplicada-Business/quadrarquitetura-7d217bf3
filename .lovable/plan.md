@@ -1,52 +1,49 @@
 
 
-## Completar FKs RESTRICT nas tabelas restantes de projetos
-
-### Resumo
-
-Adicionar `ON DELETE RESTRICT` em 7 tabelas adicionais que referenciam `projects(id)` sem FK explícita. Limpar órfãos antes de cada constraint. O `handleDeleteError` já cobre o caso `projects` — nenhuma alteração de código necessária.
+## Migrar RLS de `proposal_templates` e `reports` para equipe
 
 ### Migration SQL
 
-Uma única migration que para cada tabela: limpa órfãos e adiciona FK RESTRICT.
+Dropar as 4 políticas individuais de cada tabela e criar 4 políticas de equipe (mesmo padrão das 16 tabelas já migradas).
 
 ```sql
-DELETE FROM public.budget_quotes WHERE project_id NOT IN (SELECT id FROM public.projects);
-ALTER TABLE public.budget_quotes ADD CONSTRAINT fk_budget_quotes_project
-  FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
+-- proposal_templates (4 políticas individuais → 4 de equipe)
+DROP POLICY IF EXISTS "Users can create proposal_templates" ON public.proposal_templates;
+DROP POLICY IF EXISTS "Users can view own proposal_templates" ON public.proposal_templates;
+DROP POLICY IF EXISTS "Users can update own proposal_templates" ON public.proposal_templates;
+DROP POLICY IF EXISTS "Users can delete own proposal_templates" ON public.proposal_templates;
 
-DELETE FROM public.invoices WHERE project_id NOT IN (SELECT id FROM public.projects);
-ALTER TABLE public.invoices ADD CONSTRAINT fk_invoices_project
-  FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
+CREATE POLICY "Team can view proposal_templates" ON public.proposal_templates
+  FOR SELECT USING (user_id IN (SELECT get_team_user_ids()));
+CREATE POLICY "Team can create proposal_templates" ON public.proposal_templates
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Team can update proposal_templates" ON public.proposal_templates
+  FOR UPDATE USING (user_id IN (SELECT get_team_user_ids()));
+CREATE POLICY "Team can delete proposal_templates" ON public.proposal_templates
+  FOR DELETE USING (user_id IN (SELECT get_team_user_ids()));
 
-DELETE FROM public.pending_items WHERE project_id NOT IN (SELECT id FROM public.projects);
-ALTER TABLE public.pending_items ADD CONSTRAINT fk_pending_items_project
-  FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
+-- reports (3 políticas individuais → 4 de equipe, adicionando UPDATE)
+DROP POLICY IF EXISTS "Users can insert own reports" ON public.reports;
+DROP POLICY IF EXISTS "Users can view own reports" ON public.reports;
+DROP POLICY IF EXISTS "Users can delete own reports" ON public.reports;
 
-DELETE FROM public.purchases WHERE project_id NOT IN (SELECT id FROM public.projects);
-ALTER TABLE public.purchases ADD CONSTRAINT fk_purchases_project
-  FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
-
-DELETE FROM public.scenarios WHERE project_id NOT IN (SELECT id FROM public.projects);
-ALTER TABLE public.scenarios ADD CONSTRAINT fk_scenarios_project
-  FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
-
-DELETE FROM public.site_diary_entries WHERE project_id NOT IN (SELECT id FROM public.projects);
-ALTER TABLE public.site_diary_entries ADD CONSTRAINT fk_site_diary_project
-  FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
-
-DELETE FROM public.voice_tasks WHERE project_id NOT IN (SELECT id FROM public.projects);
-ALTER TABLE public.voice_tasks ADD CONSTRAINT fk_voice_tasks_project
-  FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
+CREATE POLICY "Team can view reports" ON public.reports
+  FOR SELECT USING (user_id IN (SELECT get_team_user_ids()));
+CREATE POLICY "Team can create reports" ON public.reports
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Team can update reports" ON public.reports
+  FOR UPDATE USING (user_id IN (SELECT get_team_user_ids()));
+CREATE POLICY "Team can delete reports" ON public.reports
+  FOR DELETE USING (user_id IN (SELECT get_team_user_ids()));
 ```
 
 ### Código frontend
 
-Nenhuma alteração. O `handleDeleteError` já tem a mensagem para `projects`: *"Este projeto possui dados vinculados (escopo, cronograma, materiais, etc.) e não pode ser excluído."* — e o `Projects.tsx` já usa `handleDeleteError(e, "projects")` no `onError` da deleção.
+Nenhuma alteração necessária.
 
 ### Arquivos
 
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---|---|
-| Migration SQL | Adicionar 7 FKs RESTRICT (com limpeza de orfaos) |
+| Migration SQL | Drop 7 políticas individuais + criar 8 políticas de equipe |
 
