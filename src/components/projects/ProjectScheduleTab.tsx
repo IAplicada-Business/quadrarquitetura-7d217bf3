@@ -252,6 +252,38 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
               viewMode={ganttView}
             />
           )}
+
+          {/* Pendências e Atrasos */}
+          {alertTasks.length > 0 && (
+            <Collapsible defaultOpen={alertTasks.some((t: any) => t.isOverdue)}>
+              <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 text-sm font-semibold text-display hover:opacity-80 transition-opacity">
+                <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                Pendências e Atrasos
+                <Badge variant="destructive" className="ml-1 text-[10px] px-1.5 py-0">{alertTasks.length}</Badge>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="border rounded-lg divide-y mt-1">
+                  {alertTasks.map((t: any) => (
+                    <div key={t.id} className="flex items-center justify-between px-3 py-2 text-xs hover:bg-muted/30 cursor-pointer" onClick={() => handleEdit(t)}>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.isOverdue ? "#DC2626" : "#D97706" }} />
+                        <span className="font-medium truncate">{t.task_name}</span>
+                        {t.discipline && <span className="text-muted-foreground hidden sm:inline">· {t.discipline}</span>}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0 ml-2">
+                        <span className="text-muted-foreground">{t.supplier_name || "—"}</span>
+                        <span className="text-muted-foreground">{t.end_date ? format(new Date(t.end_date), "dd/MM") : "—"}</span>
+                        <span className="font-semibold" style={{ color: t.isOverdue ? "#DC2626" : "#D97706" }}>
+                          {t.isOverdue ? `−${t.daysOffset}d` : `${Math.abs(t.daysOffset)}d`}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </TabsContent>
 
         <TabsContent value="lista" className="space-y-4 mt-4">
