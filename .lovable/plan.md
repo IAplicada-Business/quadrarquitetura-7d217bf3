@@ -1,56 +1,72 @@
 
+## Ajuste solicitado: consolidar remoção de `price_cash` e padronizar cálculo em runtime
 
-## Botão "Enviar por E-mail" com Edge Function usando Resend
+### Estado atual do sistema
+- A migration para remover `price_cash` já existe:
+  ```sql
+  ALTER TABLE public.proposals DROP COLUMN IF EXISTS price_cash;
+  ```
+- O formulário e a página `LeadsProposals.tsx` já migraram a lógica principal para cálculo em runtime usando `discount_cash_percent -> discount_percent`.
+- O hook `useProposals` já não tipa `price_cash`.
+- Não encontrei `ValuesPageLandscape` no repositório atual; o formato apresentação reutiliza a mesma `ValuesPage`.
 
-### Resumo
-Adicionar botão "Enviar por E-mail" no formulário de proposta. O fluxo gera o PDF A4, converte para base64, e envia via Edge Function `send-proposal-email` usando Resend com o PDF como anexo.
+### O que ainda precisa ser ajustado
+1. Padronizar a regra de cálculo em um único critério:
+   ```ts
+   const priceAtVista =
+     proposal.price_full && (proposal.discount_percent ?? 0) > 0
+       ? proposal.price_full * (1 - (proposal.discount_percent ?? 0) / 100)
+       : null;
+   ```
+2. Garantir a mesma regra em todos os pontos:
+   - preview em tempo real no formulário
+   - props passadas para o PDF em `LeadsProposals.tsx`
+   - `ValuesPage.tsx`
+   - métricas do dashboard, se houver qualquer leitura indireta de valor final com desconto
 
-### Pré-requisito: API Key do Resend
-O projeto não tem uma chave Resend configurada. Será necessário solicitar a secret `RESEND_API_KEY` antes de prosseguir com a implementação.
+### Arquivos a ajustar
 
-### Edições
+**1. `src/components/leads/ProposalFormNew.tsx`**
+- Manter `discount_cash_percent` apenas como campo de UI
+- Renomear/ajustar o cálculo local (`calcPriceCash`) para seguir exatamente a regra:
+  - se `discount_cash_percent` for `null`, `0` ou ausente: `null`
+  - se for `> 0`: calcular valor à vista
+- O texto de preview abaixo do campo de desconto deve aparecer somente quando houver desconto positivo
 
-**1. Edge Function `supabase/functions/send-proposal-email/index.ts`**
-- Receber `{ proposta_id, destinatario_email, destinatario_nome, pdf_base64, projeto_nome }`
-- Usar Resend API (`https://api.resend.com/emails`) com `RESEND_API_KEY`
-- Assunto: `Proposta Quadra Arquitetura — ${projeto_nome}`
-- Corpo HTML com saudação personalizada + mensagem padrão
-- Anexo: `{ filename: "proposta-quadra.pdf", content: pdf_base64 }` como application/pdf
-- CORS headers padrão
+**2. `src/pages/LeadsProposals.tsx`**
+- Em `buildPageProps`, manter `priceCash` apenas como valor derivado em runtime
+- Padronizar o cálculo para não depender de truthy/falsy de `price_full`
+- Em `handleSave`, continuar salvando:
+  - `price_full`
+  - `discount_percent: formData.discount_cash_percent`
+- `final_value` deve continuar sendo calculado em runtime com a mesma fórmula, sem qualquer referência a `price_cash`
+- Revisar a carga inicial (`editInitialData`) para garantir que tudo vem de `price_full` + `discount_percent`
 
-**2. `src/components/leads/ProposalFormNew.tsx`**
-- Adicionar prop `onSendEmail?: (data: ProposalFormData) => void`
-- Adicionar botão "Enviar por E-mail" (ícone `Send`) ao lado dos botões existentes, condicionado a `onSendEmail`
-- Desabilitado durante `saving`
+**3. `src/components/leads/proposal-pages/ValuesPage.tsx`**
+- Ajustar a condição de exibição da linha “À vista” para depender explicitamente de `priceCash !== null` e `priceCash < priceFull`
+- Resultado esperado:
+  - sem desconto: mostra só valor cheio
+  - com desconto: mostra valor cheio + linha “À vista”
 
-**3. `src/pages/LeadsProposals.tsx`**
-- Criar `handleSendEmail(formData)`:
-  - Buscar lead associado via `formData.lead_id` no array `leads` (já carregado)
-  - Validar que lead tem email; se não, toast de erro
-  - Gerar PDF A4 (reutilizar lógica de `handleGeneratePdf`)
-  - Converter blob → base64 via `FileReader.readAsDataURL`
-  - Chamar `supabase.functions.invoke("send-proposal-email", { body: { ... } })`
-  - Toast de sucesso com email enviado ou toast de erro
-- Passar `onSendEmail={handleSendEmail}` ao `ProposalFormNew`
+**4. `src/hooks/useProposals.ts`**
+- Confirmar que o retorno tipado continua sem `price_cash`
+- Opcionalmente restringir o `select` para colunas usadas, evitando qualquer dependência implícita do schema antigo
 
-**4. `supabase/config.toml`**
-- Adicionar bloco `[functions.send-proposal-email]` com `verify_jwt = false`
+### Sobre dashboard e queries
+- No `DashboardEscritorio.tsx`, a query atual usa `price_full`, não `price_cash`
+- Portanto, não há dependência direta restante de `price_cash` no dashboard atual
+- Mesmo assim, vou revisar eventuais cálculos derivados para garantir consistência entre:
+  - ticket médio
+  - valor exibido em listas
+  - qualquer uso futuro de `final_value`
 
-### Fluxo do usuário
-1. Preenche proposta normalmente
-2. Clica "Enviar por E-mail"
-3. PDF é gerado em background (mesmo fluxo do "Gerar PDF")
-4. PDF convertido para base64
-5. Edge Function envia via Resend com anexo
-6. Toast confirma envio com email do destinatário
+### Resultado final esperado
+- `price_cash` deixa de existir estruturalmente e logicamente
+- O sistema passa a ter uma única fonte de verdade:
+  - `price_full`
+  - `discount_percent`
+- O preview do formulário e o PDF passam a seguir exatamente a mesma regra visual
+- Nenhuma outra tabela, rota ou funcionalidade será alterada
 
-### Arquivos
-
-| Arquivo | Ação |
-|---|---|
-| Secret `RESEND_API_KEY` | Solicitar ao usuário |
-| `supabase/functions/send-proposal-email/index.ts` | Nova Edge Function |
-| `supabase/config.toml` | Adicionar config da função |
-| `ProposalFormNew.tsx` | Nova prop + botão |
-| `LeadsProposals.tsx` | Handler de envio por email |
-
+### Observação importante
+Há um detalhe no histórico recente: `src/integrations/supabase/types.ts` apareceu como editado antes, mas esse arquivo não deve ser alterado manualmente. Na implementação, o correto é não tocar nele e depender da atualização automática do schema.
