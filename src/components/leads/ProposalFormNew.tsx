@@ -203,7 +203,7 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
           </div>
           <div className="space-y-1.5">
             <Label>Nome do projeto *</Label>
-            <Input value={data.project_name} onChange={e => set("project_name", e.target.value)} placeholder="Ex: Beauty House" />
+            <Input value={data.project_name} onChange={e => set("project_name", e.target.value)} placeholder="Ex: Reforma Sala e Cozinha — Apto Vila da Serra" />
           </div>
           <div className="space-y-1.5">
             <Label>Tipo de projeto</Label>
