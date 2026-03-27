@@ -1,7 +1,7 @@
 import { useMemo, useRef, useCallback, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Eye, Copy, FileText, Check } from "lucide-react";
+import { ArrowLeft, Plus, Eye, Copy, FileText, Check, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,6 +63,20 @@ export default function LeadDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proposals")
+        .select("*")
+        .eq("lead_id", id!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const { data: leadContracts = [], isLoading: contractsLoading } = useQuery({
+    queryKey: ["contracts", "by-lead", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contracts")
         .select("*")
         .eq("lead_id", id!)
         .order("created_at", { ascending: false });
@@ -183,7 +197,7 @@ export default function LeadDetail() {
     }
   }, [logos, founderPhotos, portfolio, feedbacks, texts, contacts, lead]);
 
-  if (leadsLoading || proposalsLoading) {
+  if (leadsLoading || proposalsLoading || contractsLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -324,6 +338,62 @@ export default function LeadDetail() {
         </CardContent>
       </Card>
 
+      {/* Contracts Section */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Contratos</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {leadContracts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+              <FileText className="h-10 w-10 text-muted-foreground/40 mb-3" />
+              <p className="text-muted-foreground">Nenhum contrato vinculado a este lead.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Projeto</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {leadContracts.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">{c.title || "Sem título"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {format(new Date(c.created_at), "dd/MM/yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={`text-xs ${
+                        c.status === "rascunho" ? "bg-secondary text-secondary-foreground" :
+                        c.status === "enviado" ? "bg-[#1B2A4A] text-white" :
+                        c.status === "assinado" ? "bg-emerald-100 text-emerald-800" :
+                        c.status === "cancelado" ? "bg-destructive text-destructive-foreground" : ""
+                      }`}>
+                        {c.status === "rascunho" ? "Rascunho" : c.status === "enviado" ? "Enviado" : c.status === "assinado" ? "Assinado" : c.status === "cancelado" ? "Cancelado" : c.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        title="Editar"
+                        onClick={() => navigate("/leads/contracts", { state: { editContractId: c.id } })}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
       {/* Convert to Contract Dialog */}
       <AlertDialog open={!!convertProposal} onOpenChange={(open) => { if (!open) setConvertProposal(null); }}>
         <AlertDialogContent>
@@ -353,11 +423,13 @@ export default function LeadDetail() {
                   client_name: lead?.name || null,
                   client_email: lead?.email || null,
                   client_phone: lead?.phone || null,
+                  lead_id: convertProposal.lead_id || lead?.id || null,
                   status: "rascunho",
                 } as any).select("id").single();
 
                 if (error) throw error;
                 setConvertProposal(null);
+                queryClient.invalidateQueries({ queryKey: ["contracts", "by-lead", id] });
                 navigate("/leads/contracts", { state: { editContractId: data.id } });
                 toast({ title: "Contrato criado a partir da proposta. Revise antes de enviar." });
               } catch (err: any) {

@@ -491,6 +491,7 @@ export type Database = {
           custom_clauses: string | null
           estimated_duration: string | null
           id: string
+          lead_id: string | null
           notes: string | null
           payment_conditions: string | null
           payment_method: string | null
@@ -527,6 +528,7 @@ export type Database = {
           custom_clauses?: string | null
           estimated_duration?: string | null
           id?: string
+          lead_id?: string | null
           notes?: string | null
           payment_conditions?: string | null
           payment_method?: string | null
@@ -563,6 +565,7 @@ export type Database = {
           custom_clauses?: string | null
           estimated_duration?: string | null
           id?: string
+          lead_id?: string | null
           notes?: string | null
           payment_conditions?: string | null
           payment_method?: string | null
@@ -586,6 +589,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
           {
