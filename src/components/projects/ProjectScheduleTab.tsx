@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2, Download } from "lucide-react";
+import { differenceInDays, isBefore, addDays, format } from "date-fns";
+import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import { ProjectPendingTab } from "./ProjectPendingTab";
 import { GanttChart } from "./GanttChart";
 import { ClientScheduleView } from "./ClientScheduleView";
 import { useQueryClient } from "@tanstack/react-query";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 function formatDate(d: string | null) {
   if (!d) return "—";
