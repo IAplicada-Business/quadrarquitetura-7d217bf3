@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { handleDeleteError } from "@/lib/handleDeleteError";
 
 const CATEGORIES = [
   "Pedreiro", "Eletricista", "Encanador", "Marcenaria", "Pintura", "Vidraceiro", "Serralheria", "Marmoraria", "Gesso", "Outros"
@@ -71,6 +72,7 @@ export default function Suppliers() {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       toast({ title: "Fornecedor removido" });
     },
+    onError: (error: any) => handleDeleteError(error, "suppliers"),
   });
 
   const handleSubmit = (e: React.FormEvent) => {

@@ -4,6 +4,7 @@ const FK_MESSAGES: Record<string, string> = {
   leads: "Este lead possui propostas vinculadas e não pode ser excluído. Remova as propostas primeiro.",
   proposals: "Esta proposta possui um contrato vinculado. Remova o contrato primeiro.",
   projects: "Este projeto possui dados vinculados (escopo, cronograma, materiais, etc.) e não pode ser excluído. Remova os dados do projeto primeiro.",
+  suppliers: "Este fornecedor está alocado em obras e não pode ser excluído. Remova as alocações primeiro.",
 };
 
 const GENERIC_FK = "Este registro está vinculado a outros dados e não pode ser excluído.";
