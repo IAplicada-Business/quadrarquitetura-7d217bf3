@@ -802,7 +802,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "documents_project_id_fkey"
+            foreignKeyName: "fk_documents_project"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -1891,7 +1891,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "reports_project_id_fkey"
+            foreignKeyName: "fk_reports_project"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -2334,7 +2334,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "site_visits_project_id_fkey"
+            foreignKeyName: "fk_site_visits_project"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -2391,7 +2391,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "supplier_allocations_supplier_id_fkey"
+            foreignKeyName: "fk_supplier_allocations_supplier"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
