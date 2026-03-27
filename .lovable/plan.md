@@ -1,94 +1,51 @@
 
 
-## Migrar `settings` para RLS de equipe com escopo team/personal
-
-### Análise do estado atual
-
-A tabela `settings` armazena tudo num registro por usuário:
-- `theme` — preferência pessoal (dark/light)
-- `supplier_categories` — categorias de fornecedores do escritório
-- `calculation_params` — tabela de custo por m² do escritório
-- `message_templates` — templates de comunicação do escritório
-
-Atualmente as 3 políticas RLS filtram por `user_id = auth.uid()` — Camilla e Mariana têm registros independentes. Apenas `theme` deve ser pessoal; o resto é configuração do escritório.
-
-### Solução
-
-Adicionar coluna `scope` (`'team'` ou `'personal'`) e substituir as políticas para que registros `team` sejam visíveis/editáveis pelo time.
+## FKs faltantes + fechar INSERTs abertos
 
 ### Migration SQL
 
+Uma única migration com 4 operações:
+
+1. **FK `material_tracking` → `projects`**: limpar órfãos + adicionar FK RESTRICT
+2. **FK `material_calculations` → `projects`**: limpar órfãos + adicionar FK RESTRICT
+3. **Restringir INSERT de `calculation_parameters`** a admin via `has_role()`
+4. **Restringir INSERT de `default_disciplines`** a admin via `has_role()`
+
 ```sql
--- 1. Adicionar coluna scope
-ALTER TABLE public.settings
-  ADD COLUMN IF NOT EXISTS scope text NOT NULL DEFAULT 'team';
+-- 1. material_tracking FK
+DELETE FROM public.material_tracking
+  WHERE project_id IS NOT NULL
+  AND project_id NOT IN (SELECT id FROM public.projects);
+ALTER TABLE public.material_tracking
+  ADD CONSTRAINT fk_material_tracking_project
+  FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
 
--- 2. Marcar registros existentes como 'team' (todos são config de escritório hoje)
-UPDATE public.settings SET scope = 'team' WHERE scope IS NULL OR scope = 'team';
+-- 2. material_calculations FK
+DELETE FROM public.material_calculations
+  WHERE project_id IS NOT NULL
+  AND project_id NOT IN (SELECT id FROM public.projects);
+ALTER TABLE public.material_calculations
+  ADD CONSTRAINT fk_material_calculations_project
+  FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
 
--- 3. Dropar políticas existentes
-DROP POLICY IF EXISTS "Users can create settings" ON public.settings;
-DROP POLICY IF EXISTS "Users can update own settings" ON public.settings;
-DROP POLICY IF EXISTS "Users can view own settings" ON public.settings;
-
--- 4. Criar novas políticas com escopo
-CREATE POLICY "settings_select" ON public.settings
-  FOR SELECT TO authenticated
-  USING (
-    (scope = 'team' AND user_id IN (SELECT get_team_user_ids()))
-    OR (scope = 'personal' AND user_id = auth.uid())
-  );
-
-CREATE POLICY "settings_insert" ON public.settings
+-- 3. calculation_parameters INSERT → admin only
+DROP POLICY IF EXISTS "Authenticated can insert calculation_parameters" ON public.calculation_parameters;
+CREATE POLICY "calculation_parameters_insert" ON public.calculation_parameters
   FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "settings_update" ON public.settings
-  FOR UPDATE TO authenticated
-  USING (
-    (scope = 'team' AND user_id IN (SELECT get_team_user_ids()))
-    OR (scope = 'personal' AND user_id = auth.uid())
-  );
+-- 4. default_disciplines INSERT → admin only
+DROP POLICY IF EXISTS "Authenticated can insert default_disciplines" ON public.default_disciplines;
+CREATE POLICY "default_disciplines_insert" ON public.default_disciplines
+  FOR INSERT TO authenticated
+  WITH CHECK (public.has_role(auth.uid(), 'admin'));
 ```
 
-### Código frontend
-
-**Arquivo: `src/hooks/useCostReferenceTable.ts`**
-
-Alterar a query SELECT para buscar qualquer registro `scope = 'team'` do time (não filtrar por `user_id = user.id`):
-
-```typescript
-// SELECT: buscar config do time
-const { data, error } = await supabase
-  .from("settings")
-  .select("id, calculation_params, user_id")
-  .eq("scope", "team")
-  .maybeSingle();
-```
-
-No save, buscar o registro team existente (de qualquer membro do time) e fazer update, ou criar novo com `scope: 'team'`:
-
-```typescript
-// Buscar existente do time
-const { data: existing } = await supabase
-  .from("settings")
-  .select("id, calculation_params")
-  .eq("scope", "team")
-  .maybeSingle();
-
-if (existing) {
-  await supabase.from("settings").update({ calculation_params: newParams }).eq("id", existing.id);
-} else {
-  await supabase.from("settings").insert({ user_id: user.id, calculation_params: newParams, scope: "team" });
-}
-```
-
-Remover o filtro `.eq("user_id", user.id)` das queries, já que o RLS cuida do acesso.
+Usa `has_role()` (SECURITY DEFINER) para evitar recursão. Nenhuma alteração no frontend.
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | Adicionar coluna `scope`, dropar 3 políticas individuais, criar 3 de equipe |
-| `src/hooks/useCostReferenceTable.ts` | Remover filtro `user_id`, adicionar filtro `scope = 'team'` |
+| Migration SQL | 2 FKs RESTRICT + 2 INSERT policies restritas a admin |
 
