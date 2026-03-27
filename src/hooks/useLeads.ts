@@ -38,6 +38,7 @@ export interface Lead {
   status: string;
   meeting_date: string | null;
   converted_client_id: string | null;
+  lost_reason: string | null;
   created_at: string;
   updated_at: string;
 }
