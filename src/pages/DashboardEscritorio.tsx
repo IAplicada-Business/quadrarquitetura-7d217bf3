@@ -115,7 +115,7 @@ export default function DashboardEscritorio() {
   const { data: payments = [] } = useQuery({
     queryKey: ["dash-esc-payments"],
     queryFn: async () => {
-      const { data } = await supabase.from("payments").select("*, projects(name)").eq("user_id", user!.id);
+      const { data } = await supabase.from("payments").select("*, projects(name)");
       return data ?? [];
     },
     enabled: !!user,
@@ -124,7 +124,7 @@ export default function DashboardEscritorio() {
   const { data: budgetQuotes = [] } = useQuery({
     queryKey: ["dash-esc-budget-quotes"],
     queryFn: async () => {
-      const { data } = await supabase.from("budget_quotes").select("id, status, value, created_at, supplier_name, scope_items(discipline)").eq("user_id", user!.id);
+      const { data } = await supabase.from("budget_quotes").select("id, status, value, created_at, supplier_name, scope_items(discipline)");
       return data ?? [];
     },
     enabled: !!user,
