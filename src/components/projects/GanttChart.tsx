@@ -1,10 +1,10 @@
 import { useMemo, useState, useRef } from "react";
-import { ChevronLeft, ChevronRight, User, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, User, Pencil, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { addDays, startOfWeek, endOfWeek, format, differenceInDays, addWeeks, subWeeks, startOfMonth, endOfMonth, addMonths } from "date-fns";
+import { addDays, startOfWeek, endOfWeek, format, differenceInDays, addWeeks, subWeeks, startOfMonth, endOfMonth, addMonths, isBefore, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getDisciplineColor } from "@/lib/disciplineColors";
 
@@ -293,9 +293,21 @@ export function GanttChart({ tasks, allTasks, onEdit, viewMode }: GanttChartProp
               const taskEnd = task.end_date ? new Date(task.end_date) : taskStart;
               const startCol = Math.max(0, differenceInDays(taskStart, rangeStart));
               const endCol = Math.min(totalDays - 1, differenceInDays(taskEnd, rangeStart));
-              const barColor = task.color || getDisciplineColor(task.discipline);
+              const baseBarColor = task.color || getDisciplineColor(task.discipline);
               const isCritical = showCriticalPath && cpm.criticalIds.has(task.id);
               const taskFloat = cpm.floatMap.get(task.id);
+
+              // Deadline alerts
+              const finishedStatuses = ["concluido", "executado"];
+              const isFinished = finishedStatuses.includes(task.status || "");
+              const nowDate = new Date();
+              const hasEndDate = !!task.end_date;
+              const taskEndDate = hasEndDate ? new Date(task.end_date!) : null;
+              const isOverdue = hasEndDate && !isFinished && isBefore(taskEndDate!, new Date(format(nowDate, "yyyy-MM-dd")));
+              const isExpiringSoon = hasEndDate && !isFinished && !isOverdue && isBefore(taskEndDate!, addDays(nowDate, 4)) && !isBefore(taskEndDate!, new Date(format(nowDate, "yyyy-MM-dd")));
+              const daysUntilDeadline = hasEndDate ? differenceInDays(taskEndDate!, new Date(format(nowDate, "yyyy-MM-dd"))) : null;
+              const barColor = isOverdue ? "#DC2626" : isExpiringSoon ? "#D97706" : baseBarColor;
+              const barOpacity = isOverdue ? 0.85 : isCritical ? 1 : 0.8;
 
               return (
                 <div key={task.id} className="grid border-b last:border-b-0 hover:bg-muted/20 group" style={{ gridTemplateColumns: `200px repeat(${totalDays}, ${colWidth})`, height: `${ROW_HEIGHT}px` }}>
@@ -303,9 +315,12 @@ export function GanttChart({ tasks, allTasks, onEdit, viewMode }: GanttChartProp
                   <div className="px-2 border-r flex items-center gap-1 min-w-0">
                     <TooltipProvider>
                       <Tooltip>
-                        <TooltipTrigger asChild>
+                    <TooltipTrigger asChild>
                           <div className="truncate text-xs font-medium flex items-center gap-1 cursor-pointer" onClick={() => onEdit?.(task)}>
                             {task.requires_presence && <User className="h-3 w-3 text-warning shrink-0" />}
+                            {(isOverdue || isExpiringSoon) && (
+                              <AlertTriangle className="h-3 w-3 shrink-0" style={{ color: isOverdue ? "#DC2626" : "#D97706" }} />
+                            )}
                             <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: barColor }} />
                             <span className="truncate">{task.task_name}</span>
                           </div>
@@ -317,6 +332,12 @@ export function GanttChart({ tasks, allTasks, onEdit, viewMode }: GanttChartProp
                           {task.environment && <p className="text-xs text-muted-foreground">Amb: {task.environment}</p>}
                           <p className="text-xs text-muted-foreground">Progresso: {task.progress_percentage ?? 0}%</p>
                           {task.start_date && <p className="text-xs text-muted-foreground">Prazo: {format(new Date(task.start_date), "dd/MM")} — {task.end_date ? format(new Date(task.end_date), "dd/MM/yyyy") : "—"}</p>}
+                          {isOverdue && daysUntilDeadline !== null && (
+                            <p className="text-xs font-medium" style={{ color: "#DC2626" }}>Atrasada {Math.abs(daysUntilDeadline)} dia{Math.abs(daysUntilDeadline) !== 1 ? "s" : ""}</p>
+                          )}
+                          {isExpiringSoon && daysUntilDeadline !== null && (
+                            <p className="text-xs font-medium" style={{ color: "#D97706" }}>Vence em {daysUntilDeadline} dia{daysUntilDeadline !== 1 ? "s" : ""}</p>
+                          )}
                           {taskFloat !== undefined && (
                             <p className="text-xs text-muted-foreground">Folga: {taskFloat} dia{taskFloat !== 1 ? "s" : ""}</p>
                           )}
@@ -351,7 +372,7 @@ export function GanttChart({ tasks, allTasks, onEdit, viewMode }: GanttChartProp
                               right: isEnd ? "2px" : 0,
                               backgroundColor: barColor,
                               borderRadius: `${isStart ? "4px" : "0"} ${isEnd ? "4px" : "0"} ${isEnd ? "4px" : "0"} ${isStart ? "4px" : "0"}`,
-                              opacity: isCritical ? 1 : 0.8,
+                              opacity: barOpacity,
                               border: isCritical ? "2.5px solid hsl(var(--destructive))" : "none",
                               boxSizing: "border-box",
                             }}
