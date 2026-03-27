@@ -1,4 +1,4 @@
-import { PageContainer, COLORS, FONT_TITLE, type ProposalPageProps } from "./shared";
+import { PageContainer, COLORS, FONT_TITLE, ValidityFooter, type ProposalPageProps } from "./shared";
 
 export function ProposalContactPage({ contactInstagram, contactPhone1, contactPhone2, pageWidth, pageHeight }: ProposalPageProps) {
   return (
@@ -77,6 +77,7 @@ export function ProposalContactPage({ contactInstagram, contactPhone1, contactPh
           Obrigada pela confiança.
         </div>
       </div>
+      <ValidityFooter validUntil={validUntil} dark />
     </PageContainer>
   );
 }

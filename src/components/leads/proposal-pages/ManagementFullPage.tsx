@@ -1,4 +1,4 @@
-import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, type ProposalPageProps } from "./shared";
+import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, ValidityFooter, type ProposalPageProps } from "./shared";
 
 const CARDS = [
   {
@@ -61,7 +61,7 @@ const CARDS = [
   },
 ];
 
-export function ProposalManagementFullPage({ pageWidth, pageHeight }: ProposalPageProps) {
+export function ProposalManagementFullPage({ pageWidth, pageHeight, validUntil }: ProposalPageProps) {
   return (
     <PageContainer bg={COLORS.azulMarinho} pageWidth={pageWidth} pageHeight={pageHeight}>
       <div style={{ padding: "44px 44px 40px", color: COLORS.textoClaro, height: "100%" }}>
@@ -171,6 +171,7 @@ export function ProposalManagementFullPage({ pageWidth, pageHeight }: ProposalPa
           ))}
         </div>
       </div>
+      <ValidityFooter validUntil={validUntil} dark />
     </PageContainer>
   );
 }

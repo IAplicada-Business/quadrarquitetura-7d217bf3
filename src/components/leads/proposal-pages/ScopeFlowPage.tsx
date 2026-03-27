@@ -1,4 +1,4 @@
-import { PageContainer, COLORS, FONT_TITLE, type ProposalPageProps } from "./shared";
+import { PageContainer, COLORS, FONT_TITLE, ValidityFooter, type ProposalPageProps } from "./shared";
 
 const ALL_FLOW_STEPS = [
   { id: "Briefing", title: "Levantamento\n& Briefing", desc: "Alinhamento de conceito e necessidades", daysKey: "briefing" as const },
@@ -233,6 +233,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
           ))}
         </div>
       </div>
+      <ValidityFooter validUntil={props.validUntil} />
     </PageContainer>
   );
 }
