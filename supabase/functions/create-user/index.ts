@@ -110,6 +110,30 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Assign to team
+    // 1. Find caller's team_id
+    const { data: callerTeam } = await serviceClient
+      .from("team_members")
+      .select("team_id")
+      .eq("user_id", callerId)
+      .limit(1)
+      .maybeSingle();
+
+    let teamId = callerTeam?.team_id;
+
+    if (!teamId) {
+      // First time: generate a team_id for both caller and new user
+      teamId = crypto.randomUUID();
+      await serviceClient
+        .from("team_members")
+        .insert({ team_id: teamId, user_id: callerId, role: "admin" });
+    }
+
+    // Insert new user into the team
+    await serviceClient
+      .from("team_members")
+      .insert({ team_id: teamId, user_id: newUser.user.id, role: role === "admin" ? "admin" : "member" });
+
     return new Response(
       JSON.stringify({
         user: {
