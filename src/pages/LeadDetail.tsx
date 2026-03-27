@@ -353,6 +353,7 @@ export default function LeadDetail() {
                   client_name: lead?.name || null,
                   client_email: lead?.email || null,
                   client_phone: lead?.phone || null,
+                  lead_id: convertProposal.lead_id || lead?.id || null,
                   status: "rascunho",
                 } as any).select("id").single();
 
