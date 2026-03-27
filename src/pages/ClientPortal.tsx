@@ -3,10 +3,11 @@ import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { ClientScheduleView } from "@/components/projects/ClientScheduleView";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Wallet, Camera, MessageCircle, AlertTriangle } from "lucide-react";
+import { Calendar, Wallet, Camera, MessageCircle, AlertTriangle, FileBarChart } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 function formatCurrency(v: number | null | undefined) {
@@ -19,12 +20,30 @@ function formatDate(d: string | null | undefined) {
   return format(new Date(d), "dd/MM/yyyy", { locale: ptBR });
 }
 
+function formatWeekLabel(weekStart: string) {
+  const start = new Date(weekStart + "T00:00:00");
+  const end = addDays(start, 6);
+  return `Semana de ${format(start, "dd", { locale: ptBR })} a ${format(end, "dd 'de' MMMM", { locale: ptBR })}`;
+}
+
+interface WeeklyReport {
+  id: string;
+  week_start: string;
+  summary: string;
+  next_steps: string;
+  completion_percent: number;
+  photo_urls: string[];
+  client_pending: string | null;
+  created_at: string;
+}
+
 interface PortalData {
   project: { name: string; address: string | null; city: string | null; estimated_budget: number | null; ideal_budget: number | null };
   tasks: any[];
   payments: any[];
   invoices: any[];
   photos: { url: string; date: string }[];
+  weekly_reports: WeeklyReport[];
 }
 
 export default function ClientPortal() {
@@ -79,7 +98,7 @@ export default function ClientPortal() {
     );
   }
 
-  const { project, tasks, payments, invoices, photos } = data;
+  const { project, tasks, payments, invoices, photos, weekly_reports } = data;
   const contracted = project.estimated_budget || 0;
   const paid = payments
     .filter((p: any) => p.status === "pago")
@@ -102,7 +121,7 @@ export default function ClientPortal() {
       </header>
 
       <main className="max-w-3xl mx-auto p-4 space-y-8 pb-16">
-        {/* Seção 1 — Cronograma */}
+        {/* Cronograma */}
         <section>
           <div className="flex items-center gap-2 mb-4">
             <Calendar className="h-5 w-5 text-primary" />
@@ -111,40 +130,88 @@ export default function ClientPortal() {
           <ClientScheduleView tasks={tasks} projectName={project.name} />
         </section>
 
-        {/* Seção 2 — Prestação de Contas */}
+        {/* Relatórios Semanais */}
+        {weekly_reports && weekly_reports.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <FileBarChart className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Relatórios Semanais</h2>
+            </div>
+            <div className="space-y-4">
+              {weekly_reports.map((report) => (
+                <Card key={report.id}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-semibold">
+                      {formatWeekLabel(report.week_start)}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-muted-foreground">Conclusão geral</span>
+                        <span className="font-semibold">{report.completion_percent}%</span>
+                      </div>
+                      <Progress value={report.completion_percent} className="h-2" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-0.5">Resumo</p>
+                      <p className="text-sm whitespace-pre-line">{report.summary}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-0.5">Próximas etapas</p>
+                      <p className="text-sm whitespace-pre-line">{report.next_steps}</p>
+                    </div>
+                    {report.photo_urls && report.photo_urls.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2">
+                        {report.photo_urls.slice(0, 6).map((url, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setLightboxUrl(url)}
+                            className="aspect-square rounded-lg overflow-hidden border hover:opacity-80 transition-opacity"
+                          >
+                            <img src={url} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {report.client_pending && (
+                      <div className="border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-950/20 rounded-r-md p-3">
+                        <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1">
+                          Precisamos de você:
+                        </p>
+                        <p className="text-sm whitespace-pre-line">{report.client_pending}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Prestação de Contas */}
         <section>
           <div className="flex items-center gap-2 mb-4">
             <Wallet className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Prestação de Contas</h2>
           </div>
-
           <div className="grid grid-cols-3 gap-3 mb-4">
-            <Card>
-              <CardContent className="p-3 text-center">
-                <p className="text-[10px] text-muted-foreground uppercase">Contratado</p>
-                <p className="text-sm font-bold">{formatCurrency(contracted)}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 text-center">
-                <p className="text-[10px] text-muted-foreground uppercase">Pago</p>
-                <p className="text-sm font-bold text-primary">{formatCurrency(paid)}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 text-center">
-                <p className="text-[10px] text-muted-foreground uppercase">Saldo</p>
-                <p className="text-sm font-bold">{formatCurrency(balance)}</p>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-3 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase">Contratado</p>
+              <p className="text-sm font-bold">{formatCurrency(contracted)}</p>
+            </CardContent></Card>
+            <Card><CardContent className="p-3 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase">Pago</p>
+              <p className="text-sm font-bold text-primary">{formatCurrency(paid)}</p>
+            </CardContent></Card>
+            <Card><CardContent className="p-3 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase">Saldo</p>
+              <p className="text-sm font-bold">{formatCurrency(balance)}</p>
+            </CardContent></Card>
           </div>
-
-          {/* Payment list */}
           {payments.length > 0 && (
             <Card className="mb-4">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Pagamentos</CardTitle>
-              </CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Pagamentos</CardTitle></CardHeader>
               <CardContent className="p-0">
                 <div className="divide-y">
                   {payments.map((p: any) => (
@@ -165,13 +232,9 @@ export default function ClientPortal() {
               </CardContent>
             </Card>
           )}
-
-          {/* Invoice list */}
           {invoices.length > 0 && (
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Notas Fiscais / Materiais</CardTitle>
-              </CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Notas Fiscais / Materiais</CardTitle></CardHeader>
               <CardContent className="p-0">
                 <div className="divide-y">
                   {invoices.map((inv: any) => (
@@ -189,7 +252,7 @@ export default function ClientPortal() {
           )}
         </section>
 
-        {/* Seção 3 — Fotos */}
+        {/* Fotos */}
         {photos.length > 0 && (
           <section>
             <div className="flex items-center gap-2 mb-4">
@@ -198,11 +261,7 @@ export default function ClientPortal() {
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {photos.map((photo, i) => (
-                <button
-                  key={i}
-                  onClick={() => setLightboxUrl(photo.url)}
-                  className="aspect-square rounded-lg overflow-hidden border hover:opacity-80 transition-opacity"
-                >
+                <button key={i} onClick={() => setLightboxUrl(photo.url)} className="aspect-square rounded-lg overflow-hidden border hover:opacity-80 transition-opacity">
                   <img src={photo.url} alt={`Foto da obra ${i + 1}`} className="w-full h-full object-cover" />
                 </button>
               ))}
@@ -210,7 +269,7 @@ export default function ClientPortal() {
           </section>
         )}
 
-        {/* Seção 4 — Contato */}
+        {/* Contato */}
         <section>
           <div className="flex items-center gap-2 mb-4">
             <MessageCircle className="h-5 w-5 text-primary" />
@@ -218,17 +277,9 @@ export default function ClientPortal() {
           </div>
           <Card>
             <CardContent className="p-4 text-center space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Dúvidas? Entre em contato com a Quadra Arquitetura
-              </p>
-              <a
-                href="https://wa.me/5511999999999"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-green-700 transition-colors"
-              >
-                <MessageCircle className="h-4 w-4" />
-                WhatsApp
+              <p className="text-sm text-muted-foreground">Dúvidas? Entre em contato com a Quadra Arquitetura</p>
+              <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-green-700 transition-colors">
+                <MessageCircle className="h-4 w-4" /> WhatsApp
               </a>
             </CardContent>
           </Card>
@@ -238,9 +289,7 @@ export default function ClientPortal() {
       {/* Lightbox */}
       <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>
         <DialogContent className="max-w-[90vw] max-h-[90vh] p-1">
-          {lightboxUrl && (
-            <img src={lightboxUrl} alt="Foto da obra" className="w-full h-full object-contain rounded" />
-          )}
+          {lightboxUrl && <img src={lightboxUrl} alt="Foto da obra" className="w-full h-full object-contain rounded" />}
         </DialogContent>
       </Dialog>
     </div>

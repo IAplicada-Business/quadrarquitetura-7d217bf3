@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Trash2, Cloud, Sun, CloudRain, Snowflake, CalendarDays, Users, FileText } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Trash2, Cloud, Sun, CloudRain, Snowflake, CalendarDays, Users, FileText, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSiteDiary } from "@/hooks/useSiteDiary";
 import { useScopeItems } from "@/hooks/useScopeItems";
+import { useScheduleTasks } from "@/hooks/useScheduleTasks";
+import { useWeeklyReports } from "@/hooks/useWeeklyReports";
+import { WeeklyReportModal } from "./WeeklyReportModal";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -23,8 +26,17 @@ const weatherOptions = [
 export function ProjectTrackingTab({ projectId }: { projectId: string }) {
   const { entries, isLoading, create, remove } = useSiteDiary(projectId);
   const { items: scopeItems } = useScopeItems(projectId);
+  const { items: scheduleTasks } = useScheduleTasks(projectId);
+  const { create: createReport } = useWeeklyReports(projectId);
   const [formOpen, setFormOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState("all");
+
+  const avgProgress = useMemo(() => {
+    const tasks = scheduleTasks.filter((t: any) => t.progress_percentage != null);
+    if (tasks.length === 0) return 0;
+    return Math.round(tasks.reduce((s: number, t: any) => s + (t.progress_percentage || 0), 0) / tasks.length);
+  }, [scheduleTasks]);
 
   // Form state
   const [entryDate, setEntryDate] = useState(new Date().toISOString().split("T")[0]);
@@ -124,9 +136,14 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
             <SelectItem value="month">Este mês</SelectItem>
           </SelectContent>
         </Select>
-        <Button size="sm" onClick={() => { resetForm(); setFormOpen(true); }}>
-          <Plus className="h-4 w-4 mr-1" /> Novo Registro
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setReportOpen(true)}>
+            <BarChart3 className="h-4 w-4 mr-1" /> Gerar Relatório Semanal
+          </Button>
+          <Button size="sm" onClick={() => { resetForm(); setFormOpen(true); }}>
+            <Plus className="h-4 w-4 mr-1" /> Novo Registro
+          </Button>
+        </div>
       </div>
 
       {/* Entries List */}
@@ -244,6 +261,17 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Weekly Report Modal */}
+      <WeeklyReportModal
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        avgProgress={avgProgress}
+        isPending={createReport.isPending}
+        onSubmit={(data) => {
+          createReport.mutate(data, { onSuccess: () => setReportOpen(false) });
+        }}
+      />
     </div>
   );
 }

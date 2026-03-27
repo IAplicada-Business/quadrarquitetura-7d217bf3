@@ -2601,6 +2601,56 @@ export type Database = {
           },
         ]
       }
+      weekly_reports: {
+        Row: {
+          client_pending: string | null
+          completion_percent: number
+          created_at: string
+          created_by: string | null
+          id: string
+          next_steps: string
+          photo_urls: Json
+          project_id: string
+          summary: string
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          client_pending?: string | null
+          completion_percent?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          next_steps: string
+          photo_urls?: Json
+          project_id: string
+          summary: string
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          client_pending?: string | null
+          completion_percent?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          next_steps?: string
+          photo_urls?: Json
+          project_id?: string
+          summary?: string
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
