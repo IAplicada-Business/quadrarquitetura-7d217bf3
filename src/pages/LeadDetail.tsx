@@ -1,14 +1,16 @@
-import { useMemo, useRef, useCallback } from "react";
+import { useMemo, useRef, useCallback, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Eye, Copy, FileText } from "lucide-react";
+import { ArrowLeft, Plus, Eye, Copy, FileText, Check } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { useLeads, leadStatusLabels } from "@/hooks/useLeads";
 import { useProposalAssets } from "@/hooks/useProposalAssets";
+import { useContracts } from "@/hooks/useContracts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -52,7 +54,8 @@ export default function LeadDetail() {
   const queryClient = useQueryClient();
   const { leads, isLoading: leadsLoading } = useLeads();
   const { logos, founderPhotos, portfolio, feedbacks, texts, contacts } = useProposalAssets();
-
+  const { contracts } = useContracts();
+  const [convertProposal, setConvertProposal] = useState<any>(null);
   const lead = useMemo(() => leads.find((l) => l.id === id), [leads, id]);
 
   const { data: proposals = [], isLoading: proposalsLoading } = useQuery({
@@ -296,6 +299,21 @@ export default function LeadDetail() {
                         >
                           <FileText className="h-4 w-4" />
                         </Button>
+                        {p.status === "enviada" && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-emerald-600"
+                            title="Aprovar"
+                            onClick={async () => {
+                              await supabase.from("proposals").update({ status: "aprovada", approved_at: new Date().toISOString() }).eq("id", p.id);
+                              queryClient.invalidateQueries({ queryKey: ["proposals", "by-lead", id] });
+                              setConvertProposal(p);
+                            }}
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -305,6 +323,50 @@ export default function LeadDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Convert to Contract Dialog */}
+      <AlertDialog open={!!convertProposal} onOpenChange={(open) => { if (!open) setConvertProposal(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Proposta aprovada</AlertDialogTitle>
+            <AlertDialogDescription>Deseja converter esta proposta em contrato?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Depois</AlertDialogCancel>
+            <AlertDialogAction onClick={async () => {
+              if (!convertProposal || !user) return;
+              try {
+                const year = new Date().getFullYear();
+                const thisYear = (contracts || []).filter((c: any) => c.contract_number?.startsWith(`CONTR-${year}`));
+                const contractNumber = `CONTR-${year}-${String(thisYear.length + 1).padStart(3, "0")}`;
+
+                const { data, error } = await supabase.from("contracts").insert({
+                  user_id: user.id,
+                  proposal_id: convertProposal.id,
+                  contract_number: contractNumber,
+                  title: convertProposal.project_name || null,
+                  value: convertProposal.price_full || null,
+                  payment_conditions: convertProposal.payment_conditions || null,
+                  service_description: convertProposal.scope_description || null,
+                  start_date: convertProposal.valid_until || null,
+                  estimated_duration: convertProposal.estimated_duration || null,
+                  client_name: lead?.name || null,
+                  client_email: lead?.email || null,
+                  client_phone: lead?.phone || null,
+                  status: "rascunho",
+                } as any).select("id").single();
+
+                if (error) throw error;
+                setConvertProposal(null);
+                navigate("/leads/contracts", { state: { editContractId: data.id } });
+                toast({ title: "Contrato criado a partir da proposta. Revise antes de enviar." });
+              } catch (err: any) {
+                toast({ title: "Erro ao criar contrato", description: err.message, variant: "destructive" });
+              }
+            }}>Converter em Contrato</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
