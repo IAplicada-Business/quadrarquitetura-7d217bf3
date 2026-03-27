@@ -235,7 +235,7 @@ export default function LeadsPipeline() {
                     <Card key={lead.id} className="shadow-sm">
                       <CardContent className="p-3 space-y-2">
                         <div className="flex items-start justify-between">
-                          <p className="font-semibold text-sm leading-tight">{lead.name}</p>
+                          <p className="font-semibold text-sm leading-tight cursor-pointer hover:underline" onClick={() => navigate(`/leads/${lead.id}`)}>{lead.name}</p>
                           <div className="flex gap-0.5">
                             <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit(lead)}>
                               <Pencil className="h-3 w-3" />
@@ -313,7 +313,7 @@ export default function LeadsPipeline() {
                 )}
                 {filtered.map((lead) => (
                   <TableRow key={lead.id}>
-                    <TableCell className="font-medium">{lead.name}</TableCell>
+                    <TableCell className="font-medium cursor-pointer hover:underline" onClick={() => navigate(`/leads/${lead.id}`)}>{lead.name}</TableCell>
                     <TableCell className="text-sm">{lead.phone}</TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{lead.email || "—"}</TableCell>
                     <TableCell>

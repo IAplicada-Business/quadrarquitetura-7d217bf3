@@ -12,6 +12,7 @@ import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import LeadsPipeline from "./pages/LeadsPipeline";
+import LeadDetail from "./pages/LeadDetail";
 import LeadsProposals from "./pages/LeadsProposals";
 import LeadsContracts from "./pages/LeadsContracts";
 import SiteTracking from "./pages/SiteTracking";
@@ -67,6 +68,7 @@ const App = () => (
               <Route path="/projects/:id" element={<ProjectDetail />} />
               {/* Leads */}
               <Route path="/leads/pipeline" element={<LeadsPipeline />} />
+              <Route path="/leads/:id" element={<LeadDetail />} />
               <Route path="/leads/proposals" element={<LeadsProposals />} />
               <Route path="/leads/contracts" element={<LeadsContracts />} />
               {/* Obra */}

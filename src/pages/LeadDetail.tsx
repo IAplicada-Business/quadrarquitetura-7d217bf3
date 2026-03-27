@@ -1,0 +1,310 @@
+import { useMemo, useRef, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Plus, Eye, Copy, FileText } from "lucide-react";
+import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { useLeads, leadStatusLabels } from "@/hooks/useLeads";
+import { useProposalAssets } from "@/hooks/useProposalAssets";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+import { buildProposalPages } from "@/components/leads/ProposalPageRenderer";
+import { ProposalPageProps } from "@/components/leads/proposal-pages/shared";
+import { generateProposalPdf, waitForFonts } from "@/lib/generateProposalPdf";
+import ReactDOM from "react-dom/client";
+import { flushSync } from "react-dom";
+
+const originLabels: Record<string, string> = {
+  indicacao: "Indicação", instagram: "Instagram", google: "Google", site: "Site", outro: "Outro",
+};
+const typeLabels: Record<string, string> = {
+  residencial: "Residencial", comercial: "Comercial", saude: "Saúde", outro: "Outro",
+};
+const statusColors: Record<string, string> = {
+  novo: "bg-blue-500/10 text-blue-700 border-blue-200",
+  contato_feito: "bg-amber-500/10 text-amber-700 border-amber-200",
+  reuniao_agendada: "bg-purple-500/10 text-purple-700 border-purple-200",
+  proposta_enviada: "bg-cyan-500/10 text-cyan-700 border-cyan-200",
+  fechado: "bg-green-500/10 text-green-700 border-green-200",
+  perdido: "bg-red-500/10 text-red-700 border-red-200",
+};
+
+const proposalStatusColors: Record<string, string> = {
+  rascunho: "bg-secondary text-secondary-foreground",
+  enviada: "bg-[#1B2A4A] text-white",
+  aprovada: "bg-emerald-100 text-emerald-800",
+  rejeitada: "bg-destructive text-destructive-foreground",
+};
+
+function formatCurrency(v: number | null) {
+  if (v == null) return "—";
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+}
+
+export default function LeadDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { leads, isLoading: leadsLoading } = useLeads();
+  const { logos, founderPhotos, portfolio, feedbacks, texts, contacts } = useProposalAssets();
+
+  const lead = useMemo(() => leads.find((l) => l.id === id), [leads, id]);
+
+  const { data: proposals = [], isLoading: proposalsLoading } = useQuery({
+    queryKey: ["proposals", "by-lead", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("proposals")
+        .select("*")
+        .eq("lead_id", id!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const duplicate = useMutation({
+    mutationFn: async (proposal: any) => {
+      const { id: _id, created_at, updated_at, ...rest } = proposal;
+      const { error } = await supabase.from("proposals").insert({
+        ...rest,
+        status: "rascunho",
+        proposal_number: null,
+        sent_at: null,
+        approved_at: null,
+        rejected_at: null,
+        user_id: user!.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["proposals", "by-lead", id] });
+      toast({ title: "Proposta duplicada com sucesso" });
+    },
+    onError: (e: Error) => toast({ title: "Erro ao duplicar", description: e.message, variant: "destructive" }),
+  });
+
+  const handleGeneratePdf = useCallback(async (proposal: any) => {
+    try {
+      toast({ title: "Gerando PDF…" });
+      const logo = logos[0]?.file_url || "";
+      const founderPhoto = founderPhotos[0]?.file_url || "";
+      const portfolioItems = (proposal.portfolio_projects as any[]) || portfolio.map((p) => ({
+        image: p.file_url || "", title: p.project_name || p.name, category: p.project_category || "",
+      }));
+      const feedbackItems = (proposal.feedback_items as any[]) || feedbacks.map((f) => ({
+        text: f.description || "", author: f.name,
+      }));
+      const aboutText = texts.find((t) => t.name === "about")?.description || "";
+      const contactInfo = contacts[0] || null;
+
+      const discountCashPercent = proposal.discount_percent ?? 0;
+      const priceFull = proposal.price_full ?? 0;
+      const priceAtVista = discountCashPercent > 0 ? priceFull * (1 - discountCashPercent / 100) : null;
+
+      const pageProps: ProposalPageProps = {
+        clientName: proposal.client_name || lead?.name || "",
+        projectName: proposal.project_name || "",
+        scopeDescription: proposal.scope_description || "",
+        servicesIncluded: proposal.services_included || "ambos",
+        logoUrl: logo,
+        founderPhotos,
+        aboutText,
+        contactPhone1: contactInfo?.description || "",
+        contactInstagram: (contactInfo?.metadata as any)?.instagram || "",
+        ambientes: (proposal.ambientes as string[]) || [],
+        totalArea: proposal.total_area ?? undefined,
+        etapasAtivas: (proposal.etapas_ativas as string[]) || [],
+        timelineBriefing: proposal.timeline_briefing ?? undefined,
+        timelineStudy: proposal.timeline_study ?? undefined,
+        timelineAnteprojeto: proposal.timeline_anteprojeto ?? undefined,
+        timelineBudget: proposal.timeline_budget ?? undefined,
+        timelinePriorities: proposal.timeline_priorities ?? undefined,
+        timelineMobilization: proposal.timeline_mobilization ?? undefined,
+        timelineConstruction: proposal.timeline_construction ?? undefined,
+        timelineFiscalization: proposal.timeline_fiscalization ?? undefined,
+        priceFull: priceFull || undefined,
+        priceCash: priceAtVista ?? undefined,
+        priceNote: proposal.price_note || undefined,
+        installmentsCount: proposal.installments_count ?? undefined,
+        installmentEntry: proposal.installment_entry ?? undefined,
+        installmentValue: proposal.installment_value ?? undefined,
+        validUntil: proposal.valid_until || undefined,
+        portfolioCards: portfolioItems.map((p: any) => ({ id: p.image || "", nome: p.title || "", foto_url: p.image || "" })),
+        feedbackImages: feedbacks,
+        portfolioImages: portfolio,
+      };
+
+      const pages = buildProposalPages({
+        data: pageProps,
+        portfolioImages: portfolio,
+        feedbackImages: feedbacks,
+        selectedPortfolioProjects: portfolio.map(p => p.id),
+        selectedFeedbackIds: feedbacks.map(f => f.id),
+      });
+      await waitForFonts();
+
+      const container = document.createElement("div");
+      container.style.position = "fixed";
+      container.style.left = "-9999px";
+      container.style.top = "0";
+      document.body.appendChild(container);
+
+      const renderPage = (page: React.ReactElement, index: number) => {
+        const wrapper = document.createElement("div");
+        wrapper.id = `pdf-page-${index}`;
+        container.appendChild(wrapper);
+        const root = ReactDOM.createRoot(wrapper);
+        flushSync(() => root.render(page));
+        return wrapper.firstElementChild as HTMLElement | null;
+      };
+
+      const blob = await generateProposalPdf(pages, renderPage);
+      document.body.removeChild(container);
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `proposta-${proposal.project_name || "sem-nome"}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "PDF gerado com sucesso!" });
+    } catch (err: any) {
+      toast({ title: "Erro ao gerar PDF", description: err.message, variant: "destructive" });
+    }
+  }, [logos, founderPhotos, portfolio, feedbacks, texts, contacts, lead]);
+
+  if (leadsLoading || proposalsLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!lead) {
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <Button variant="ghost" onClick={() => navigate("/leads/pipeline")}>
+          <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+        </Button>
+        <p className="text-muted-foreground">Lead não encontrado.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-start gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/leads/pipeline")}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div className="flex-1 space-y-1">
+          <h1 className="text-2xl font-bold font-display">{lead.name}</h1>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            {lead.phone && <span>{lead.phone}</span>}
+            {lead.email && <span>• {lead.email}</span>}
+          </div>
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            <Badge variant="outline" className={`text-xs ${statusColors[lead.status]}`}>
+              {leadStatusLabels[lead.status] || lead.status}
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              {typeLabels[lead.project_type] || lead.project_type}
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              {originLabels[lead.origin] || lead.origin}
+            </Badge>
+          </div>
+        </div>
+      </div>
+
+      {/* Proposals Section */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-lg">Propostas</CardTitle>
+          <Button size="sm" onClick={() => navigate("/leads/proposals")}>
+            <Plus className="h-4 w-4 mr-1" /> Criar proposta
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {proposals.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+              <FileText className="h-10 w-10 text-muted-foreground/40 mb-3" />
+              <p className="text-muted-foreground mb-4">Nenhuma proposta gerada para este lead ainda.</p>
+              <Button onClick={() => navigate("/leads/proposals")}>
+                <Plus className="h-4 w-4 mr-1" /> Criar proposta
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Projeto</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {proposals.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.project_name || "Sem nome"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {format(new Date(p.created_at), "dd/MM/yyyy")}
+                    </TableCell>
+                    <TableCell className="text-sm">{formatCurrency(p.price_full)}</TableCell>
+                    <TableCell>
+                      <Badge className={`text-xs ${proposalStatusColors[p.status] || ""}`}>
+                        {p.status === "rascunho" ? "Rascunho" : p.status === "enviada" ? "Enviada" : p.status === "aprovada" ? "Aprovada" : p.status === "rejeitada" ? "Rejeitada" : p.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          title="Visualizar"
+                          onClick={() => navigate("/leads/proposals", { state: { editProposalId: p.id } })}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          title="Duplicar"
+                          onClick={() => duplicate.mutate(p)}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          title="Gerar PDF"
+                          onClick={() => handleGeneratePdf(p)}
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
