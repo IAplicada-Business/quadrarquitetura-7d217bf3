@@ -429,6 +429,7 @@ export default function LeadDetail() {
 
                 if (error) throw error;
                 setConvertProposal(null);
+                queryClient.invalidateQueries({ queryKey: ["contracts", "by-lead", id] });
                 navigate("/leads/contracts", { state: { editContractId: data.id } });
                 toast({ title: "Contrato criado a partir da proposta. Revise antes de enviar." });
               } catch (err: any) {
