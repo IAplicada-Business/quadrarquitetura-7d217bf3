@@ -68,18 +68,20 @@ export function ProposalCoverPage({ clientName, projectName, logoUrl, pageWidth,
         >
           {clientName || "CLIENTE"}
         </div>
-        <div
-          style={{
-            fontSize: 11,
-            letterSpacing: 4,
-            color: COLORS.textoClaro,
-            opacity: 0.55,
-            textTransform: "uppercase",
-            marginTop: 6,
-          }}
-        >
-          Projeto
-        </div>
+        {projectName ? (
+          <div
+            style={{
+              fontSize: 11,
+              letterSpacing: 4,
+              color: COLORS.textoClaro,
+              opacity: 0.55,
+              textTransform: "uppercase",
+              marginTop: 6,
+            }}
+          >
+            {projectName}
+          </div>
+        ) : null}
       </div>
       <ValidityFooter validUntil={validUntil} dark />
       <LogoQuadra />
