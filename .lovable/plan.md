@@ -1,52 +1,42 @@
 
 
-## Foreign Keys — Ajuste de ON DELETE CASCADE para RESTRICT
+## Adicionar `lead_id` nos contratos + seção "Contratos" na página de detalhe do lead
 
-### Estado atual
-
-As foreign keys **já existem** no banco:
-- `proposals.lead_id → leads(id)` com `ON DELETE CASCADE`
-- `contracts.proposal_id → proposals(id)` com `ON DELETE CASCADE`
-
-O problema: `CASCADE` significa que deletar um lead **apaga silenciosamente todas as propostas** vinculadas, e deletar uma proposta **apaga todos os contratos** vinculados. Isso é exatamente o risco que você quer evitar.
-
-A tabela `projects` **não possui** coluna `lead_id`, então a terceira FK do prompt não se aplica no schema atual.
-
-### Migration
-
-Uma única migration para alterar o comportamento de deleção:
+### 1. Migration SQL
 
 ```sql
--- 1. proposals.lead_id: CASCADE → RESTRICT
-ALTER TABLE public.proposals
-  DROP CONSTRAINT proposals_lead_id_fkey,
-  ADD CONSTRAINT proposals_lead_id_fkey
-    FOREIGN KEY (lead_id) REFERENCES public.leads(id)
-    ON DELETE RESTRICT;
+-- Adicionar coluna
+ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS lead_id uuid REFERENCES public.leads(id) ON DELETE RESTRICT;
 
--- 2. contracts.proposal_id: CASCADE → RESTRICT
-ALTER TABLE public.contracts
-  DROP CONSTRAINT contracts_proposal_id_fkey,
-  ADD CONSTRAINT contracts_proposal_id_fkey
-    FOREIGN KEY (proposal_id) REFERENCES public.proposals(id)
-    ON DELETE RESTRICT;
+-- Backfill retroativo
+UPDATE public.contracts c
+SET lead_id = p.lead_id
+FROM public.proposals p
+WHERE c.proposal_id = p.id
+AND c.lead_id IS NULL;
 ```
 
-### Impacto no código
+### 2. Fluxo de conversão — preencher `lead_id`
 
-Nenhuma alteração de código é necessária. O comportamento muda apenas no banco: tentativas de deletar um lead com propostas ou uma proposta com contratos retornarão um erro do Postgres, que o Supabase SDK já propaga como `error` no retorno da query.
+Nos dois locais onde contratos são criados a partir de propostas:
 
-As telas de deleção de leads (pipeline) já tratam erros genéricos com toast — o usuário verá uma mensagem de erro se tentar deletar um lead protegido.
+**`src/pages/LeadsProposals.tsx`** (linha ~549): adicionar `lead_id: convertProposal.lead_id || null` no insert.
 
-### Sobre `projects.lead_id`
+**`src/pages/LeadDetail.tsx`** (linha ~343): adicionar `lead_id: convertProposal.lead_id || lead?.id || null` no insert.
 
-A tabela `projects` não tem coluna `lead_id` no schema atual. Se no futuro quiser vincular projetos a leads, será necessário primeiro criar a coluna e depois a FK. Isso não faz parte desta migration.
+### 3. Seção "Contratos" em `LeadDetail.tsx`
+
+Após a seção de Propostas, adicionar um novo `<Card>` com:
+- Query: `supabase.from("contracts").select("*").eq("lead_id", id)` com queryKey `["contracts", "by-lead", id]`
+- Tabela com colunas: Projeto (`title`), Data (`created_at` formatada), Status (badge), Ações (botão "Editar" → navega para `/leads/contracts` com state `editContractId`)
+- Estado vazio: "Nenhum contrato vinculado a este lead."
+- Cores de status dos contratos: rascunho=cinza, enviado=azul, assinado=verde, cancelado=vermelho
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | Alterar ON DELETE de CASCADE para RESTRICT em 2 FKs |
-
-Nenhum arquivo de código precisa ser alterado.
+| Migration SQL | Adicionar coluna `lead_id` + backfill |
+| `LeadsProposals.tsx` | Adicionar `lead_id` no insert do contrato |
+| `LeadDetail.tsx` | Adicionar `lead_id` no insert + nova seção "Contratos" |
 
