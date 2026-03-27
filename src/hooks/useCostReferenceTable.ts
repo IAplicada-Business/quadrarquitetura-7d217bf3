@@ -46,8 +46,8 @@ export function useCostReferenceTable() {
       if (!user) return DEFAULT_COST_TABLE;
       const { data, error } = await supabase
         .from("settings")
-        .select("calculation_params")
-        .eq("user_id", user.id)
+        .select("id, calculation_params, user_id")
+        .eq("scope" as any, "team")
         .maybeSingle();
       if (error) throw error;
       const params = data?.calculation_params as Record<string, unknown> | null;
