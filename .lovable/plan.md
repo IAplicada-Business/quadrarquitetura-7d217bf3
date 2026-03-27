@@ -1,24 +1,46 @@
 
 
-## Capa com nome do projeto dinâmico
+## Status de proposta — ajustes incrementais
 
-### Edições
+A maioria do que o prompt pede **já está implementado**: a coluna `status` existe com default `'rascunho'`, a listagem tem badges, filtros e botões de ação (Enviar, Aprovar, Rejeitar). O dashboard já conta `propostasAguardando` com `status === 'enviada'`.
 
-**1. `src/components/leads/proposal-pages/CoverPage.tsx`**
-- Substituir o conteúdo do bloco inferior (linhas 58-82) por:
-  - Linha principal (maior): `clientName || "CLIENTE"` — mantém estilo atual (Jost, 16px, letterSpacing 6, uppercase, opacity 0.85)
-  - Linha secundária: `projectName` — fontSize 11, letterSpacing 4, opacity 0.55, uppercase
-  - Se `projectName` for vazio/null/undefined, não renderizar a linha secundária
-- Remover o texto fixo "Projeto" que está hardcoded na linha 81
+### O que falta implementar
 
-**2. `src/components/leads/ProposalFormNew.tsx`**
-- Atualizar o placeholder do campo "Nome do projeto" (linha 206) para `"Ex: Reforma Sala e Cozinha — Apto Vila da Serra"`
-- O campo já está mapeado para `project_name` e já é passado via `buildPageProps` — nenhuma outra alteração necessária
+**1. Toast com ação ao aprovar (LeadsProposals.tsx)**
+- No botão "Aprovar" (linha 473), após o `update.mutate`, exibir toast:
+  - Título: "Proposta aprovada"
+  - Descrição: "Deseja converter em contrato?"
+  - Ação: botão "Converter" que por enquanto apenas fecha o toast (placeholder para Prompt 6)
+
+**2. Cores específicas nos badges (LeadsProposals.tsx)**
+- Ajustar o Badge na listagem (linha 451) para usar cores explícitas:
+  - Rascunho: cinza (já é `secondary`)
+  - Enviada: fundo `#1B2A4A`, texto branco
+  - Aprovada: verde (`bg-emerald-100 text-emerald-800`)
+  - Recusada: vermelho (já é `destructive`)
+
+**3. KPI "Propostas aprovadas no mês" (DashboardEscritorio.tsx)**
+- No `computed`, adicionar:
+  ```ts
+  const propostasAprovadasMes = allProposals.filter(
+    p => p.status === "aprovada" && p.created_at?.startsWith(format(today, "yyyy-MM"))
+  ).length;
+  ```
+- Adicionar novo Card na seção Métricas Comerciais (após "Aguardando Resposta") com ícone `CheckCircle2`, cor verde
+
+**4. CHECK constraint na coluna status (migration)**
+- Não criar a coluna (já existe). Adicionar apenas o constraint:
+  ```sql
+  ALTER TABLE proposals DROP CONSTRAINT IF EXISTS proposals_status_check;
+  ALTER TABLE proposals ADD CONSTRAINT proposals_status_check
+    CHECK (status IN ('rascunho', 'enviada', 'aprovada', 'rejeitada'));
+  ```
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| `CoverPage.tsx` | Substituir subtítulo fixo por `projectName` dinâmico |
-| `ProposalFormNew.tsx` | Atualizar placeholder |
+| Migration SQL | Adicionar CHECK constraint |
+| `LeadsProposals.tsx` | Toast com ação ao aprovar + cores dos badges |
+| `DashboardEscritorio.tsx` | Novo KPI "Propostas aprovadas no mês" |
 
