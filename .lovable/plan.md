@@ -1,49 +1,54 @@
 
 
-## Migrar RLS de `proposal_templates` e `reports` para equipe
+## Verificar e corrigir FKs restantes
+
+### Estado atual (verificado no banco)
+
+| Tabela | FK | Ref | Tipo atual | Ação |
+|---|---|---|---|---|
+| `contracts` | `contracts_proposal_id_fkey` | `proposals` | RESTRICT (r) | Nenhuma — já correto |
+| `reports` | `reports_project_id_fkey` | `projects` | CASCADE (c) | Alterar para RESTRICT |
+| `documents` | `documents_project_id_fkey` | `projects` | CASCADE (c) | Alterar para RESTRICT |
+| `site_visits` | `site_visits_project_id_fkey` | `projects` | CASCADE (c) | Alterar para RESTRICT |
+| `supplier_allocations` | `supplier_allocations_supplier_id_fkey` | `suppliers` | CASCADE (c) | Alterar para RESTRICT |
 
 ### Migration SQL
 
-Dropar as 4 políticas individuais de cada tabela e criar 4 políticas de equipe (mesmo padrão das 16 tabelas já migradas).
-
 ```sql
--- proposal_templates (4 políticas individuais → 4 de equipe)
-DROP POLICY IF EXISTS "Users can create proposal_templates" ON public.proposal_templates;
-DROP POLICY IF EXISTS "Users can view own proposal_templates" ON public.proposal_templates;
-DROP POLICY IF EXISTS "Users can update own proposal_templates" ON public.proposal_templates;
-DROP POLICY IF EXISTS "Users can delete own proposal_templates" ON public.proposal_templates;
+-- reports → projects: CASCADE → RESTRICT
+DELETE FROM public.reports WHERE project_id NOT IN (SELECT id FROM public.projects);
+ALTER TABLE public.reports DROP CONSTRAINT reports_project_id_fkey;
+ALTER TABLE public.reports ADD CONSTRAINT fk_reports_project
+  FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
 
-CREATE POLICY "Team can view proposal_templates" ON public.proposal_templates
-  FOR SELECT USING (user_id IN (SELECT get_team_user_ids()));
-CREATE POLICY "Team can create proposal_templates" ON public.proposal_templates
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Team can update proposal_templates" ON public.proposal_templates
-  FOR UPDATE USING (user_id IN (SELECT get_team_user_ids()));
-CREATE POLICY "Team can delete proposal_templates" ON public.proposal_templates
-  FOR DELETE USING (user_id IN (SELECT get_team_user_ids()));
+-- documents → projects: CASCADE → RESTRICT
+DELETE FROM public.documents WHERE project_id IS NOT NULL AND project_id NOT IN (SELECT id FROM public.projects);
+ALTER TABLE public.documents DROP CONSTRAINT documents_project_id_fkey;
+ALTER TABLE public.documents ADD CONSTRAINT fk_documents_project
+  FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
 
--- reports (3 políticas individuais → 4 de equipe, adicionando UPDATE)
-DROP POLICY IF EXISTS "Users can insert own reports" ON public.reports;
-DROP POLICY IF EXISTS "Users can view own reports" ON public.reports;
-DROP POLICY IF EXISTS "Users can delete own reports" ON public.reports;
+-- site_visits → projects: CASCADE → RESTRICT
+DELETE FROM public.site_visits WHERE project_id NOT IN (SELECT id FROM public.projects);
+ALTER TABLE public.site_visits DROP CONSTRAINT site_visits_project_id_fkey;
+ALTER TABLE public.site_visits ADD CONSTRAINT fk_site_visits_project
+  FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
 
-CREATE POLICY "Team can view reports" ON public.reports
-  FOR SELECT USING (user_id IN (SELECT get_team_user_ids()));
-CREATE POLICY "Team can create reports" ON public.reports
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Team can update reports" ON public.reports
-  FOR UPDATE USING (user_id IN (SELECT get_team_user_ids()));
-CREATE POLICY "Team can delete reports" ON public.reports
-  FOR DELETE USING (user_id IN (SELECT get_team_user_ids()));
+-- supplier_allocations → suppliers: CASCADE → RESTRICT
+DELETE FROM public.supplier_allocations WHERE supplier_id NOT IN (SELECT id FROM public.suppliers);
+ALTER TABLE public.supplier_allocations DROP CONSTRAINT supplier_allocations_supplier_id_fkey;
+ALTER TABLE public.supplier_allocations ADD CONSTRAINT fk_supplier_allocations_supplier
+  FOREIGN KEY (supplier_id) REFERENCES public.suppliers(id) ON DELETE RESTRICT;
 ```
+
+Nota: `documents.project_id` é nullable, por isso o filtro adicional `IS NOT NULL`.
 
 ### Código frontend
 
-Nenhuma alteração necessária.
+Nenhuma alteração. O `contracts → proposals` já está RESTRICT. O `handleDeleteError` já cobre `projects` com mensagem amigável.
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | Drop 7 políticas individuais + criar 8 políticas de equipe |
+| Migration SQL | Drop 4 FKs CASCADE + criar 4 FKs RESTRICT |
 
