@@ -125,7 +125,7 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
 
   // Auto-calc cash price from discount
   const calcPriceCash = useMemo(() => {
-    if (!data.price_full || !data.discount_cash_percent) return null;
+    if (!data.price_full || !data.discount_cash_percent || data.discount_cash_percent <= 0) return null;
     return data.price_full * (1 - data.discount_cash_percent / 100);
   }, [data.price_full, data.discount_cash_percent]);
 

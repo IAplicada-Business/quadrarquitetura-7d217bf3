@@ -4,7 +4,7 @@ export function ProposalValuesPage(props: ProposalPageProps) {
   const { priceFull, priceCash, installmentsCount, installmentEntry, installmentValue, priceNote, logoUrl } = props;
 
   const investmentLabel = priceFull ? formatBRL(priceFull) : "A consultar";
-  const investmentSub = priceCash && priceFull && priceCash < priceFull
+  const investmentSub = priceCash != null && priceFull != null && priceCash < priceFull
     ? `À vista: ${formatBRL(priceCash)}`
     : "";
 

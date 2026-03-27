@@ -88,7 +88,7 @@ export default function LeadsProposals() {
       timelineMobilization: formData.timeline_mobilization ?? undefined,
       timelineFiscalization: formData.timeline_fiscalization ?? undefined,
       priceFull: formData.price_full,
-      priceCash: formData.price_full && formData.discount_cash_percent
+      priceCash: formData.price_full && formData.discount_cash_percent && formData.discount_cash_percent > 0
         ? formData.price_full * (1 - formData.discount_cash_percent / 100)
         : null,
       installmentsCount: formData.installments_count,
@@ -150,7 +150,7 @@ export default function LeadsProposals() {
       total_area: formData.total_area,
       etapas_ativas: formData.etapas_ativas,
       value: formData.price_full,
-      final_value: formData.price_full && formData.discount_cash_percent
+      final_value: formData.price_full && formData.discount_cash_percent && formData.discount_cash_percent > 0
         ? formData.price_full * (1 - formData.discount_cash_percent / 100)
         : formData.price_full,
       status,
