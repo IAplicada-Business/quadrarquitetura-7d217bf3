@@ -324,6 +324,24 @@ export default function DashboardEscritorio() {
         ))}
       </div>
 
+      {/* KPI Tarefas Atrasadas */}
+      {overdueTasks.length > 0 && (
+        <Card
+          className="hover:shadow-md transition-shadow border-l-4 cursor-pointer"
+          style={{ borderLeftColor: "#DC2626" }}
+          onClick={() => navigate("/projects")}
+        >
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Tarefas Atrasadas</CardTitle>
+            <AlertTriangle className="h-5 w-5" style={{ color: "#DC2626" }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: "#DC2626" }}>{overdueTasks.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">em todos os projetos ativos</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Alertas */}
       {computed.alertas.length > 0 && (
         <Card style={{ borderColor: ROSA.fill2, backgroundColor: ROSA.fundoSuave }}>
