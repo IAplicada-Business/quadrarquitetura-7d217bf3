@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { handleDeleteError } from "@/lib/handleDeleteError";
 
 export interface Contract {
   id: string;
@@ -72,7 +73,7 @@ export function useContracts() {
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
       toast({ title: "Contrato removido" });
     },
-    onError: (e: Error) => toast({ title: "Erro ao remover", description: e.message, variant: "destructive" }),
+    onError: (e: any) => handleDeleteError(e, "contracts"),
   });
 
   const signAndCreateProject = useMutation({

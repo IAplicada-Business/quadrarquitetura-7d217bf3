@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { handleDeleteError } from "@/lib/handleDeleteError";
 
 export const LEAD_STATUSES = [
   "novo",
@@ -106,7 +107,7 @@ export function useLeads() {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       toast({ title: "Lead removido" });
     },
-    onError: (e: Error) => toast({ title: "Erro ao remover lead", description: e.message, variant: "destructive" }),
+    onError: (e: any) => handleDeleteError(e, "leads"),
   });
 
   const convertToClient = useMutation({
