@@ -36,12 +36,7 @@ const menuGroups: MenuGroup[] = [
   {
     label: "Projetos",
     items: [
-      { title: "Lista", url: "/projects" },
-    ],
-  },
-  {
-    label: "Obra",
-    items: [
+      { title: "Obras", url: "/projects" },
       { title: "Acompanhamento", url: "/construction/tracking" },
       {
         title: "Tarefas",
@@ -54,7 +49,6 @@ const menuGroups: MenuGroup[] = [
       },
       { title: "Fornecedores", url: "/construction/suppliers" },
       { title: "Documentos", url: "/construction/documents" },
-      { title: "Relatórios", url: "/construction/reports" },
     ],
   },
   {
@@ -62,6 +56,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Configurações", url: "/admin/settings" },
       { title: "Usuários", url: "/admin/users" },
+      { title: "Relatórios", url: "/construction/reports" },
     ],
   },
 ];
