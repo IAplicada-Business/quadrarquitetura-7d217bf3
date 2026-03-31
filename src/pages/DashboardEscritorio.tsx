@@ -172,6 +172,18 @@ export default function DashboardEscritorio() {
     enabled: !!user,
   });
 
+  const { data: pendingNFs = [] } = useQuery({
+    queryKey: ["dash-esc-pending-nfs"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("invoices_nf" as any)
+        .select("id")
+        .eq("status", "pendente");
+      return (data ?? []) as any[];
+    },
+    enabled: !!user,
+  });
+
   // ── Computed data ──
   const computed = useMemo(() => {
     const activeProjects = projects.filter((p) => p.status !== "concluido");
