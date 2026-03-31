@@ -27,6 +27,7 @@ import ConstructionAgenda from "./pages/ConstructionAgenda";
 import NotificationsPage from "./pages/NotificationsPage";
 import NotFound from "./pages/NotFound";
 import ClientPortal from "./pages/ClientPortal";
+import InvoicesPage from "./pages/InvoicesPage";
 
 const queryClient = new QueryClient();
 
