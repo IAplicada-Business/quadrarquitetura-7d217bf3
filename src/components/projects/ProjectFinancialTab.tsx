@@ -9,6 +9,7 @@ import { useProjectPayments } from "@/hooks/useProjectPayments";
 import { useInvoices } from "@/hooks/useInvoices";
 import { PaymentForm } from "./PaymentForm";
 import { InvoiceForm } from "./InvoiceForm";
+import { InvoiceNFList } from "./InvoiceNFList";
 
 function formatCurrency(v: number | null | undefined) {
   if (v == null) return "—";
