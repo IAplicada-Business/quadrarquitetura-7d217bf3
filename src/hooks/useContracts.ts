@@ -81,6 +81,15 @@ export function useContracts() {
       const lead = contract.proposals?.leads;
       const leadId = contract.proposals?.lead_id;
 
+      // Get next project_number
+      const { data: maxRow } = await supabase
+        .from("projects")
+        .select("project_number")
+        .order("project_number", { ascending: false })
+        .limit(1)
+        .single();
+      const nextNumber = ((maxRow as any)?.project_number || 0) + 1;
+
       // 1. Create project
       const { data: project, error: projError } = await supabase
         .from("projects")
@@ -94,7 +103,8 @@ export function useContracts() {
           project_type: (lead?.project_type as any) || "residencial",
           status: "contrato" as any,
           contract_id: contract.id,
-        })
+          project_number: nextNumber,
+        } as any)
         .select()
         .single();
       if (projError) throw projError;
@@ -110,6 +120,16 @@ export function useContracts() {
       if (leadId) {
         await supabase.from("leads").update({ status: "fechado" }).eq("id", leadId);
       }
+
+      // 4. Insert revenue payment
+      await supabase.from("payments").insert({
+        user_id: user!.id,
+        project_id: project.id,
+        description: `Receita: ${lead?.name || "Projeto"}`,
+        value: contract.value || contract.proposals?.value || 0,
+        status: "pendente" as any,
+        supplier_name: "Receita Escritório",
+      } as any);
 
       return project;
     },

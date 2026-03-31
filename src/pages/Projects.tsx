@@ -62,6 +62,15 @@ export default function Projects() {
 
   const createMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
+      // Get next project_number
+      const { data: maxRow } = await supabase
+        .from("projects")
+        .select("project_number")
+        .order("project_number", { ascending: false })
+        .limit(1)
+        .single();
+      const nextNumber = ((maxRow as any)?.project_number || 0) + 1;
+
       const insertData = {
         name: data.name as string,
         client_id: (data.client_id as string) || null,
@@ -76,8 +85,9 @@ export default function Projects() {
         estimated_budget: (data.estimated_budget as number) || null,
         finish_level: (data.finish_level as number) || null,
         user_id: user!.id,
+        project_number: nextNumber,
       };
-      const { error } = await supabase.from("projects").insert([insertData]);
+      const { error } = await supabase.from("projects").insert([insertData] as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -219,7 +229,12 @@ export default function Projects() {
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => navigate(`/projects/${p.id}`)}
                 >
-                  <TableCell className="font-medium">{p.name}</TableCell>
+                  <TableCell className="font-medium">
+                    {(p as any).project_number ? (
+                      <span className="text-muted-foreground font-mono text-xs mr-2">#{String((p as any).project_number).padStart(3, "0")}</span>
+                    ) : null}
+                    {p.name}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {(p.clients as { name: string } | null)?.name || "—"}
                   </TableCell>

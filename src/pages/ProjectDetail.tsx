@@ -50,6 +50,11 @@ export default function ProjectDetail() {
         </Button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
+            {(project as any).project_number && (
+              <Badge variant="outline" className="text-xs font-mono">
+                #{String((project as any).project_number).padStart(3, "0")}
+              </Badge>
+            )}
             <h1 className="text-2xl font-bold text-display">{project.name}</h1>
             <Badge variant="secondary">
               {statusLabels[project.status || ""] || project.status}
@@ -66,7 +71,7 @@ export default function ProjectDetail() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1 bg-muted/50">
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
-          <TabsTrigger value="cenarios">Cenários</TabsTrigger>
+          <TabsTrigger value="cenarios">Cotações</TabsTrigger>
           <TabsTrigger value="escopo">Escopo</TabsTrigger>
           <TabsTrigger value="orcamentos">Orçamentos</TabsTrigger>
           <TabsTrigger value="materiais">Materiais</TabsTrigger>

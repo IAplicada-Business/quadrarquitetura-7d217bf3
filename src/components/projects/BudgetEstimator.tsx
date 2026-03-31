@@ -166,7 +166,7 @@ export function BudgetEstimator({ project, updateProject, onTabChange }: BudgetE
               </Button>
               <Button size="sm" variant="outline" onClick={handleCreateScenario} disabled={updateProject.isPending}>
                 <PlusCircle className="h-4 w-4 mr-1.5" />
-                Criar cenário a partir desta estimativa
+                Criar cotação a partir desta estimativa
               </Button>
             </div>
           </div>

@@ -144,21 +144,21 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
       {/* Create Scenario */}
       <div className="flex items-center gap-3">
         <Input
-          placeholder="Nome do cenário (ex: Cenário A)"
+          placeholder="Nome da cotação (ex: Cotação A)"
           value={newScenarioName}
           onChange={(e) => setNewScenarioName(e.target.value)}
           className="max-w-[300px]"
           onKeyDown={(e) => e.key === "Enter" && handleCreateScenario()}
         />
         <Button onClick={handleCreateScenario} disabled={!newScenarioName.trim() || createScenario.isPending}>
-          <Plus className="h-4 w-4 mr-1" /> Novo Cenário
+          <Plus className="h-4 w-4 mr-1" /> Nova Cotação
         </Button>
       </div>
 
       {/* Scenarios */}
       {scenarios.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-          Nenhum cenário criado. Crie um cenário para começar a simulação.
+          Nenhuma cotação criada. Crie uma cotação para começar a simulação.
         </div>
       ) : (
         <div className={scenarios.length >= 2 ? "grid grid-cols-1 lg:grid-cols-2 gap-4" : "space-y-4"}>
