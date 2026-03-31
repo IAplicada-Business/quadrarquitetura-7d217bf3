@@ -1398,6 +1398,63 @@ export type Database = {
           },
         ]
       }
+      price_research: {
+        Row: {
+          activity_id: string
+          id: string
+          material_name: string
+          price_avg: number | null
+          price_max: number | null
+          price_min: number | null
+          project_id: string
+          searched_at: string | null
+          suppliers: Json | null
+          unit: string | null
+          user_id: string
+        }
+        Insert: {
+          activity_id: string
+          id?: string
+          material_name: string
+          price_avg?: number | null
+          price_max?: number | null
+          price_min?: number | null
+          project_id: string
+          searched_at?: string | null
+          suppliers?: Json | null
+          unit?: string | null
+          user_id: string
+        }
+        Update: {
+          activity_id?: string
+          id?: string
+          material_name?: string
+          price_avg?: number | null
+          price_max?: number | null
+          price_min?: number | null
+          project_id?: string
+          searched_at?: string | null
+          suppliers?: Json | null
+          unit?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_research_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "project_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_research_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
