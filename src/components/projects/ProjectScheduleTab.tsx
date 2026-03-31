@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useScheduleTasks } from "@/hooks/useScheduleTasks";
 import { useScopeItems } from "@/hooks/useScopeItems";
+import { useProjectActivities } from "@/hooks/useProjectActivities";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
