@@ -52,7 +52,7 @@ export default function LeadDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { leads, isLoading: leadsLoading } = useLeads();
+  const { leads, isLoading: leadsLoading, convertToClient } = useLeads();
   const { logos, founderPhotos, portfolio, feedbacks, texts, contacts } = useProposalAssets();
   const { contracts } = useContracts();
   const [convertProposal, setConvertProposal] = useState<any>(null);
@@ -428,6 +428,12 @@ export default function LeadDetail() {
                 } as any).select("id").single();
 
                 if (error) throw error;
+
+                // Auto-convert lead to client
+                if (lead && !lead.converted_client_id) {
+                  convertToClient.mutate(lead);
+                }
+
                 setConvertProposal(null);
                 queryClient.invalidateQueries({ queryKey: ["contracts", "by-lead", id] });
                 navigate("/leads/contracts", { state: { editContractId: data.id } });
