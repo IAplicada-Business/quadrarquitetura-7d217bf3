@@ -15,8 +15,9 @@ import { BudgetQuoteCard } from "./BudgetQuoteCard";
 import { BudgetQuoteForm } from "./BudgetQuoteForm";
 import { ProjectPurchasesTab } from "./ProjectPurchasesTab";
 import { ShoppingListDialog } from "./ShoppingListDialog";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Calculator } from "lucide-react";
 import { useProjectActivities } from "@/hooks/useProjectActivities";
+import { BudgetPreviewDialog } from "./BudgetPreviewDialog";
 import { useMaterialIndices } from "@/hooks/useMaterialIndices";
 import { usePriceResearch } from "@/hooks/usePriceResearch";
 import { PriceSearchDialog } from "./PriceSearchDialog";
@@ -58,6 +59,7 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
   const [editingQuote, setEditingQuote] = useState<Record<string, unknown> | null>(null);
   const [activeScopeId, setActiveScopeId] = useState<string | null>(null);
   const [shoppingListOpen, setShoppingListOpen] = useState(false);
+  const [budgetPreviewOpen, setBudgetPreviewOpen] = useState(false);
   const [priceSearchOpen, setPriceSearchOpen] = useState(false);
   const [priceSearchActivity, setPriceSearchActivity] = useState<{
     id: string; name: string; materials: { name: string; unit: string; quantity: number }[];
@@ -201,6 +203,9 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
               <Button variant="outline" size="sm" onClick={() => setShoppingListOpen(true)}>
                 <ShoppingCart className="h-4 w-4 mr-1" /> Lista de Compras
               </Button>
+              <Button size="sm" onClick={() => setBudgetPreviewOpen(true)}>
+                <Calculator className="h-4 w-4 mr-1" /> Gerar Prévia de Orçamento
+              </Button>
             </div>
           </div>
 
@@ -291,6 +296,13 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
           <ShoppingListDialog
             open={shoppingListOpen}
             onOpenChange={setShoppingListOpen}
+            projectId={projectId}
+            projectName={projectName}
+          />
+
+          <BudgetPreviewDialog
+            open={budgetPreviewOpen}
+            onOpenChange={setBudgetPreviewOpen}
             projectId={projectId}
             projectName={projectName}
           />

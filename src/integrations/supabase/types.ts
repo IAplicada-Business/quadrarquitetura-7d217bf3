@@ -878,6 +878,42 @@ export type Database = {
           },
         ]
       }
+      labor_costs: {
+        Row: {
+          activity_type: string | null
+          cost_per_m2: number | null
+          cost_per_unit: number | null
+          discipline: string
+          id: string
+          notes: string | null
+          region: string | null
+          unit: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activity_type?: string | null
+          cost_per_m2?: number | null
+          cost_per_unit?: number | null
+          discipline: string
+          id?: string
+          notes?: string | null
+          region?: string | null
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activity_type?: string | null
+          cost_per_m2?: number | null
+          cost_per_unit?: number | null
+          discipline?: string
+          id?: string
+          notes?: string | null
+          region?: string | null
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       lead_form_submissions: {
         Row: {
           created_at: string
