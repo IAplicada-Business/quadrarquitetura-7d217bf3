@@ -151,7 +151,7 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
           onKeyDown={(e) => e.key === "Enter" && handleCreateScenario()}
         />
         <Button onClick={handleCreateScenario} disabled={!newScenarioName.trim() || createScenario.isPending}>
-          <Plus className="h-4 w-4 mr-1" /> Novo Cenário
+          <Plus className="h-4 w-4 mr-1" /> Nova Cotação
         </Button>
       </div>
 
