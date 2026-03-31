@@ -52,7 +52,7 @@ export default function LeadDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { leads, isLoading: leadsLoading } = useLeads();
+  const { leads, isLoading: leadsLoading, convertToClient } = useLeads();
   const { logos, founderPhotos, portfolio, feedbacks, texts, contacts } = useProposalAssets();
   const { contracts } = useContracts();
   const [convertProposal, setConvertProposal] = useState<any>(null);
