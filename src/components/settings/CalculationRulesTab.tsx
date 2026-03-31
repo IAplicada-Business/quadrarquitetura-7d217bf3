@@ -54,6 +54,12 @@ export default function CalculationRulesTab() {
   const [editingIndexId, setEditingIndexId] = useState<string | null>(null);
   const [indexForm, setIndexForm] = useState({ activity_type: "", material_name: "", unit: "un", index_per_m2: 0, notes: "" });
 
+  // Labor Costs state
+  const { laborCosts, isLoading: laborLoading, create: createLabor, update: updateLabor, remove: removeLabor } = useLaborCosts();
+  const [laborDialogOpen, setLaborDialogOpen] = useState(false);
+  const [editingLaborId, setEditingLaborId] = useState<string | null>(null);
+  const [laborForm, setLaborForm] = useState({ discipline: "", activity_type: "", cost_per_m2: 0, cost_per_unit: 0, unit: "m2", region: "Belo Horizonte", notes: "" });
+
   const openCreate = () => {
     setEditingId(null);
     setForm(EMPTY_FORM);
