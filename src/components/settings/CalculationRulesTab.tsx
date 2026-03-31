@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Calculator, Layers } from "lucide-react";
+import { Plus, Pencil, Trash2, Calculator, Layers, Wrench } from "lucide-react";
+import { useLaborCosts, type LaborCost } from "@/hooks/useLaborCosts";
 
 const DISCIPLINE_OPTIONS = [
   "Alvenaria", "Elétrica", "Hidráulica", "Pintura", "Acabamento",
