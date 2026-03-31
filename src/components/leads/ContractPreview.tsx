@@ -21,6 +21,8 @@ interface ContractPreviewProps {
   estimatedDuration: string;
   customClauses: string;
   template: ContractTemplate | null;
+  environments?: string;
+  totalArea?: number | null;
 }
 
 function formatCurrency(v: number | null) {
