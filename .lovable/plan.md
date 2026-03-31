@@ -1,74 +1,83 @@
 
 
-## Pesquisa de Preços em BH — Aba Cotações
+## Gerar Prévia de Orçamento — Aba Cotações
 
-### Nota sobre API de busca
-
-O projeto usa Lovable AI (gateway) que não suporta Anthropic/Claude nem `web_search` nativo. Existem duas opções viáveis:
-
-- **Perplexity** (conector disponível): busca web real com modelo `sonar`, retorna citações e fontes. Requer conectar o conector Perplexity ao projeto.
-- **Lovable AI** (já configurado): gerar estimativas de preço baseadas em conhecimento do modelo (sem busca web real). Mais rápido de implementar, mas preços são estimativas, não dados live.
-
-Recomendo **Perplexity** pela busca web real. Será necessário conectar o conector antes de implementar.
-
----
-
-### 1. Migration — Tabela `price_research`
+### 1. Migration — Tabela `labor_costs`
 
 ```sql
-CREATE TABLE price_research (
+CREATE TABLE labor_costs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id uuid REFERENCES projects(id) ON DELETE RESTRICT,
-  activity_id uuid REFERENCES project_activities(id) ON DELETE CASCADE,
-  material_name text,
-  price_min numeric,
-  price_max numeric,
-  price_avg numeric GENERATED ALWAYS AS ((price_min + price_max) / 2) STORED,
-  unit text,
-  suppliers jsonb,
-  searched_at timestamptz DEFAULT now(),
-  user_id uuid
+  discipline text NOT NULL,
+  activity_type text,
+  cost_per_m2 numeric,
+  cost_per_unit numeric,
+  unit text DEFAULT 'm2',
+  region text DEFAULT 'Belo Horizonte',
+  notes text,
+  updated_at timestamptz DEFAULT now()
 );
-ALTER TABLE price_research ENABLE ROW LEVEL SECURITY;
--- RLS de equipe padrão (4 policies)
+ALTER TABLE labor_costs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Team can view labor_costs" ON labor_costs FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admin can insert labor_costs" ON labor_costs FOR INSERT TO authenticated WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
+CREATE POLICY "Admin can update labor_costs" ON labor_costs FOR UPDATE TO authenticated USING (has_role(auth.uid(), 'admin'::app_role));
+CREATE POLICY "Admin can delete labor_costs" ON labor_costs FOR DELETE TO authenticated USING (has_role(auth.uid(), 'admin'::app_role));
+```
+
+Seed com valores iniciais:
+```sql
+INSERT INTO labor_costs (discipline, activity_type, cost_per_m2, unit) VALUES
+('Elétrica', 'eletrica', 45, 'm2'),
+('Pintura', 'pintura', 18, 'm2'),
+('Alvenaria', 'alvenaria', 55, 'm2'),
+('Piso', 'piso', 35, 'm2'),
+('Reboco', 'reboco', 30, 'm2'),
+('Hidráulica', 'hidraulica', 50, 'm2'),
+('Gesso/Forro', 'gesso', 40, 'm2');
 ```
 
 ---
 
-### 2. Edge Function `search-prices-bh`
+### 2. Hook `src/hooks/useLaborCosts.ts`
 
-- Recebe `{ activity_name, materials: [{name, unit, quantity}], city }`
-- Para cada material, faz query ao Perplexity (ou Lovable AI) com prompt: `"preço [material] [unidade] distribuidora Belo Horizonte 2025"`
-- Usa tool calling para extrair: `supplier, neighborhood, price_min, price_max, unit, source_url`
-- Retorna array de resultados por material
+CRUD hook para `labor_costs`. Mesma estrutura do `useMaterialIndices`. Query sem filtro (tabela global). Mutations de create/update/delete para admin.
 
 ---
 
-### 3. Hook `usePriceResearch`
+### 3. Configurações → Regras de Cálculo — Seção "Custos de Mão de Obra"
 
-- Query: buscar pesquisas recentes (< 7 dias) por `activity_id`
-- Mutation: salvar resultado na tabela
-
----
-
-### 4. Componente `PriceSearchDialog`
-
-Modal "Pesquisa de Preços — [Atividade]":
-- Cards por material com faixa de preço (R$ X — R$ Y)
-- Lista de fornecedores com bairro e contato
-- Badge "Atualizado em [data]"
-- Botão "Usar preço médio" → preenche valor na atividade
-- Estado de loading com spinner durante pesquisa
+Em `CalculationRulesTab.tsx`, adicionar uma terceira seção abaixo dos Índices de Material:
+- Titulo: "Custos de Mão de Obra por Disciplina"
+- Tabela: Disciplina | Tipo Atividade | Custo/m² | Unidade | Região
+- Dialog para add/edit/remove (admin only)
 
 ---
 
-### 5. Integração na aba Cotações (`ProjectBudgetsTab.tsx`)
+### 4. Componente `BudgetPreviewDialog.tsx`
 
-- Importar `useProjectActivities` para listar atividades do projeto
-- Abaixo da seção de disciplinas contratadas, adicionar seção **"Pesquisa de Preços por Atividade"**
-- Para cada atividade com `area_m2 > 0`: card com botão "Pesquisar Preços em BH"
-- Se já existe pesquisa recente (< 7 dias): mostrar botão "Ver última pesquisa" em vez de pesquisar novamente
-- Cruzar atividade com `material_indices` para montar lista de materiais automaticamente
+Modal "Prévia do Orçamento Executivo":
+
+**Lógica de composição** (por atividade com `area_m2 > 0`):
+1. Cruza com `material_indices` → calcula quantidade por material
+2. Busca `price_research` (< 30 dias) → usa `price_avg` ou fallback manual
+3. `custo_material = Σ(quantidade × preço_médio)` por atividade
+4. Cruza `discipline` com `labor_costs` → `custo_mo = area_m2 × cost_per_m2`
+5. `total_atividade = custo_material + custo_mo`
+6. `total_geral = Σ total_atividade`
+
+**UI do modal:**
+- Tabela: Atividade | Disciplina | Área m² | Custo Material | Custo MO | Total
+- Subtotais agrupados por disciplina
+- Total geral em destaque
+- Indicadores de confiança por linha (verde/amarelo/cinza)
+- Botão "Exportar como PDF" — client-side com jsPDF (já instalado)
+- Botão "Salvar como Cotação" — cria `budget_quotes` via hook existente
+
+---
+
+### 5. Integração na aba Cotações
+
+Em `ProjectBudgetsTab.tsx`, adicionar botão **"Gerar Prévia de Orçamento"** no header da aba, ao lado dos botões existentes. Abre o `BudgetPreviewDialog`.
 
 ---
 
@@ -76,12 +85,11 @@ Modal "Pesquisa de Preços — [Atividade]":
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | Criar `price_research` + RLS |
-| `supabase/functions/search-prices-bh/index.ts` | **Novo** — Edge Function de pesquisa |
-| `supabase/config.toml` | Adicionar function entry |
-| `src/hooks/usePriceResearch.ts` | **Novo** — CRUD hook |
-| `src/components/projects/PriceSearchDialog.tsx` | **Novo** — Modal de resultados |
-| `src/components/projects/ProjectBudgetsTab.tsx` | Adicionar seção de pesquisa por atividade |
+| Migration SQL | Criar `labor_costs` + RLS + seed |
+| `src/hooks/useLaborCosts.ts` | **Novo** — CRUD hook |
+| `src/components/projects/BudgetPreviewDialog.tsx` | **Novo** — Modal de prévia + PDF |
+| `src/components/projects/ProjectBudgetsTab.tsx` | Adicionar botão + importar dialog |
+| `src/components/settings/CalculationRulesTab.tsx` | Adicionar seção de custos MO |
 
 Nenhuma outra aba ou rota alterada.
 
