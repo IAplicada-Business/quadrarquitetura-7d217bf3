@@ -197,19 +197,13 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
         isLoading={create.isPending || update.isPending}
       />
 
-      {/* AI Dialog - Placeholder */}
-      <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Gerar Atividades com IA</DialogTitle>
-          </DialogHeader>
-          <div className="py-8 text-center text-muted-foreground">
-            <Sparkles className="h-8 w-8 mx-auto mb-3 text-primary/50" />
-            <p className="text-sm">Funcionalidade em breve.</p>
-            <p className="text-xs mt-1">A IA irá sugerir atividades com base no tipo de obra.</p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <GenerateActivitiesDialog
+        open={aiDialogOpen}
+        onOpenChange={setAiDialogOpen}
+        projectId={projectId}
+        existingCount={activities.length}
+        onCreate={(data) => create.mutate(data)}
+      />
     </div>
   );
 }
