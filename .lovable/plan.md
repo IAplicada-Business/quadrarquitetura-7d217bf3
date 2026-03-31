@@ -1,35 +1,38 @@
 
 
-## Limpeza de dados de teste (mantendo Alexandra)
+## Conversão automática de Lead → Cliente ao fechar
 
-### Migration SQL (via insert tool)
+### Problema identificado
 
-Ordem respeitando FKs:
+O fluxo de conversão lead→cliente **só funciona** no Pipeline (via drag-and-drop ou botão "Avançar" para "fechado"). Porém, no fluxo mais comum — aprovar proposta e criar contrato na página de detalhe do lead — o lead **não** é movido para "fechado" e o cliente **não** é criado automaticamente.
 
-```sql
--- 1. Filhos do projeto "teste 1"
-DELETE FROM voice_tasks WHERE project_id = '94defc4d-5e6e-4a8e-9073-f6b991d26296';
-DELETE FROM schedule_tasks WHERE project_id = '94defc4d-5e6e-4a8e-9073-f6b991d26296';
-DELETE FROM scope_items WHERE project_id = '94defc4d-5e6e-4a8e-9073-f6b991d26296';
-DELETE FROM scenarios WHERE project_id = '94defc4d-5e6e-4a8e-9073-f6b991d26296';
+Há dois cenários onde a conversão falha:
+1. **LeadDetail**: Ao aprovar proposta e criar contrato, o status do lead permanece inalterado e nenhum cliente é criado
+2. **Edição direta**: Se o status for editado manualmente para "fechado" por qualquer via que não passe pelo `moveStatus`
 
--- 2. Projeto "teste 1"
-DELETE FROM projects WHERE id = '94defc4d-5e6e-4a8e-9073-f6b991d26296';
+### Solução
 
--- 3. Cliente "teste"
-DELETE FROM clients WHERE id = '1a89724e-a568-40e7-bfe8-c814438a9612';
+#### 1. LeadDetail.tsx — Converter lead ao criar contrato
 
--- 4. Cenário "CENARIO TESTE"
-DELETE FROM scenarios WHERE id = '944cf6e3-d4de-4b21-b98c-cae30ad2b871';
+No bloco `onClick` do `AlertDialogAction` (onde o contrato é criado a partir da proposta aprovada), adicionar após a criação do contrato:
 
--- 5. Chat messages e notificações de teste
-DELETE FROM chat_messages WHERE true;
-DELETE FROM notifications WHERE true;
-```
+- Chamar `convertToClient.mutate(lead)` do hook `useLeads` (que já cria o cliente e marca o lead como "fechado" com `converted_client_id`)
+- Isso garante que aprovar proposta → criar contrato → lead vira cliente automaticamente
 
-**Alexandra mantida.** Removidos: cliente "teste", projeto "teste 1" + dependências, cenário "CENARIO TESTE", chat messages e notificações.
+Alteração: importar `convertToClient` do `useLeads()` já disponível no componente, e chamá-lo dentro do bloco de sucesso da criação do contrato.
 
-### Arquivos
+#### 2. useLeads.ts — Preencher `converted_at`
 
-Nenhuma alteração de código — apenas deleção de dados via insert tool.
+No `convertToClient` mutation, adicionar `converted_at: new Date().toISOString()` no update do lead junto com `converted_client_id` e `status: "fechado"`. Hoje esse campo existe na tabela mas nunca é preenchido.
+
+### Arquivos alterados
+
+| Arquivo | Alteração |
+|---|---|
+| `src/pages/LeadDetail.tsx` | Chamar `convertToClient` ao criar contrato a partir de proposta aprovada |
+| `src/hooks/useLeads.ts` | Adicionar `converted_at` no update do `convertToClient` |
+
+### Sem alteração de banco
+
+A tabela `leads` já possui a coluna `converted_at`. Nenhuma migration necessária.
 
