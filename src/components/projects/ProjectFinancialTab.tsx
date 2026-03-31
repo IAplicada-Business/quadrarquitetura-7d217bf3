@@ -203,6 +203,10 @@ export function ProjectFinancialTab({ projectId }: { projectId: string }) {
             ))
           )}
         </TabsContent>
+
+        <TabsContent value="notas_nf" className="space-y-4 mt-4">
+          <InvoiceNFList projectId={projectId} />
+        </TabsContent>
       </Tabs>
 
       <PaymentForm

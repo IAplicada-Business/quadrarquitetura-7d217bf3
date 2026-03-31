@@ -56,6 +56,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Configurações", url: "/admin/settings" },
       { title: "Usuários", url: "/admin/users" },
+      { title: "Notas Fiscais", url: "/admin/invoices" },
       { title: "Relatórios", url: "/construction/reports" },
     ],
   },
