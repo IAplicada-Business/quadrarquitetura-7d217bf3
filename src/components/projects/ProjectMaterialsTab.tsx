@@ -16,6 +16,7 @@ import { MaterialTrackingForm } from "./MaterialTrackingForm";
 import { ProjectPurchasesTab } from "./ProjectPurchasesTab";
 import { SupplierPurchaseList } from "./SupplierPurchaseList";
 import { ShoppingListDialog } from "./ShoppingListDialog";
+import { MaterialCalcByActivitiesDialog } from "./MaterialCalcByActivitiesDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { getDisciplineColor } from "@/lib/disciplineColors";
