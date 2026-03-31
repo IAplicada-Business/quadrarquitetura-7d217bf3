@@ -50,6 +50,11 @@ export default function ProjectDetail() {
         </Button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
+            {(project as any).project_number && (
+              <Badge variant="outline" className="text-xs font-mono">
+                #{String((project as any).project_number).padStart(3, "0")}
+              </Badge>
+            )}
             <h1 className="text-2xl font-bold text-display">{project.name}</h1>
             <Badge variant="secondary">
               {statusLabels[project.status || ""] || project.status}

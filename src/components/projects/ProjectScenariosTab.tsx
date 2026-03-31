@@ -158,7 +158,7 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
       {/* Scenarios */}
       {scenarios.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-          Nenhum cenário criado. Crie um cenário para começar a simulação.
+          Nenhuma cotação criada. Crie uma cotação para começar a simulação.
         </div>
       ) : (
         <div className={scenarios.length >= 2 ? "grid grid-cols-1 lg:grid-cols-2 gap-4" : "space-y-4"}>

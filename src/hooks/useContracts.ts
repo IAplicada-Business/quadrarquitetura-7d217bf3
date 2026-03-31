@@ -121,6 +121,16 @@ export function useContracts() {
         await supabase.from("leads").update({ status: "fechado" }).eq("id", leadId);
       }
 
+      // 4. Insert revenue payment
+      await supabase.from("payments").insert({
+        user_id: user!.id,
+        project_id: project.id,
+        description: `Receita: ${lead?.name || "Projeto"}`,
+        value: contract.value || contract.proposals?.value || 0,
+        status: "pendente" as any,
+        supplier_name: "Receita Escritório",
+      } as any);
+
       return project;
     },
     onSuccess: () => {

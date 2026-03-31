@@ -229,7 +229,12 @@ export default function Projects() {
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => navigate(`/projects/${p.id}`)}
                 >
-                  <TableCell className="font-medium">{p.name}</TableCell>
+                  <TableCell className="font-medium">
+                    {(p as any).project_number ? (
+                      <span className="text-muted-foreground font-mono text-xs mr-2">#{String((p as any).project_number).padStart(3, "0")}</span>
+                    ) : null}
+                    {p.name}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {(p.clients as { name: string } | null)?.name || "—"}
                   </TableCell>

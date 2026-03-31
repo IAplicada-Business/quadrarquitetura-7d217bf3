@@ -429,6 +429,17 @@ export default function LeadDetail() {
 
                 if (error) throw error;
 
+                // Insert revenue payment
+                await supabase.from("payments").insert({
+                  user_id: user.id,
+                  project_id: null,
+                  description: `Receita: ${convertProposal.project_name || lead?.name}`,
+                  value: convertProposal.price_full || 0,
+                  status: "pendente" as any,
+                  payment_method: convertProposal.payment_method || null,
+                  supplier_name: "Receita Escritório",
+                } as any);
+
                 // Auto-convert lead to client
                 if (lead && !lead.converted_client_id) {
                   convertToClient.mutate(lead);
