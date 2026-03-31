@@ -1,60 +1,67 @@
 
 
-## Gerar Atividades com IA — Escopo do Projeto
+## Cálculo Automático de Materiais por Índices de Atividade
 
-### Visão geral
+### 1. Migration — Criar tabela `material_indices`
 
-Substituir o placeholder "Em breve" do botão "Gerar com IA" na aba Escopo por um modal completo com 3 modos de entrada (texto, áudio, foto), chamando uma nova Edge Function `generate-activities` que usa Lovable AI para gerar atividades estruturadas.
+```sql
+CREATE TABLE material_indices (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  activity_type text NOT NULL,
+  material_name text NOT NULL,
+  unit text NOT NULL,
+  index_per_m2 numeric NOT NULL,
+  notes text,
+  created_at timestamptz DEFAULT now()
+);
 
----
+ALTER TABLE material_indices ENABLE ROW LEVEL SECURITY;
 
-### 1. Edge Function `supabase/functions/generate-activities/index.ts`
+-- Equipe pode visualizar
+CREATE POLICY "Team can view material_indices" ON material_indices
+  FOR SELECT TO authenticated USING (true);
 
-- Recebe `{ project_id, mode, content }` onde mode é `"text"`, `"audio"` ou `"image"`
-- Para mode `"text"`: content é a descrição em texto livre
-- Para mode `"audio"`: content é a transcrição já feita no frontend
-- Para mode `"image"`: content é a URL pública da imagem (reutiliza padrão do analyze-plant)
-- Usa tool calling (structured output) para garantir resposta JSON:
-
+-- Admin pode CRUD
+CREATE POLICY "Admin can insert material_indices" ON material_indices
+  FOR INSERT TO authenticated WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
+CREATE POLICY "Admin can update material_indices" ON material_indices
+  FOR UPDATE TO authenticated USING (has_role(auth.uid(), 'admin'::app_role));
+CREATE POLICY "Admin can delete material_indices" ON material_indices
+  FOR DELETE TO authenticated USING (has_role(auth.uid(), 'admin'::app_role));
 ```
-Tool: generate_activities_list
-Parameters: { activities: [{ name, discipline, area_m2, duration_days, description }] }
-```
 
-- Prompt do sistema conforme especificado (assistente de gestão de obra em BH)
-- Para imagem: envia como `image_url` no content array (mesmo padrão do analyze-plant)
-- Trata 429/402 com mensagens amigáveis
-- Adicionar ao `config.toml`: `[functions.generate-activities]` com `verify_jwt = false`
+Seed dos índices base via migration (INSERT dos 9 registros fornecidos).
 
 ---
 
-### 2. Novo componente `src/components/projects/GenerateActivitiesDialog.tsx`
+### 2. Hook `src/hooks/useMaterialIndices.ts`
 
-Modal com 3 tabs internas:
-
-**Tab "Texto"**: Textarea para descrição livre do projeto
-
-**Tab "Áudio"**: Reutiliza o componente `VoiceChat` (de `ia-siri-chat.tsx`) já existente para gravação e transcrição. Ao obter transcrição, preenche automaticamente o campo de texto.
-
-**Tab "Foto"**: Upload de imagem (PNG/JPG, max 10MB), faz upload ao storage `project-files`, obtém URL pública, envia como mode `"image"`.
-
-**Botão "Gerar Lista"**: Chama `supabase.functions.invoke("generate-activities", { body })`.
-
-**Após geração**: Exibe lista de atividades com:
-- Checkbox ao lado de cada uma (todas selecionadas por padrão)
-- Nome editável inline (Input)
-- Duração editável inline (Input number)
-- Disciplina (badge, não editável inline)
-- Área m² (texto)
-
-**Botão "Adicionar Selecionadas"**: Insere as marcadas em `project_activities` via `create.mutate()` com `status: 'pendente'` e `position` sequencial (baseado no count atual de activities).
+CRUD hook para `material_indices`. Query sem filtro (tabela global). Mutations de create/update/delete para admin.
 
 ---
 
-### 3. Atualizar `ProjectScopeTab.tsx`
+### 3. Aba Materiais — Botão "Calcular por Atividades"
 
-- Substituir o Dialog placeholder (linhas 199-211) pelo novo `GenerateActivitiesDialog`
-- Passar `projectId`, `activities` (para calcular position), e `create` mutation
+Em `ProjectMaterialsTab.tsx`, na sub-aba "Rastreamento":
+
+- Adicionar botão **"Calcular por Atividades"** ao lado dos botões existentes
+- Ao clicar, abre um Dialog que:
+  1. Busca `project_activities` com `area_m2 > 0`
+  2. Cruza `activity.discipline` (lowercase) com `material_indices.activity_type`
+  3. Calcula `quantidade = area_m2 × index_per_m2`
+  4. Exibe tabela com: material, unidade, quantidade calculada, quantidade ajustada (Input editável), checkbox de seleção
+- Botão **"Importar para Lista"** insere os selecionados em `material_tracking` com `source: 'indices'`, verificando duplicatas por `material_name` + `project_id`
+
+---
+
+### 4. Configurações → Regras de Cálculo — Seção "Índices de Material"
+
+Em `CalculationRulesTab.tsx`, adicionar seção abaixo das regras existentes:
+
+- Título: "Índices de Material por m²"
+- Tabela com colunas: Tipo de Atividade, Material, Unidade, Índice/m²
+- Botões de adicionar/editar/remover (somente admin)
+- Dialog de formulário com campos: activity_type (input texto), material_name, unit (select), index_per_m2 (number), notes
 
 ---
 
@@ -62,10 +69,10 @@ Modal com 3 tabs internas:
 
 | Arquivo | Ação |
 |---|---|
-| `supabase/functions/generate-activities/index.ts` | **Novo** — Edge Function com Lovable AI |
-| `supabase/config.toml` | Adicionar `[functions.generate-activities]` |
-| `src/components/projects/GenerateActivitiesDialog.tsx` | **Novo** — Modal com 3 tabs + revisão |
-| `src/components/projects/ProjectScopeTab.tsx` | Trocar placeholder pelo novo dialog |
+| Migration SQL | Criar tabela + RLS + seed |
+| `src/hooks/useMaterialIndices.ts` | **Novo** — CRUD hook |
+| `src/components/projects/ProjectMaterialsTab.tsx` | Adicionar botão + dialog de cálculo |
+| `src/components/settings/CalculationRulesTab.tsx` | Adicionar seção de índices |
 
-Nenhuma rota ou funcionalidade existente alterada.
+Nenhuma alteração em `material_tracking`, `useProjectActivities`, ou outras abas.
 
