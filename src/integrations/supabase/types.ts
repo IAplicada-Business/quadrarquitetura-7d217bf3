@@ -1389,6 +1389,68 @@ export type Database = {
         }
         Relationships: []
       }
+      project_activities: {
+        Row: {
+          area_m2: number | null
+          created_at: string | null
+          depends_on: string[] | null
+          description: string | null
+          discipline: string | null
+          duration_days: number | null
+          end_date: string | null
+          id: string
+          name: string
+          position: number | null
+          progress_percent: number | null
+          project_id: string
+          start_date: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          area_m2?: number | null
+          created_at?: string | null
+          depends_on?: string[] | null
+          description?: string | null
+          discipline?: string | null
+          duration_days?: number | null
+          end_date?: string | null
+          id?: string
+          name: string
+          position?: number | null
+          progress_percent?: number | null
+          project_id: string
+          start_date?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          area_m2?: number | null
+          created_at?: string | null
+          depends_on?: string[] | null
+          description?: string | null
+          discipline?: string | null
+          duration_days?: number | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          position?: number | null
+          progress_percent?: number | null
+          project_id?: string
+          start_date?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_activities_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           address: string | null
