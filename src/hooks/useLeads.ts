@@ -132,7 +132,7 @@ export function useLeads() {
       // Update lead with converted_client_id and status
       const { error: leadError } = await supabase
         .from("leads")
-        .update({ converted_client_id: client.id, status: "fechado" })
+        .update({ converted_client_id: client.id, status: "fechado", converted_at: new Date().toISOString() })
         .eq("id", lead.id);
       if (leadError) throw leadError;
 

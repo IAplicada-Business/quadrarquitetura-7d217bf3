@@ -428,6 +428,12 @@ export default function LeadDetail() {
                 } as any).select("id").single();
 
                 if (error) throw error;
+
+                // Auto-convert lead to client
+                if (lead && !lead.converted_client_id) {
+                  convertToClient.mutate(lead);
+                }
+
                 setConvertProposal(null);
                 queryClient.invalidateQueries({ queryKey: ["contracts", "by-lead", id] });
                 navigate("/leads/contracts", { state: { editContractId: data.id } });
