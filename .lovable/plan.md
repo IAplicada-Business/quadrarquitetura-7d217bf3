@@ -1,58 +1,74 @@
 
 
-## Campos adicionais no módulo de Contratos
+## Pesquisa de Preços em BH — Aba Cotações
 
-### 1. Migration — Novas colunas em `contracts`
+### Nota sobre API de busca
+
+O projeto usa Lovable AI (gateway) que não suporta Anthropic/Claude nem `web_search` nativo. Existem duas opções viáveis:
+
+- **Perplexity** (conector disponível): busca web real com modelo `sonar`, retorna citações e fontes. Requer conectar o conector Perplexity ao projeto.
+- **Lovable AI** (já configurado): gerar estimativas de preço baseadas em conhecimento do modelo (sem busca web real). Mais rápido de implementar, mas preços são estimativas, não dados live.
+
+Recomendo **Perplexity** pela busca web real. Será necessário conectar o conector antes de implementar.
+
+---
+
+### 1. Migration — Tabela `price_research`
 
 ```sql
-ALTER TABLE contracts ADD COLUMN IF NOT EXISTS client_address text;
-ALTER TABLE contracts ADD COLUMN IF NOT EXISTS project_address text;
-ALTER TABLE contracts ADD COLUMN IF NOT EXISTS environments text;
-ALTER TABLE contracts ADD COLUMN IF NOT EXISTS total_area numeric;
+CREATE TABLE price_research (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id uuid REFERENCES projects(id) ON DELETE RESTRICT,
+  activity_id uuid REFERENCES project_activities(id) ON DELETE CASCADE,
+  material_name text,
+  price_min numeric,
+  price_max numeric,
+  price_avg numeric GENERATED ALWAYS AS ((price_min + price_max) / 2) STORED,
+  unit text,
+  suppliers jsonb,
+  searched_at timestamptz DEFAULT now(),
+  user_id uuid
+);
+ALTER TABLE price_research ENABLE ROW LEVEL SECURITY;
+-- RLS de equipe padrão (4 policies)
 ```
 
-Nota: `client_address` já existe no formulário como campo local, mas precisa ser persistido na tabela. `project_address` é novo (endereço da obra separado do campo `address` existente — ou reutilizar `address` como `project_address`). Verificando o schema atual: a tabela já tem `address` e `city` para obra. Vou adicionar apenas as colunas que realmente faltam.
+---
+
+### 2. Edge Function `search-prices-bh`
+
+- Recebe `{ activity_name, materials: [{name, unit, quantity}], city }`
+- Para cada material, faz query ao Perplexity (ou Lovable AI) com prompt: `"preço [material] [unidade] distribuidora Belo Horizonte 2025"`
+- Usa tool calling para extrair: `supplier, neighborhood, price_min, price_max, unit, source_url`
+- Retorna array de resultados por material
 
 ---
 
-### 2. Auto-preenchimento na conversão proposta → contrato
+### 3. Hook `usePriceResearch`
 
-**Em `LeadDetail.tsx`** (linhas 413-428): Ao criar contrato a partir de proposta aprovada, adicionar:
-- `environments`: converter `proposal.ambientes` (jsonb array) em texto formatado (join com vírgula)
-- `total_area`: copiar de `proposal.total_area`
-- `client_address`: buscar do cliente convertido (se existir `lead.converted_client_id`, buscar `clients.address`)
-
-**Em `LeadsContracts.tsx`** → `handleSelectProposal` (linhas 88-105): Ao selecionar proposta no formulário, preencher também:
-- `environments` e `total_area` vindos da proposta
-- `client_address` se disponível via lead/client
+- Query: buscar pesquisas recentes (< 7 dias) por `activity_id`
+- Mutation: salvar resultado na tabela
 
 ---
 
-### 3. Formulário de contrato — Novos campos
+### 4. Componente `PriceSearchDialog`
 
-Em `LeadsContracts.tsx`, adicionar ao `formData`:
-- `environments` (textarea, seção "Dados da Obra")
-- `total_area` (input number, seção "Dados da Obra")
-
-Esses campos já são editáveis e salvos via `handleSubmit`.
-
----
-
-### 4. Variáveis no ContractPreview
-
-Em `ContractPreview.tsx`, adicionar novas props e variáveis de interpolação:
-- `environments` → `{AMBIENTES}`
-- `totalArea` → `{METRAGEM}`
-- `clientAddress` já existe como `{ENDERECO_CLIENTE}`
-- `constructionAddress` já existe como `{ENDERECO_OBRA}`
-
-Adicionar ao objeto `vars` as novas variáveis para que templates possam usar `{AMBIENTES}` e `{METRAGEM}`.
+Modal "Pesquisa de Preços — [Atividade]":
+- Cards por material com faixa de preço (R$ X — R$ Y)
+- Lista de fornecedores com bairro e contato
+- Badge "Atualizado em [data]"
+- Botão "Usar preço médio" → preenche valor na atividade
+- Estado de loading com spinner durante pesquisa
 
 ---
 
-### 5. useContracts — Persistir novos campos
+### 5. Integração na aba Cotações (`ProjectBudgetsTab.tsx`)
 
-Em `useContracts.ts`, no `signAndCreateProject`, garantir que `environments` e `total_area` são copiados ao payload.
+- Importar `useProjectActivities` para listar atividades do projeto
+- Abaixo da seção de disciplinas contratadas, adicionar seção **"Pesquisa de Preços por Atividade"**
+- Para cada atividade com `area_m2 > 0`: card com botão "Pesquisar Preços em BH"
+- Se já existe pesquisa recente (< 7 dias): mostrar botão "Ver última pesquisa" em vez de pesquisar novamente
+- Cruzar atividade com `material_indices` para montar lista de materiais automaticamente
 
 ---
 
@@ -60,8 +76,12 @@ Em `useContracts.ts`, no `signAndCreateProject`, garantir que `environments` e `
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | `ALTER TABLE contracts ADD COLUMN environments text, total_area numeric` (client_address e project_address — verificar se `address` já cobre) |
-| `src/pages/LeadDetail.tsx` | Adicionar `environments`, `total_area` ao insert do contrato |
-| `src/pages/LeadsContracts.tsx` | Novos campos no formData + formulário + handleSelectProposal |
-| `src/components/leads/ContractPreview.tsx` | Novas props + variáveis `{AMBIENTES}`, `{METRAGEM}` |
+| Migration SQL | Criar `price_research` + RLS |
+| `supabase/functions/search-prices-bh/index.ts` | **Novo** — Edge Function de pesquisa |
+| `supabase/config.toml` | Adicionar function entry |
+| `src/hooks/usePriceResearch.ts` | **Novo** — CRUD hook |
+| `src/components/projects/PriceSearchDialog.tsx` | **Novo** — Modal de resultados |
+| `src/components/projects/ProjectBudgetsTab.tsx` | Adicionar seção de pesquisa por atividade |
+
+Nenhuma outra aba ou rota alterada.
 
