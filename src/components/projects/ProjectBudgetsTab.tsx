@@ -203,6 +203,9 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
               <Button variant="outline" size="sm" onClick={() => setShoppingListOpen(true)}>
                 <ShoppingCart className="h-4 w-4 mr-1" /> Lista de Compras
               </Button>
+              <Button size="sm" onClick={() => setBudgetPreviewOpen(true)}>
+                <Calculator className="h-4 w-4 mr-1" /> Gerar Prévia de Orçamento
+              </Button>
             </div>
           </div>
 
