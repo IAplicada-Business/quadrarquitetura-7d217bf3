@@ -66,7 +66,7 @@ export default function ProjectDetail() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1 bg-muted/50">
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
-          <TabsTrigger value="cenarios">Cenários</TabsTrigger>
+          <TabsTrigger value="cenarios">Cotações</TabsTrigger>
           <TabsTrigger value="escopo">Escopo</TabsTrigger>
           <TabsTrigger value="orcamentos">Orçamentos</TabsTrigger>
           <TabsTrigger value="materiais">Materiais</TabsTrigger>
