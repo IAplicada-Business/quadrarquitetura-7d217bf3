@@ -408,6 +408,8 @@ export default function LeadsContracts() {
               estimatedDuration={formData.estimated_duration}
               customClauses={formData.custom_clauses}
               template={selectedTemplate}
+              environments={formData.environments}
+              totalArea={formData.total_area ? Number(formData.total_area) : null}
             />
           </div>
         </DialogContent>
