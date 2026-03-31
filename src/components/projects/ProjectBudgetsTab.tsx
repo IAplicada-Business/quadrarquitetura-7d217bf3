@@ -59,6 +59,7 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
   const [editingQuote, setEditingQuote] = useState<Record<string, unknown> | null>(null);
   const [activeScopeId, setActiveScopeId] = useState<string | null>(null);
   const [shoppingListOpen, setShoppingListOpen] = useState(false);
+  const [budgetPreviewOpen, setBudgetPreviewOpen] = useState(false);
   const [priceSearchOpen, setPriceSearchOpen] = useState(false);
   const [priceSearchActivity, setPriceSearchActivity] = useState<{
     id: string; name: string; materials: { name: string; unit: string; quantity: number }[];
