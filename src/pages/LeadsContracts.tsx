@@ -90,6 +90,12 @@ export default function LeadsContracts() {
     const p = proposals.find(pr => pr.id === proposalId);
     if (p) {
       const lead = p.leads as any;
+      // Format ambientes
+      const ambientesRaw = (p as any).ambientes;
+      let environmentsText = "";
+      if (Array.isArray(ambientesRaw) && ambientesRaw.length > 0) {
+        environmentsText = ambientesRaw.map((a: any) => typeof a === "string" ? a : a?.name || a?.ambiente || "").filter(Boolean).join(", ");
+      }
       setFormData(prev => ({
         ...prev,
         proposal_id: proposalId,
@@ -101,6 +107,8 @@ export default function LeadsContracts() {
         client_phone: lead?.phone || "",
         service_description: p.project_description || "",
         estimated_duration: (p as any).estimated_duration || p.deadline || "",
+        environments: environmentsText,
+        total_area: (p as any).total_area?.toString() || "",
       }));
     }
   };
