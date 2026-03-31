@@ -21,6 +21,8 @@ interface ContractPreviewProps {
   estimatedDuration: string;
   customClauses: string;
   template: ContractTemplate | null;
+  environments?: string;
+  totalArea?: number | null;
 }
 
 function formatCurrency(v: number | null) {
@@ -76,6 +78,8 @@ export function ContractPreview(props: ContractPreviewProps) {
     DATA_INICIO: props.startDate,
     PRAZO: props.estimatedDuration,
     DESCRICAO_SERVICOS: props.serviceDescription,
+    AMBIENTES: props.environments || "",
+    METRAGEM: props.totalArea != null ? `${props.totalArea} m²` : "",
   };
 
   const t = props.template;

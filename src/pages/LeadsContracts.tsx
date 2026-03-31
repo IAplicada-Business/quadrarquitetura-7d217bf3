@@ -51,7 +51,7 @@ export default function LeadsContracts() {
     address: "", city: "", construction_neighborhood: "",
     value: "", payment_conditions: "", payment_method: "", start_date: "", estimated_duration: "",
     client_name: "", client_cpf_cnpj: "", client_email: "", client_phone: "", client_address: "",
-    service_description: "", notes: "",
+    service_description: "", notes: "", environments: "", total_area: "",
   });
 
   const selectedTemplate = templates.find(t => t.id === formData.template_id) || null;
@@ -63,7 +63,7 @@ export default function LeadsContracts() {
       address: "", city: "", construction_neighborhood: "",
       value: "", payment_conditions: "", payment_method: "", start_date: "", estimated_duration: "",
       client_name: "", client_cpf_cnpj: "", client_email: "", client_phone: "", client_address: "",
-      service_description: "", notes: "",
+      service_description: "", notes: "", environments: "", total_area: "",
     });
     setFormOpen(true);
   };
@@ -81,6 +81,7 @@ export default function LeadsContracts() {
       client_email: (c as any).client_email || "", client_phone: (c as any).client_phone || "",
       client_address: (c as any).client_address || "",
       service_description: (c as any).service_description || "", notes: (c as any).notes || "",
+      environments: (c as any).environments || "", total_area: (c as any).total_area?.toString() || "",
     });
     setFormOpen(true);
   };
@@ -89,6 +90,12 @@ export default function LeadsContracts() {
     const p = proposals.find(pr => pr.id === proposalId);
     if (p) {
       const lead = p.leads as any;
+      // Format ambientes
+      const ambientesRaw = (p as any).ambientes;
+      let environmentsText = "";
+      if (Array.isArray(ambientesRaw) && ambientesRaw.length > 0) {
+        environmentsText = ambientesRaw.map((a: any) => typeof a === "string" ? a : a?.name || a?.ambiente || "").filter(Boolean).join(", ");
+      }
       setFormData(prev => ({
         ...prev,
         proposal_id: proposalId,
@@ -100,6 +107,8 @@ export default function LeadsContracts() {
         client_phone: lead?.phone || "",
         service_description: p.project_description || "",
         estimated_duration: (p as any).estimated_duration || p.deadline || "",
+        environments: environmentsText,
+        total_area: (p as any).total_area?.toString() || "",
       }));
     }
   };
@@ -127,6 +136,8 @@ export default function LeadsContracts() {
       client_address: formData.client_address || null,
       service_description: formData.service_description || null,
       notes: formData.notes || null,
+      environments: formData.environments || null,
+      total_area: formData.total_area ? Number(formData.total_area) : null,
     };
     if (editingContract) {
       update.mutate({ id: editingContract.id, ...payload });
@@ -325,6 +336,16 @@ export default function LeadsContracts() {
                   <Input value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Ambientes Contratados</Label>
+                  <Textarea value={formData.environments} onChange={(e) => setFormData({ ...formData, environments: e.target.value })} rows={2} placeholder="Ex: Sala, Cozinha, Quarto..." />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Metragem Total (m²)</Label>
+                  <Input type="number" value={formData.total_area} onChange={(e) => setFormData({ ...formData, total_area: e.target.value })} placeholder="Ex: 120" />
+                </div>
+              </div>
 
               <h3 className="font-semibold text-sm border-b pb-1">Serviços e Valores</h3>
               <div className="space-y-1.5">
@@ -387,6 +408,8 @@ export default function LeadsContracts() {
               estimatedDuration={formData.estimated_duration}
               customClauses={formData.custom_clauses}
               template={selectedTemplate}
+              environments={formData.environments}
+              totalArea={formData.total_area ? Number(formData.total_area) : null}
             />
           </div>
         </DialogContent>
