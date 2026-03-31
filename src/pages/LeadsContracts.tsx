@@ -63,7 +63,7 @@ export default function LeadsContracts() {
       address: "", city: "", construction_neighborhood: "",
       value: "", payment_conditions: "", payment_method: "", start_date: "", estimated_duration: "",
       client_name: "", client_cpf_cnpj: "", client_email: "", client_phone: "", client_address: "",
-      service_description: "", notes: "",
+      service_description: "", notes: "", environments: "", total_area: "",
     });
     setFormOpen(true);
   };
