@@ -354,6 +354,24 @@ export default function DashboardEscritorio() {
         </Card>
       )}
 
+      {/* KPI NFs Pendentes */}
+      {pendingNFs.length > 0 && (
+        <Card
+          className="hover:shadow-md transition-shadow border-l-4 cursor-pointer"
+          style={{ borderLeftColor: ROSA.destaque }}
+          onClick={() => navigate("/admin/invoices?status=pendente")}
+        >
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">NFs Pendentes de Envio</CardTitle>
+            <FileText className="h-5 w-5" style={{ color: ROSA.destaque }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: ROSA.textoDestaque }}>{pendingNFs.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">aguardando envio ao contador</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Alertas */}
       {computed.alertas.length > 0 && (
         <Card style={{ borderColor: ROSA.fill2, backgroundColor: ROSA.fundoSuave }}>
