@@ -51,10 +51,18 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
   const { quotes, isLoading, create, update, remove, createRevision } = useBudgetQuotes(projectId);
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { activities } = useProjectActivities(projectId);
+  const { indices } = useMaterialIndices();
+  const { research, getRecentForActivity } = usePriceResearch(projectId);
   const [formOpen, setFormOpen] = useState(false);
   const [editingQuote, setEditingQuote] = useState<Record<string, unknown> | null>(null);
   const [activeScopeId, setActiveScopeId] = useState<string | null>(null);
   const [shoppingListOpen, setShoppingListOpen] = useState(false);
+  const [priceSearchOpen, setPriceSearchOpen] = useState(false);
+  const [priceSearchActivity, setPriceSearchActivity] = useState<{
+    id: string; name: string; materials: { name: string; unit: string; quantity: number }[];
+  } | null>(null);
+  const [priceSearchExisting, setPriceSearchExisting] = useState<any[] | undefined>(undefined);
 
   const revisions = useMemo(() => {
     const revNums = [...new Set(quotes.map((q) => q.revision_number))].sort((a, b) => (a ?? 0) - (b ?? 0));
