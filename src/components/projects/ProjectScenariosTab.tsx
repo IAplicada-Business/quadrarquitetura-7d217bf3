@@ -144,7 +144,7 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
       {/* Create Scenario */}
       <div className="flex items-center gap-3">
         <Input
-          placeholder="Nome do cenário (ex: Cenário A)"
+          placeholder="Nome da cotação (ex: Cotação A)"
           value={newScenarioName}
           onChange={(e) => setNewScenarioName(e.target.value)}
           className="max-w-[300px]"
