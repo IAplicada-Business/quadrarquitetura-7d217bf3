@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, Search, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,10 @@ import { BudgetQuoteForm } from "./BudgetQuoteForm";
 import { ProjectPurchasesTab } from "./ProjectPurchasesTab";
 import { ShoppingListDialog } from "./ShoppingListDialog";
 import { ShoppingCart } from "lucide-react";
+import { useProjectActivities } from "@/hooks/useProjectActivities";
+import { useMaterialIndices } from "@/hooks/useMaterialIndices";
+import { usePriceResearch } from "@/hooks/usePriceResearch";
+import { PriceSearchDialog } from "./PriceSearchDialog";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -47,10 +51,18 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
   const { quotes, isLoading, create, update, remove, createRevision } = useBudgetQuotes(projectId);
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { activities } = useProjectActivities(projectId);
+  const { indices } = useMaterialIndices();
+  const { research, getRecentForActivity } = usePriceResearch(projectId);
   const [formOpen, setFormOpen] = useState(false);
   const [editingQuote, setEditingQuote] = useState<Record<string, unknown> | null>(null);
   const [activeScopeId, setActiveScopeId] = useState<string | null>(null);
   const [shoppingListOpen, setShoppingListOpen] = useState(false);
+  const [priceSearchOpen, setPriceSearchOpen] = useState(false);
+  const [priceSearchActivity, setPriceSearchActivity] = useState<{
+    id: string; name: string; materials: { name: string; unit: string; quantity: number }[];
+  } | null>(null);
+  const [priceSearchExisting, setPriceSearchExisting] = useState<any[] | undefined>(undefined);
 
   const revisions = useMemo(() => {
     const revNums = [...new Set(quotes.map((q) => q.revision_number))].sort((a, b) => (a ?? 0) - (b ?? 0));
@@ -282,6 +294,81 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
             projectId={projectId}
             projectName={projectName}
           />
+
+          {/* Pesquisa de Preços por Atividade */}
+          {activities.filter((a) => a.area_m2 && a.area_m2 > 0).length > 0 && (
+            <Card className="mt-6">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-display">Pesquisa de Preços por Atividade</CardTitle>
+                <p className="text-xs text-muted-foreground">Pesquise preços de materiais em BH com base nas atividades cadastradas</p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {activities.filter((a) => a.area_m2 && a.area_m2 > 0).map((activity) => {
+                    const matchingIndices = indices.filter(
+                      (idx) => activity.name.toLowerCase().includes(idx.activity_type.toLowerCase())
+                    );
+                    const materialsForActivity = matchingIndices.map((idx) => ({
+                      name: idx.material_name,
+                      unit: idx.unit,
+                      quantity: Math.ceil(idx.index_per_m2 * (activity.area_m2 || 0)),
+                    }));
+                    const recentResearch = getRecentForActivity(activity.id);
+                    const hasRecent = recentResearch.length > 0;
+
+                    if (materialsForActivity.length === 0) return null;
+
+                    return (
+                      <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <p className="text-sm font-medium">{activity.name}</p>
+                          <p className="text-xs text-muted-foreground">{activity.area_m2} m² • {materialsForActivity.length} material(is)</p>
+                        </div>
+                        <div className="flex gap-1">
+                          {hasRecent && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setPriceSearchActivity({ id: activity.id, name: activity.name, materials: materialsForActivity });
+                                setPriceSearchExisting(recentResearch);
+                                setPriceSearchOpen(true);
+                              }}
+                            >
+                              <Eye className="h-3.5 w-3.5 mr-1" /> Ver Pesquisa
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setPriceSearchActivity({ id: activity.id, name: activity.name, materials: materialsForActivity });
+                              setPriceSearchExisting(undefined);
+                              setPriceSearchOpen(true);
+                            }}
+                          >
+                            <Search className="h-3.5 w-3.5 mr-1" /> {hasRecent ? "Nova Pesquisa" : "Pesquisar Preços"}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {priceSearchActivity && (
+            <PriceSearchDialog
+              open={priceSearchOpen}
+              onOpenChange={setPriceSearchOpen}
+              activityName={priceSearchActivity.name}
+              activityId={priceSearchActivity.id}
+              projectId={projectId}
+              materials={priceSearchActivity.materials}
+              existingResearch={priceSearchExisting}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="compras" className="mt-4">
