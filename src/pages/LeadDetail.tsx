@@ -410,6 +410,13 @@ export default function LeadDetail() {
                 const thisYear = (contracts || []).filter((c: any) => c.contract_number?.startsWith(`CONTR-${year}`));
                 const contractNumber = `CONTR-${year}-${String(thisYear.length + 1).padStart(3, "0")}`;
 
+                // Format ambientes from proposal
+                const ambientesRaw = (convertProposal as any).ambientes;
+                let environmentsText = "";
+                if (Array.isArray(ambientesRaw) && ambientesRaw.length > 0) {
+                  environmentsText = ambientesRaw.map((a: any) => typeof a === "string" ? a : a?.name || a?.ambiente || "").filter(Boolean).join(", ");
+                }
+
                 const { data, error } = await supabase.from("contracts").insert({
                   user_id: user.id,
                   proposal_id: convertProposal.id,
@@ -425,6 +432,8 @@ export default function LeadDetail() {
                   client_phone: lead?.phone || null,
                   lead_id: convertProposal.lead_id || lead?.id || null,
                   status: "rascunho",
+                  environments: environmentsText || null,
+                  total_area: (convertProposal as any).total_area || null,
                 } as any).select("id").single();
 
                 if (error) throw error;

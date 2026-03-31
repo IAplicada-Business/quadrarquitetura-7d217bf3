@@ -136,6 +136,8 @@ export default function LeadsContracts() {
       client_address: formData.client_address || null,
       service_description: formData.service_description || null,
       notes: formData.notes || null,
+      environments: formData.environments || null,
+      total_area: formData.total_area ? Number(formData.total_area) : null,
     };
     if (editingContract) {
       update.mutate({ id: editingContract.id, ...payload });
