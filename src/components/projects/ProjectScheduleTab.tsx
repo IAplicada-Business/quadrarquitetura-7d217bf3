@@ -35,6 +35,8 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const { items, isLoading, create, update, remove } = useScheduleTasks(projectId);
   const { items: scopeItems } = useScopeItems(projectId);
+  const { activities, isLoading: activitiesLoading } = useProjectActivities(projectId);
+  const useActivitiesSource = activities.length > 0;
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
