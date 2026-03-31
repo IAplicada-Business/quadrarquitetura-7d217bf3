@@ -1,83 +1,68 @@
 
 
-## Gerar Prévia de Orçamento — Aba Cotações
+## Módulo de Notas Fiscais — Duas visões
 
-### 1. Migration — Tabela `labor_costs`
+### 1. Migration — Tabela `invoices_nf` + Storage bucket
 
 ```sql
-CREATE TABLE labor_costs (
+CREATE TABLE invoices_nf (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  discipline text NOT NULL,
-  activity_type text,
-  cost_per_m2 numeric,
-  cost_per_unit numeric,
-  unit text DEFAULT 'm2',
-  region text DEFAULT 'Belo Horizonte',
+  project_id uuid REFERENCES projects(id) ON DELETE RESTRICT,
+  user_id uuid NOT NULL,
+  nf_number text,
+  nf_type text CHECK (nf_type IN ('emitida','recebida')),
+  issuer_name text,
+  issuer_cnpj text,
+  recipient_name text,
+  recipient_cnpj text,
+  service_description text,
+  amount numeric NOT NULL,
+  issue_date date NOT NULL,
+  competence_month text,
+  status text DEFAULT 'pendente' CHECK (status IN ('pendente','enviada_contador','arquivada')),
+  sent_to_accountant_at timestamptz,
+  file_url text,
   notes text,
-  updated_at timestamptz DEFAULT now()
+  created_at timestamptz DEFAULT now()
 );
-ALTER TABLE labor_costs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Team can view labor_costs" ON labor_costs FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admin can insert labor_costs" ON labor_costs FOR INSERT TO authenticated WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
-CREATE POLICY "Admin can update labor_costs" ON labor_costs FOR UPDATE TO authenticated USING (has_role(auth.uid(), 'admin'::app_role));
-CREATE POLICY "Admin can delete labor_costs" ON labor_costs FOR DELETE TO authenticated USING (has_role(auth.uid(), 'admin'::app_role));
+ALTER TABLE invoices_nf ENABLE ROW LEVEL SECURITY;
+-- 4 RLS policies padrão de equipe (get_team_user_ids)
+-- Bucket 'invoices' público para upload de XML/PDF
+INSERT INTO storage.buckets (id, name, public) VALUES ('invoices', 'invoices', true);
+-- Storage RLS: authenticated can upload/read
 ```
 
-Seed com valores iniciais:
-```sql
-INSERT INTO labor_costs (discipline, activity_type, cost_per_m2, unit) VALUES
-('Elétrica', 'eletrica', 45, 'm2'),
-('Pintura', 'pintura', 18, 'm2'),
-('Alvenaria', 'alvenaria', 55, 'm2'),
-('Piso', 'piso', 35, 'm2'),
-('Reboco', 'reboco', 30, 'm2'),
-('Hidráulica', 'hidraulica', 50, 'm2'),
-('Gesso/Forro', 'gesso', 40, 'm2');
-```
+### 2. Hook `useInvoicesNF`
 
----
+CRUD hook com filtros opcionais: `projectId`, `nfType`, `competenceMonth`, `status`. Query retorna dados ordenados por `issue_date DESC`.
 
-### 2. Hook `src/hooks/useLaborCosts.ts`
+### 3. Componente `InvoiceNFForm`
 
-CRUD hook para `labor_costs`. Mesma estrutura do `useMaterialIndices`. Query sem filtro (tabela global). Mutations de create/update/delete para admin.
+Dialog com campos: nf_number, nf_type (select emitida/recebida), issuer_name, issuer_cnpj, recipient_name, recipient_cnpj, service_description, amount, issue_date, competence_month (YYYY-MM), status, notes, file upload (XML/PDF para bucket `invoices`).
 
----
+### 4. Componente `InvoiceNFList`
 
-### 3. Configurações → Regras de Cálculo — Seção "Custos de Mão de Obra"
+Tabela reutilizável com filtros (projeto, tipo, mês competência, status). Colunas: Nº NF, Tipo (badge), Emitente, Valor, Data Emissão, Competência, Status, Ações. Botões por linha: editar, "Enviar ao Contador" (muda status + set `sent_to_accountant_at`), excluir.
 
-Em `CalculationRulesTab.tsx`, adicionar uma terceira seção abaixo dos Índices de Material:
-- Titulo: "Custos de Mão de Obra por Disciplina"
-- Tabela: Disciplina | Tipo Atividade | Custo/m² | Unidade | Região
-- Dialog para add/edit/remove (admin only)
+### 5. Integração na aba "Prestação de Contas"
 
----
+Em `ProjectFinancialTab.tsx`, adicionar terceira sub-aba **"Notas Fiscais"** dentro do `Tabs` existente (ao lado de Pagamentos e Notas Fiscais antigas). Renderiza `InvoiceNFList` filtrado por `projectId`.
 
-### 4. Componente `BudgetPreviewDialog.tsx`
+### 6. Página administrativa `/admin/invoices`
 
-Modal "Prévia do Orçamento Executivo":
+Nova página `InvoicesPage.tsx` com visão consolidada (sem filtro de projeto fixo). Inclui:
+- Filtros globais: projeto (select), tipo, mês, status
+- Tabela completa com coluna "Projeto"
+- Botão "Exportar Relatório Mensal" — gera CSV client-side com separação emitidas/recebidas e totais
 
-**Lógica de composição** (por atividade com `area_m2 > 0`):
-1. Cruza com `material_indices` → calcula quantidade por material
-2. Busca `price_research` (< 30 dias) → usa `price_avg` ou fallback manual
-3. `custo_material = Σ(quantidade × preço_médio)` por atividade
-4. Cruza `discipline` com `labor_costs` → `custo_mo = area_m2 × cost_per_m2`
-5. `total_atividade = custo_material + custo_mo`
-6. `total_geral = Σ total_atividade`
+### 7. Rota + Sidebar
 
-**UI do modal:**
-- Tabela: Atividade | Disciplina | Área m² | Custo Material | Custo MO | Total
-- Subtotais agrupados por disciplina
-- Total geral em destaque
-- Indicadores de confiança por linha (verde/amarelo/cinza)
-- Botão "Exportar como PDF" — client-side com jsPDF (já instalado)
-- Botão "Salvar como Cotação" — cria `budget_quotes` via hook existente
+- `App.tsx`: adicionar `<Route path="/admin/invoices" element={<InvoicesPage />} />`
+- `AppSidebar.tsx`: no grupo "Administrativo", adicionar `{ title: "Notas Fiscais", url: "/admin/invoices" }`
 
----
+### 8. KPI no Dashboard Escritório
 
-### 5. Integração na aba Cotações
-
-Em `ProjectBudgetsTab.tsx`, adicionar botão **"Gerar Prévia de Orçamento"** no header da aba, ao lado dos botões existentes. Abre o `BudgetPreviewDialog`.
+Em `DashboardEscritorio.tsx`, adicionar query para `invoices_nf` com `status = 'pendente'` e exibir card **"NFs pendentes de envio"** com contagem e link para `/admin/invoices?status=pendente`.
 
 ---
 
@@ -85,11 +70,15 @@ Em `ProjectBudgetsTab.tsx`, adicionar botão **"Gerar Prévia de Orçamento"** n
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | Criar `labor_costs` + RLS + seed |
-| `src/hooks/useLaborCosts.ts` | **Novo** — CRUD hook |
-| `src/components/projects/BudgetPreviewDialog.tsx` | **Novo** — Modal de prévia + PDF |
-| `src/components/projects/ProjectBudgetsTab.tsx` | Adicionar botão + importar dialog |
-| `src/components/settings/CalculationRulesTab.tsx` | Adicionar seção de custos MO |
+| Migration SQL | Criar `invoices_nf` + RLS + bucket `invoices` + storage policies |
+| `src/hooks/useInvoicesNF.ts` | **Novo** — CRUD + filtros |
+| `src/components/projects/InvoiceNFForm.tsx` | **Novo** — Formulário com upload |
+| `src/components/projects/InvoiceNFList.tsx` | **Novo** — Tabela filtrada reutilizável |
+| `src/components/projects/ProjectFinancialTab.tsx` | Adicionar sub-aba "Notas Fiscais" |
+| `src/pages/InvoicesPage.tsx` | **Novo** — Visão administrativa consolidada |
+| `src/App.tsx` | Adicionar rota `/admin/invoices` |
+| `src/components/layout/AppSidebar.tsx` | Adicionar item no menu Administrativo |
+| `src/pages/DashboardEscritorio.tsx` | Adicionar KPI "NFs pendentes" |
 
-Nenhuma outra aba ou rota alterada.
+Nenhuma rota ou funcionalidade existente alterada.
 
