@@ -1409,6 +1409,7 @@ export type Database = {
           name: string
           neighborhood: string | null
           notes: string | null
+          project_number: number | null
           project_type: Database["public"]["Enums"]["client_type"] | null
           real_budget: number | null
           real_end_date: string | null
@@ -1438,6 +1439,7 @@ export type Database = {
           name: string
           neighborhood?: string | null
           notes?: string | null
+          project_number?: number | null
           project_type?: Database["public"]["Enums"]["client_type"] | null
           real_budget?: number | null
           real_end_date?: string | null
@@ -1467,6 +1469,7 @@ export type Database = {
           name?: string
           neighborhood?: string | null
           notes?: string | null
+          project_number?: number | null
           project_type?: Database["public"]["Enums"]["client_type"] | null
           real_budget?: number | null
           real_end_date?: string | null
