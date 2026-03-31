@@ -48,6 +48,11 @@ export default function CalculationRulesTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
+  // Material Indices state
+  const [indexDialogOpen, setIndexDialogOpen] = useState(false);
+  const [editingIndexId, setEditingIndexId] = useState<string | null>(null);
+  const [indexForm, setIndexForm] = useState({ activity_type: "", material_name: "", unit: "un", index_per_m2: 0, notes: "" });
+
   const openCreate = () => {
     setEditingId(null);
     setForm(EMPTY_FORM);
