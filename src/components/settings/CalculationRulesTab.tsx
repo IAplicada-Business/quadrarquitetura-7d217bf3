@@ -43,6 +43,7 @@ const EMPTY_FORM: FormState = {
 
 export default function CalculationRulesTab() {
   const { rules, isLoading, createRule, updateRule, deleteRule } = useCalculationRules();
+  const { indices, isLoading: indicesLoading, create: createIndex, update: updateIndex, remove: removeIndex } = useMaterialIndices();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
