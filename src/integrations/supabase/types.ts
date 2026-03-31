@@ -1053,6 +1053,36 @@ export type Database = {
           },
         ]
       }
+      material_indices: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          id: string
+          index_per_m2: number
+          material_name: string
+          notes: string | null
+          unit: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          id?: string
+          index_per_m2: number
+          material_name: string
+          notes?: string | null
+          unit: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          id?: string
+          index_per_m2?: number
+          material_name?: string
+          notes?: string | null
+          unit?: string
+        }
+        Relationships: []
+      }
       material_tracking: {
         Row: {
           budget_quote_id: string | null
