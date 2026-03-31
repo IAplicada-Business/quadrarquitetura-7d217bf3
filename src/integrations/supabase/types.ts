@@ -878,6 +878,77 @@ export type Database = {
           },
         ]
       }
+      invoices_nf: {
+        Row: {
+          amount: number
+          competence_month: string | null
+          created_at: string | null
+          file_url: string | null
+          id: string
+          issue_date: string
+          issuer_cnpj: string | null
+          issuer_name: string | null
+          nf_number: string | null
+          nf_type: string | null
+          notes: string | null
+          project_id: string | null
+          recipient_cnpj: string | null
+          recipient_name: string | null
+          sent_to_accountant_at: string | null
+          service_description: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          competence_month?: string | null
+          created_at?: string | null
+          file_url?: string | null
+          id?: string
+          issue_date: string
+          issuer_cnpj?: string | null
+          issuer_name?: string | null
+          nf_number?: string | null
+          nf_type?: string | null
+          notes?: string | null
+          project_id?: string | null
+          recipient_cnpj?: string | null
+          recipient_name?: string | null
+          sent_to_accountant_at?: string | null
+          service_description?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          competence_month?: string | null
+          created_at?: string | null
+          file_url?: string | null
+          id?: string
+          issue_date?: string
+          issuer_cnpj?: string | null
+          issuer_name?: string | null
+          nf_number?: string | null
+          nf_type?: string | null
+          notes?: string | null
+          project_id?: string | null
+          recipient_cnpj?: string | null
+          recipient_name?: string | null
+          sent_to_accountant_at?: string | null
+          service_description?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_nf_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       labor_costs: {
         Row: {
           activity_type: string | null

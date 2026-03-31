@@ -9,6 +9,7 @@ import { useProjectPayments } from "@/hooks/useProjectPayments";
 import { useInvoices } from "@/hooks/useInvoices";
 import { PaymentForm } from "./PaymentForm";
 import { InvoiceForm } from "./InvoiceForm";
+import { InvoiceNFList } from "./InvoiceNFList";
 
 function formatCurrency(v: number | null | undefined) {
   if (v == null) return "—";
@@ -61,7 +62,8 @@ export function ProjectFinancialTab({ projectId }: { projectId: string }) {
       <Tabs defaultValue="pagamentos">
         <TabsList>
           <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
-          <TabsTrigger value="notas">Notas Fiscais</TabsTrigger>
+          <TabsTrigger value="notas">Notas Fiscais (Compras)</TabsTrigger>
+          <TabsTrigger value="notas_nf">Notas Fiscais</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pagamentos" className="space-y-4 mt-4">
@@ -200,6 +202,10 @@ export function ProjectFinancialTab({ projectId }: { projectId: string }) {
               </div>
             ))
           )}
+        </TabsContent>
+
+        <TabsContent value="notas_nf" className="space-y-4 mt-4">
+          <InvoiceNFList projectId={projectId} />
         </TabsContent>
       </Tabs>
 

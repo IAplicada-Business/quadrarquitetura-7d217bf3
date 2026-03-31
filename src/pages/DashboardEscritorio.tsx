@@ -172,6 +172,18 @@ export default function DashboardEscritorio() {
     enabled: !!user,
   });
 
+  const { data: pendingNFs = [] } = useQuery({
+    queryKey: ["dash-esc-pending-nfs"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("invoices_nf" as any)
+        .select("id")
+        .eq("status", "pendente");
+      return (data ?? []) as any[];
+    },
+    enabled: !!user,
+  });
+
   // ── Computed data ──
   const computed = useMemo(() => {
     const activeProjects = projects.filter((p) => p.status !== "concluido");
@@ -338,6 +350,24 @@ export default function DashboardEscritorio() {
           <CardContent>
             <p className="text-2xl font-bold font-display" style={{ color: "#DC2626" }}>{overdueTasks.length}</p>
             <p className="text-xs text-muted-foreground mt-1">em todos os projetos ativos</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* KPI NFs Pendentes */}
+      {pendingNFs.length > 0 && (
+        <Card
+          className="hover:shadow-md transition-shadow border-l-4 cursor-pointer"
+          style={{ borderLeftColor: ROSA.destaque }}
+          onClick={() => navigate("/admin/invoices?status=pendente")}
+        >
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">NFs Pendentes de Envio</CardTitle>
+            <FileText className="h-5 w-5" style={{ color: ROSA.destaque }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: ROSA.textoDestaque }}>{pendingNFs.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">aguardando envio ao contador</p>
           </CardContent>
         </Card>
       )}
