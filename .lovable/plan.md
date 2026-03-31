@@ -1,67 +1,58 @@
 
 
-## Cálculo Automático de Materiais por Índices de Atividade
+## Campos adicionais no módulo de Contratos
 
-### 1. Migration — Criar tabela `material_indices`
+### 1. Migration — Novas colunas em `contracts`
 
 ```sql
-CREATE TABLE material_indices (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  activity_type text NOT NULL,
-  material_name text NOT NULL,
-  unit text NOT NULL,
-  index_per_m2 numeric NOT NULL,
-  notes text,
-  created_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE material_indices ENABLE ROW LEVEL SECURITY;
-
--- Equipe pode visualizar
-CREATE POLICY "Team can view material_indices" ON material_indices
-  FOR SELECT TO authenticated USING (true);
-
--- Admin pode CRUD
-CREATE POLICY "Admin can insert material_indices" ON material_indices
-  FOR INSERT TO authenticated WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
-CREATE POLICY "Admin can update material_indices" ON material_indices
-  FOR UPDATE TO authenticated USING (has_role(auth.uid(), 'admin'::app_role));
-CREATE POLICY "Admin can delete material_indices" ON material_indices
-  FOR DELETE TO authenticated USING (has_role(auth.uid(), 'admin'::app_role));
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS client_address text;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS project_address text;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS environments text;
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS total_area numeric;
 ```
 
-Seed dos índices base via migration (INSERT dos 9 registros fornecidos).
+Nota: `client_address` já existe no formulário como campo local, mas precisa ser persistido na tabela. `project_address` é novo (endereço da obra separado do campo `address` existente — ou reutilizar `address` como `project_address`). Verificando o schema atual: a tabela já tem `address` e `city` para obra. Vou adicionar apenas as colunas que realmente faltam.
 
 ---
 
-### 2. Hook `src/hooks/useMaterialIndices.ts`
+### 2. Auto-preenchimento na conversão proposta → contrato
 
-CRUD hook para `material_indices`. Query sem filtro (tabela global). Mutations de create/update/delete para admin.
+**Em `LeadDetail.tsx`** (linhas 413-428): Ao criar contrato a partir de proposta aprovada, adicionar:
+- `environments`: converter `proposal.ambientes` (jsonb array) em texto formatado (join com vírgula)
+- `total_area`: copiar de `proposal.total_area`
+- `client_address`: buscar do cliente convertido (se existir `lead.converted_client_id`, buscar `clients.address`)
 
----
-
-### 3. Aba Materiais — Botão "Calcular por Atividades"
-
-Em `ProjectMaterialsTab.tsx`, na sub-aba "Rastreamento":
-
-- Adicionar botão **"Calcular por Atividades"** ao lado dos botões existentes
-- Ao clicar, abre um Dialog que:
-  1. Busca `project_activities` com `area_m2 > 0`
-  2. Cruza `activity.discipline` (lowercase) com `material_indices.activity_type`
-  3. Calcula `quantidade = area_m2 × index_per_m2`
-  4. Exibe tabela com: material, unidade, quantidade calculada, quantidade ajustada (Input editável), checkbox de seleção
-- Botão **"Importar para Lista"** insere os selecionados em `material_tracking` com `source: 'indices'`, verificando duplicatas por `material_name` + `project_id`
+**Em `LeadsContracts.tsx`** → `handleSelectProposal` (linhas 88-105): Ao selecionar proposta no formulário, preencher também:
+- `environments` e `total_area` vindos da proposta
+- `client_address` se disponível via lead/client
 
 ---
 
-### 4. Configurações → Regras de Cálculo — Seção "Índices de Material"
+### 3. Formulário de contrato — Novos campos
 
-Em `CalculationRulesTab.tsx`, adicionar seção abaixo das regras existentes:
+Em `LeadsContracts.tsx`, adicionar ao `formData`:
+- `environments` (textarea, seção "Dados da Obra")
+- `total_area` (input number, seção "Dados da Obra")
 
-- Título: "Índices de Material por m²"
-- Tabela com colunas: Tipo de Atividade, Material, Unidade, Índice/m²
-- Botões de adicionar/editar/remover (somente admin)
-- Dialog de formulário com campos: activity_type (input texto), material_name, unit (select), index_per_m2 (number), notes
+Esses campos já são editáveis e salvos via `handleSubmit`.
+
+---
+
+### 4. Variáveis no ContractPreview
+
+Em `ContractPreview.tsx`, adicionar novas props e variáveis de interpolação:
+- `environments` → `{AMBIENTES}`
+- `totalArea` → `{METRAGEM}`
+- `clientAddress` já existe como `{ENDERECO_CLIENTE}`
+- `constructionAddress` já existe como `{ENDERECO_OBRA}`
+
+Adicionar ao objeto `vars` as novas variáveis para que templates possam usar `{AMBIENTES}` e `{METRAGEM}`.
+
+---
+
+### 5. useContracts — Persistir novos campos
+
+Em `useContracts.ts`, no `signAndCreateProject`, garantir que `environments` e `total_area` são copiados ao payload.
 
 ---
 
@@ -69,10 +60,8 @@ Em `CalculationRulesTab.tsx`, adicionar seção abaixo das regras existentes:
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | Criar tabela + RLS + seed |
-| `src/hooks/useMaterialIndices.ts` | **Novo** — CRUD hook |
-| `src/components/projects/ProjectMaterialsTab.tsx` | Adicionar botão + dialog de cálculo |
-| `src/components/settings/CalculationRulesTab.tsx` | Adicionar seção de índices |
-
-Nenhuma alteração em `material_tracking`, `useProjectActivities`, ou outras abas.
+| Migration SQL | `ALTER TABLE contracts ADD COLUMN environments text, total_area numeric` (client_address e project_address — verificar se `address` já cobre) |
+| `src/pages/LeadDetail.tsx` | Adicionar `environments`, `total_area` ao insert do contrato |
+| `src/pages/LeadsContracts.tsx` | Novos campos no formData + formulário + handleSelectProposal |
+| `src/components/leads/ContractPreview.tsx` | Novas props + variáveis `{AMBIENTES}`, `{METRAGEM}` |
 
