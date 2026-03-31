@@ -294,6 +294,81 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
             projectId={projectId}
             projectName={projectName}
           />
+
+          {/* Pesquisa de Preços por Atividade */}
+          {activities.filter((a) => a.area_m2 && a.area_m2 > 0).length > 0 && (
+            <Card className="mt-6">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-display">Pesquisa de Preços por Atividade</CardTitle>
+                <p className="text-xs text-muted-foreground">Pesquise preços de materiais em BH com base nas atividades cadastradas</p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {activities.filter((a) => a.area_m2 && a.area_m2 > 0).map((activity) => {
+                    const matchingIndices = indices.filter(
+                      (idx) => activity.name.toLowerCase().includes(idx.activity_type.toLowerCase())
+                    );
+                    const materialsForActivity = matchingIndices.map((idx) => ({
+                      name: idx.material_name,
+                      unit: idx.unit,
+                      quantity: Math.ceil(idx.index_per_m2 * (activity.area_m2 || 0)),
+                    }));
+                    const recentResearch = getRecentForActivity(activity.id);
+                    const hasRecent = recentResearch.length > 0;
+
+                    if (materialsForActivity.length === 0) return null;
+
+                    return (
+                      <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <p className="text-sm font-medium">{activity.name}</p>
+                          <p className="text-xs text-muted-foreground">{activity.area_m2} m² • {materialsForActivity.length} material(is)</p>
+                        </div>
+                        <div className="flex gap-1">
+                          {hasRecent && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setPriceSearchActivity({ id: activity.id, name: activity.name, materials: materialsForActivity });
+                                setPriceSearchExisting(recentResearch);
+                                setPriceSearchOpen(true);
+                              }}
+                            >
+                              <Eye className="h-3.5 w-3.5 mr-1" /> Ver Pesquisa
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setPriceSearchActivity({ id: activity.id, name: activity.name, materials: materialsForActivity });
+                              setPriceSearchExisting(undefined);
+                              setPriceSearchOpen(true);
+                            }}
+                          >
+                            <Search className="h-3.5 w-3.5 mr-1" /> {hasRecent ? "Nova Pesquisa" : "Pesquisar Preços"}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {priceSearchActivity && (
+            <PriceSearchDialog
+              open={priceSearchOpen}
+              onOpenChange={setPriceSearchOpen}
+              activityName={priceSearchActivity.name}
+              activityId={priceSearchActivity.id}
+              projectId={projectId}
+              materials={priceSearchActivity.materials}
+              existingResearch={priceSearchExisting}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="compras" className="mt-4">
