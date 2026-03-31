@@ -81,6 +81,7 @@ export default function LeadsContracts() {
       client_email: (c as any).client_email || "", client_phone: (c as any).client_phone || "",
       client_address: (c as any).client_address || "",
       service_description: (c as any).service_description || "", notes: (c as any).notes || "",
+      environments: (c as any).environments || "", total_area: (c as any).total_area?.toString() || "",
     });
     setFormOpen(true);
   };
