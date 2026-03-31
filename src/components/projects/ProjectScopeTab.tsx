@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useProjectActivities, ProjectActivity } from "@/hooks/useProjectActivities";
 import { ActivityForm } from "./ActivityForm";
+import { GenerateActivitiesDialog } from "./GenerateActivitiesDialog";
 import { getDisciplineColor } from "@/lib/disciplineColors";
 
 interface ProjectScopeTabProps {
