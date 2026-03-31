@@ -336,6 +336,16 @@ export default function LeadsContracts() {
                   <Input value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Ambientes Contratados</Label>
+                  <Textarea value={formData.environments} onChange={(e) => setFormData({ ...formData, environments: e.target.value })} rows={2} placeholder="Ex: Sala, Cozinha, Quarto..." />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Metragem Total (m²)</Label>
+                  <Input type="number" value={formData.total_area} onChange={(e) => setFormData({ ...formData, total_area: e.target.value })} placeholder="Ex: 120" />
+                </div>
+              </div>
 
               <h3 className="font-semibold text-sm border-b pb-1">Serviços e Valores</h3>
               <div className="space-y-1.5">
