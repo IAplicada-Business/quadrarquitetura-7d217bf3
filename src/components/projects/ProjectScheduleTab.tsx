@@ -141,10 +141,17 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
     })),
   [items]);
 
-  const total = items.length;
-  const inProgress = items.filter((t: any) => t.status === "em_execucao").length;
-  const overdue = items.filter((t: any) => t.status === "atrasado").length;
-  const completed = items.filter((t: any) => t.status === "executado").length;
+  const sourceItems = useActivitiesSource ? activities : items;
+  const total = sourceItems.length;
+  const inProgress = useActivitiesSource
+    ? activities.filter(a => a.status === "em_andamento").length
+    : items.filter((t: any) => t.status === "em_execucao").length;
+  const overdue = useActivitiesSource
+    ? activities.filter(a => a.status === "bloqueada").length
+    : items.filter((t: any) => t.status === "atrasado").length;
+  const completed = useActivitiesSource
+    ? activities.filter(a => a.status === "concluida").length
+    : items.filter((t: any) => t.status === "executado").length;
 
   // Deadline alert tasks
   const alertTasks = useMemo(() => {
