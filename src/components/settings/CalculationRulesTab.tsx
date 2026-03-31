@@ -324,6 +324,126 @@ export default function CalculationRulesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ===== CUSTOS DE MÃO DE OBRA ===== */}
+      <div className="mt-10 pt-6 border-t">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold font-display flex items-center gap-2">
+              <Wrench className="h-5 w-5" /> Custos de Mão de Obra por Disciplina
+            </h2>
+            <p className="text-sm text-muted-foreground">Valores de referência por m² usados na prévia de orçamento</p>
+          </div>
+          <Button size="sm" onClick={() => { setEditingLaborId(null); setLaborForm({ discipline: "", activity_type: "", cost_per_m2: 0, cost_per_unit: 0, unit: "m2", region: "Belo Horizonte", notes: "" }); setLaborDialogOpen(true); }}>
+            <Plus className="h-4 w-4 mr-1.5" /> Novo Custo
+          </Button>
+        </div>
+
+        {laborLoading ? (
+          <p className="text-muted-foreground text-center py-8">Carregando...</p>
+        ) : laborCosts.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">Nenhum custo cadastrado.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Disciplina</TableHead>
+                <TableHead>Tipo Atividade</TableHead>
+                <TableHead className="text-right">Custo/m²</TableHead>
+                <TableHead>Unidade</TableHead>
+                <TableHead>Região</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {laborCosts.map((lc) => (
+                <TableRow key={lc.id}>
+                  <TableCell><Badge variant="secondary">{lc.discipline}</Badge></TableCell>
+                  <TableCell>{lc.activity_type || "-"}</TableCell>
+                  <TableCell className="text-right font-mono">R$ {Number(lc.cost_per_m2 || 0).toFixed(2)}</TableCell>
+                  <TableCell>{lc.unit}</TableCell>
+                  <TableCell>{lc.region}</TableCell>
+                  <TableCell className="text-right space-x-1">
+                    <Button variant="ghost" size="icon" onClick={() => {
+                      setEditingLaborId(lc.id);
+                      setLaborForm({
+                        discipline: lc.discipline,
+                        activity_type: lc.activity_type || "",
+                        cost_per_m2: Number(lc.cost_per_m2 || 0),
+                        cost_per_unit: Number(lc.cost_per_unit || 0),
+                        unit: lc.unit,
+                        region: lc.region,
+                        notes: lc.notes || "",
+                      });
+                      setLaborDialogOpen(true);
+                    }}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => removeLabor.mutate(lc.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+
+      <Dialog open={laborDialogOpen} onOpenChange={setLaborDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingLaborId ? "Editar Custo" : "Novo Custo de Mão de Obra"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Disciplina</Label>
+              <Input placeholder="Ex: Elétrica, Pintura" value={laborForm.discipline} onChange={e => setLaborForm({ ...laborForm, discipline: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo de Atividade</Label>
+              <Input placeholder="Ex: eletrica, pintura" value={laborForm.activity_type} onChange={e => setLaborForm({ ...laborForm, activity_type: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Custo por m²</Label>
+                <Input type="number" step="0.01" min="0" value={laborForm.cost_per_m2} onChange={e => setLaborForm({ ...laborForm, cost_per_m2: Number(e.target.value) })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Unidade</Label>
+                <Select value={laborForm.unit} onValueChange={v => setLaborForm({ ...laborForm, unit: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {UNIT_OPTIONS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Região</Label>
+              <Input value={laborForm.region} onChange={e => setLaborForm({ ...laborForm, region: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea placeholder="Notas..." value={laborForm.notes} onChange={e => setLaborForm({ ...laborForm, notes: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLaborDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={() => {
+              if (!laborForm.discipline || !laborForm.cost_per_m2) return;
+              const payload = { ...laborForm, activity_type: laborForm.activity_type || null, notes: laborForm.notes || null, cost_per_unit: laborForm.cost_per_unit || null };
+              if (editingLaborId) {
+                updateLabor.mutate({ id: editingLaborId, ...payload }, { onSuccess: () => setLaborDialogOpen(false) });
+              } else {
+                createLabor.mutate(payload as any, { onSuccess: () => setLaborDialogOpen(false) });
+              }
+            }} disabled={createLabor.isPending || updateLabor.isPending}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

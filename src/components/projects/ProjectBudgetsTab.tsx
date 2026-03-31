@@ -300,6 +300,13 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
             projectName={projectName}
           />
 
+          <BudgetPreviewDialog
+            open={budgetPreviewOpen}
+            onOpenChange={setBudgetPreviewOpen}
+            projectId={projectId}
+            projectName={projectName}
+          />
+
           {/* Pesquisa de Preços por Atividade */}
           {activities.filter((a) => a.area_m2 && a.area_m2 > 0).length > 0 && (
             <Card className="mt-6">
