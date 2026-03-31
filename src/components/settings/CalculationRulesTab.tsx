@@ -211,6 +211,112 @@ export default function CalculationRulesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ===== ÍNDICES DE MATERIAL ===== */}
+      <div className="mt-10 pt-6 border-t">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold font-display flex items-center gap-2">
+              <Layers className="h-5 w-5" /> Índices de Material por m²
+            </h2>
+            <p className="text-sm text-muted-foreground">Consumo de materiais por tipo de atividade, usado no cálculo automático da aba Materiais</p>
+          </div>
+          <Button size="sm" onClick={() => { setEditingIndexId(null); setIndexForm({ activity_type: "", material_name: "", unit: "un", index_per_m2: 0, notes: "" }); setIndexDialogOpen(true); }}>
+            <Plus className="h-4 w-4 mr-1.5" /> Novo Índice
+          </Button>
+        </div>
+
+        {indicesLoading ? (
+          <p className="text-muted-foreground text-center py-8">Carregando...</p>
+        ) : indices.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">Nenhum índice cadastrado.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tipo de Atividade</TableHead>
+                <TableHead>Material</TableHead>
+                <TableHead>Unidade</TableHead>
+                <TableHead className="text-right">Índice/m²</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {indices.map((idx) => (
+                <TableRow key={idx.id}>
+                  <TableCell><Badge variant="secondary">{idx.activity_type}</Badge></TableCell>
+                  <TableCell>{idx.material_name}</TableCell>
+                  <TableCell>{idx.unit}</TableCell>
+                  <TableCell className="text-right font-mono">{idx.index_per_m2}</TableCell>
+                  <TableCell className="text-right space-x-1">
+                    <Button variant="ghost" size="icon" onClick={() => {
+                      setEditingIndexId(idx.id);
+                      setIndexForm({ activity_type: idx.activity_type, material_name: idx.material_name, unit: idx.unit, index_per_m2: Number(idx.index_per_m2), notes: idx.notes || "" });
+                      setIndexDialogOpen(true);
+                    }}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => removeIndex.mutate(idx.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+
+      <Dialog open={indexDialogOpen} onOpenChange={setIndexDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingIndexId ? "Editar Índice" : "Novo Índice"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Tipo de Atividade</Label>
+              <Input placeholder="Ex: alvenaria, piso, pintura" value={indexForm.activity_type} onChange={e => setIndexForm({ ...indexForm, activity_type: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Nome do Material</Label>
+              <Input placeholder="Ex: Tijolo 29x19x9" value={indexForm.material_name} onChange={e => setIndexForm({ ...indexForm, material_name: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Unidade</Label>
+                <Select value={indexForm.unit} onValueChange={v => setIndexForm({ ...indexForm, unit: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {UNIT_OPTIONS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Índice por m²</Label>
+                <Input type="number" step="0.01" min="0" value={indexForm.index_per_m2} onChange={e => setIndexForm({ ...indexForm, index_per_m2: Number(e.target.value) })} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea placeholder="Notas..." value={indexForm.notes} onChange={e => setIndexForm({ ...indexForm, notes: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIndexDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={() => {
+              if (!indexForm.activity_type || !indexForm.material_name || !indexForm.index_per_m2) return;
+              const payload = { ...indexForm, notes: indexForm.notes || null };
+              if (editingIndexId) {
+                updateIndex.mutate({ id: editingIndexId, ...payload }, { onSuccess: () => setIndexDialogOpen(false) });
+              } else {
+                createIndex.mutate(payload, { onSuccess: () => setIndexDialogOpen(false) });
+              }
+            }} disabled={createIndex.isPending || updateIndex.isPending}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
