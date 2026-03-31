@@ -492,6 +492,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           custom_clauses: string | null
+          environments: string | null
           estimated_duration: string | null
           id: string
           lead_id: string | null
@@ -508,6 +509,7 @@ export type Database = {
           template_id: string | null
           template_name: string | null
           title: string | null
+          total_area: number | null
           updated_at: string
           user_id: string
           value: number | null
@@ -529,6 +531,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           custom_clauses?: string | null
+          environments?: string | null
           estimated_duration?: string | null
           id?: string
           lead_id?: string | null
@@ -545,6 +548,7 @@ export type Database = {
           template_id?: string | null
           template_name?: string | null
           title?: string | null
+          total_area?: number | null
           updated_at?: string
           user_id: string
           value?: number | null
@@ -566,6 +570,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           custom_clauses?: string | null
+          environments?: string | null
           estimated_duration?: string | null
           id?: string
           lead_id?: string | null
@@ -582,6 +587,7 @@ export type Database = {
           template_id?: string | null
           template_name?: string | null
           title?: string | null
+          total_area?: number | null
           updated_at?: string
           user_id?: string
           value?: number | null
