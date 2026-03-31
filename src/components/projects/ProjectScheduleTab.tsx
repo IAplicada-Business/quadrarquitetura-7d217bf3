@@ -78,7 +78,41 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
     });
   }, [items, filterDiscipline, filterSupplier, filterEnvironment]);
 
+  const activityStatusColorMap: Record<string, string> = {
+    pendente: "#9CA3AF",
+    em_andamento: "#1B2A4A",
+    concluida: "#16A34A",
+    bloqueada: "#DC2626",
+  };
+
+  const activityStatusMap: Record<string, string> = {
+    pendente: "planejado",
+    em_andamento: "em_execucao",
+    concluida: "executado",
+    bloqueada: "atrasado",
+  };
+
+  const activitiesGanttTasks = useMemo(() =>
+    activities.map(a => ({
+      id: a.id,
+      task_name: a.name,
+      start_date: a.start_date,
+      end_date: a.end_date,
+      status: activityStatusMap[a.status] || "planejado",
+      discipline: a.discipline,
+      supplier_name: null,
+      progress_percentage: a.progress_percent,
+      color: activityStatusColorMap[a.status] || "#9CA3AF",
+      requires_presence: null,
+      is_daily_detail: null,
+      dependencies: a.depends_on,
+      environment: null,
+      estimated_days: a.duration_days,
+    })),
+  [activities]);
+
   const allGanttTasks = useMemo(() =>
+    useActivitiesSource ? activitiesGanttTasks :
     items.map((t: any) => ({
       id: t.id, task_name: t.task_name, start_date: t.start_date, end_date: t.end_date,
       status: t.status, discipline: t.discipline || (t.scope_items as any)?.discipline || null,
@@ -86,9 +120,10 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
       color: t.color, requires_presence: t.requires_presence, is_daily_detail: t.is_daily_detail,
       dependencies: t.dependencies, environment: t.environment, estimated_days: t.estimated_days,
     })),
-  [items]);
+  [items, activitiesGanttTasks, useActivitiesSource]);
 
   const ganttTasks = useMemo(() =>
+    useActivitiesSource ? activitiesGanttTasks :
     filteredItems.map((t: any) => ({
       id: t.id, task_name: t.task_name, start_date: t.start_date, end_date: t.end_date,
       status: t.status, discipline: t.discipline || (t.scope_items as any)?.discipline || null,
@@ -96,7 +131,7 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
       color: t.color, requires_presence: t.requires_presence, is_daily_detail: t.is_daily_detail,
       dependencies: t.dependencies, environment: t.environment, estimated_days: t.estimated_days,
     })),
-  [filteredItems]);
+  [filteredItems, activitiesGanttTasks, useActivitiesSource]);
 
   const clientTasks = useMemo(() =>
     items.filter((t: any) => t.is_client_visible === true).map((t: any) => ({
