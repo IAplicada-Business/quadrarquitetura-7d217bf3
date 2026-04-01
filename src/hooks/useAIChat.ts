@@ -58,14 +58,16 @@ export function useAIChat() {
     setCurrentConversationId(null);
   }, []);
 
-  const saveMessage = useCallback(async (convId: string, role: string, content: string) => {
+  const saveMessage = useCallback(async (convId: string, role: string, content: string, projectId?: string) => {
     if (!user) return;
-    await supabase.from("chat_messages").insert({
+    const row: any = {
       conversation_id: convId,
       user_id: user.id,
       role,
       content,
-    });
+    };
+    if (projectId) row.project_id = projectId;
+    await supabase.from("chat_messages").insert(row);
   }, [user]);
 
   const sendMessage = useCallback(async (input: string, contextPayload?: { route?: string; project_id?: string; lead_id?: string }) => {
