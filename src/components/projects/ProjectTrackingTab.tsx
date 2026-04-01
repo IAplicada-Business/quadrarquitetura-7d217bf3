@@ -141,7 +141,11 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
           </SelectContent>
         </Select>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => setReportOpen(true)}>
+          <Button size="sm" variant="outline" onClick={handleGenerateAISummary} disabled={aiSummaryLoading}>
+            {aiSummaryLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+            Gerar Resumo com IA
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => { setPrefillData(null); setReportOpen(true); }}>
             <BarChart3 className="h-4 w-4 mr-1" /> Gerar Relatório Semanal
           </Button>
           <Button size="sm" onClick={() => { resetForm(); setFormOpen(true); }}>
