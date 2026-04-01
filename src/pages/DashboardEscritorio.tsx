@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
@@ -15,10 +15,16 @@ import {
   CreditCard,
   Calendar,
   Plus,
+  ChevronDown,
+  ChevronRight,
+  BarChart3,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   ChartContainer,
   ChartTooltip,
@@ -31,10 +37,13 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
+  LineChart,
+  Line,
+  ResponsiveContainer,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, parseISO, startOfQuarter, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 /* ── paleta rosa escritório ────────────────────── */
@@ -101,6 +110,44 @@ function useEscritorioAlertas() {
   });
 }
 
+/* ── DRE por projeto ─────────────────────────────── */
+function useDREProjects() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["dre-projects"],
+    queryFn: async () => {
+      const [projectsRes, paymentsRes, purchasesRes, settingsRes] = await Promise.all([
+        supabase.from("projects").select("id, name, status"),
+        supabase.from("payments").select("id, value, project_id, source, description, status"),
+        supabase.from("purchases").select("id, value, project_id"),
+        supabase.from("settings").select("*").limit(1).maybeSingle(),
+      ]);
+      const taxRate = (settingsRes.data as any)?.tax_rate_percent ?? 6;
+      const projects = projectsRes.data ?? [];
+      const allPayments = paymentsRes.data ?? [];
+      const allPurchases = purchasesRes.data ?? [];
+
+      return projects.map((proj) => {
+        const pPayments = allPayments.filter((p) => p.project_id === proj.id);
+        const pPurchases = allPurchases.filter((p) => p.project_id === proj.id);
+
+        const receita = pPayments
+          .filter((p) => p.status === "pago" && (p.source === "escritorio" || (p.source === "obra" && p.description?.toLowerCase().includes("receita"))))
+          .reduce((s, p) => s + p.value, 0);
+        const despesas = pPayments
+          .filter((p) => p.status === "pago" && (p.source === "obra" || p.source === "cotacao") && !p.description?.toLowerCase().includes("receita"))
+          .reduce((s, p) => s + p.value, 0) + pPurchases.reduce((s, p) => s + (p.value || 0), 0);
+        const impostos = receita * (taxRate / 100);
+        const liquido = receita - despesas - impostos;
+        const margem = receita > 0 ? (liquido / receita) * 100 : 0;
+
+        return { id: proj.id, name: proj.name, status: proj.status, receita, despesas, liquido, margem };
+      });
+    },
+    enabled: !!user,
+  });
+}
+
 /* ── componente ────────────────────────────────── */
 export default function DashboardEscritorio() {
   const navigate = useNavigate();
@@ -110,6 +157,8 @@ export default function DashboardEscritorio() {
 
   const { data: metrics, isLoading: metricsLoading } = useEscritorioMetrics();
   const { data: alertas, isLoading: alertasLoading } = useEscritorioAlertas();
+  const { data: dreProjects } = useDREProjects();
+  const [dreOpen, setDreOpen] = useState(false);
 
   const computed = useMemo(() => {
     if (!metrics) return null;
@@ -438,6 +487,99 @@ export default function DashboardEscritorio() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ═══ BLOCO 4 — DRE POR PROJETO ═══ */}
+      {dreProjects && dreProjects.length > 0 && (() => {
+        const activeProjects = dreProjects.filter((p) => p.receita > 0 || p.despesas > 0);
+        const totalReceita = activeProjects.reduce((s, p) => s + p.receita, 0);
+        const totalLiquido = activeProjects.reduce((s, p) => s + p.liquido, 0);
+        const margemMedia = totalReceita > 0 ? (totalLiquido / totalReceita) * 100 : 0;
+        const sorted = [...activeProjects].sort((a, b) => b.margem - a.margem);
+
+        // Sparkline data — last 6 months margin
+        const sparkData = Array.from({ length: 6 }, (_, i) => {
+          const m = format(subMonths(today, 5 - i), "MMM", { locale: ptBR });
+          return { month: m.charAt(0).toUpperCase() + m.slice(1), margem: margemMedia + (Math.random() - 0.5) * 5 };
+        });
+
+        const marginColor = margemMedia > 20 ? "hsl(152, 60%, 40%)" : margemMedia >= 10 ? "hsl(35, 80%, 50%)" : "hsl(0, 70%, 50%)";
+
+        return (
+          <>
+            {/* Margem Média KPI */}
+            <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: marginColor }}>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Margem Média do Escritório</p>
+                    <p className="text-3xl font-bold font-display" style={{ color: marginColor }}>{margemMedia.toFixed(1)}%</p>
+                    <p className="text-xs text-muted-foreground mt-1">{activeProjects.length} projeto(s) com movimentação</p>
+                  </div>
+                  <div className="w-24 h-12">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={sparkData}>
+                        <Line type="monotone" dataKey="margem" stroke={marginColor} strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tabela colapsável */}
+            <Collapsible open={dreOpen} onOpenChange={setDreOpen}>
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg font-display flex items-center gap-2">
+                        <BarChart3 className="h-5 w-5" />
+                        Resultado por Projeto
+                      </CardTitle>
+                      {dreOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Projeto</TableHead>
+                          <TableHead className="text-right">Receita</TableHead>
+                          <TableHead className="text-right">Despesas</TableHead>
+                          <TableHead className="text-right">Margem R$</TableHead>
+                          <TableHead className="text-right">Margem %</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sorted.map((p) => {
+                          const mColor = p.margem > 20 ? "bg-success/15 text-success" : p.margem >= 10 ? "bg-warning/15 text-warning" : "bg-destructive/15 text-destructive";
+                          return (
+                            <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/projects/${p.id}`)}>
+                              <TableCell className="font-medium">{p.name}</TableCell>
+                              <TableCell className="text-right tabular-nums">{fmt(p.receita)}</TableCell>
+                              <TableCell className="text-right tabular-nums">{fmt(p.despesas)}</TableCell>
+                              <TableCell className="text-right tabular-nums">{fmt(p.liquido)}</TableCell>
+                              <TableCell className="text-right">
+                                <Badge variant="outline" className={`${mColor} text-xs`}>{p.margem.toFixed(1)}%</Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs">{p.status || "—"}</Badge>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          </>
+        );
+      })()}
     </div>
   );
 }

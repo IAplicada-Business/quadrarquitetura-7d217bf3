@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,9 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useProjectPayments } from "@/hooks/useProjectPayments";
 import { useInvoices } from "@/hooks/useInvoices";
+import { useProjectPurchases } from "@/hooks/useProjectPurchases";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { PaymentForm } from "./PaymentForm";
 import { InvoiceForm } from "./InvoiceForm";
 import { InvoiceNFList } from "./InvoiceNFList";
+import jsPDF from "jspdf";
 
 function formatCurrency(v: number | null | undefined) {
   if (v == null) return "—";
@@ -28,13 +33,115 @@ const paymentStatusConfig: Record<string, { label: string; className: string }> 
   atrasado: { label: "Atrasado", className: "bg-destructive/15 text-destructive border-destructive/30" },
 };
 
-export function ProjectFinancialTab({ projectId }: { projectId: string }) {
+function MarginBadge({ margin }: { margin: number }) {
+  const color = margin > 20 ? "bg-success/15 text-success" : margin >= 10 ? "bg-warning/15 text-warning" : "bg-destructive/15 text-destructive";
+  return <Badge variant="outline" className={`${color} text-sm font-bold`}>{margin.toFixed(1)}%</Badge>;
+}
+
+function DRERow({ label, value, total, bold, negative }: { label: string; value: number; total: number; bold: boolean; negative?: boolean }) {
+  const pct = total > 0 ? Math.abs(value / total) * 100 : 0;
+  return (
+    <div className={`flex items-center justify-between py-1.5 px-3 ${bold ? "font-bold" : ""}`}>
+      <span className="text-sm">{label}</span>
+      <div className="flex items-center gap-4">
+        <span className={`text-sm tabular-nums ${negative ? "text-destructive" : ""}`}>
+          {formatCurrency(Math.abs(value))}
+        </span>
+        <span className="text-xs text-muted-foreground w-14 text-right tabular-nums">{pct.toFixed(1)}%</span>
+      </div>
+    </div>
+  );
+}
+
+type DREData = {
+  receitaHonorarios: number; receitaObra: number; receitaTotal: number;
+  despesasFornecedores: number; despesasCompras: number; despesasTotal: number;
+  resultadoBruto: number; impostos: number; resultadoLiquido: number;
+  margem: number; rate: number;
+};
+
+function exportDREPdf(dre: DREData, projectName?: string) {
+  const doc = new jsPDF();
+  doc.setFontSize(18);
+  doc.text("Quadra Arquitetura", 20, 20);
+  doc.setFontSize(12);
+  doc.text(`DRE — ${projectName || "Projeto"}`, 20, 30);
+  doc.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")}`, 20, 38);
+  doc.setFontSize(10);
+  const lines: [string, string][] = [
+    ["(+) Receita Honorários", formatCurrency(dre.receitaHonorarios)],
+    ["(+) Receita Obra", formatCurrency(dre.receitaObra)],
+    ["(=) RECEITA TOTAL", formatCurrency(dre.receitaTotal)],
+    ["", ""],
+    ["(−) Despesas Fornecedores", formatCurrency(dre.despesasFornecedores)],
+    ["(−) Compras", formatCurrency(dre.despesasCompras)],
+    ["(=) RESULTADO BRUTO", formatCurrency(dre.resultadoBruto)],
+    ["", ""],
+    [`(−) Impostos (${dre.rate}%)`, formatCurrency(dre.impostos)],
+    ["(=) RESULTADO LÍQUIDO", formatCurrency(dre.resultadoLiquido)],
+    ["", ""],
+    ["MARGEM", `${dre.margem.toFixed(1)}%`],
+  ];
+  let y = 50;
+  for (const [label, val] of lines) {
+    if (!label) { y += 4; continue; }
+    const isBold = label.startsWith("(=)") || label === "MARGEM";
+    doc.setFont("helvetica", isBold ? "bold" : "normal");
+    doc.text(label, 20, y);
+    doc.text(val, 190, y, { align: "right" });
+    y += 7;
+  }
+  doc.save(`DRE_${(projectName || "projeto").replace(/\s+/g, "_")}.pdf`);
+}
+
+export function ProjectFinancialTab({ projectId, projectName }: { projectId: string; projectName?: string }) {
+  const { user } = useAuth();
   const payments = useProjectPayments(projectId);
   const invoices = useInvoices(projectId);
+  const purchases = useProjectPurchases(projectId);
   const [paymentFormOpen, setPaymentFormOpen] = useState(false);
   const [invoiceFormOpen, setInvoiceFormOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Record<string, unknown> | null>(null);
   const [editingInvoice, setEditingInvoice] = useState<Record<string, unknown> | null>(null);
+
+  // Tax rate from settings
+  const { data: taxRate } = useQuery({
+    queryKey: ["settings-tax-rate"],
+    queryFn: async () => {
+      const { data } = await supabase.from("settings").select("*").limit(1).maybeSingle();
+      return (data as any)?.tax_rate_percent ?? 6;
+    },
+    enabled: !!user,
+  });
+
+  // DRE calculations
+  const dre = useMemo(() => {
+    const rate = taxRate ?? 6;
+    const receitaHonorarios = payments.items
+      .filter((p) => p.source === "escritorio" && p.status === "pago")
+      .reduce((s, p) => s + p.value, 0);
+    const receitaObra = payments.items
+      .filter((p) => p.source === "obra" && p.value > 0 && p.description?.toLowerCase().includes("receita"))
+      .reduce((s, p) => s + p.value, 0);
+    const receitaTotal = receitaHonorarios + receitaObra;
+
+    const despesasFornecedores = payments.items
+      .filter((p) => (p.source === "obra" || p.source === "cotacao") && p.status === "pago" && !p.description?.toLowerCase().includes("receita"))
+      .reduce((s, p) => s + p.value, 0);
+    const despesasCompras = purchases.items.reduce((s, p) => s + (p.value || 0), 0);
+    const despesasTotal = despesasFornecedores + despesasCompras;
+
+    const resultadoBruto = receitaTotal - despesasTotal;
+    const impostos = receitaTotal * (rate / 100);
+    const resultadoLiquido = resultadoBruto - impostos;
+    const margem = receitaTotal > 0 ? (resultadoLiquido / receitaTotal) * 100 : 0;
+
+    return {
+      receitaHonorarios, receitaObra, receitaTotal,
+      despesasFornecedores, despesasCompras, despesasTotal,
+      resultadoBruto, impostos, resultadoLiquido, margem, rate,
+    };
+  }, [payments.items, purchases.items, taxRate]);
 
   // Payment totals
   const paymentTotals = useMemo(() => {
@@ -64,6 +171,7 @@ export function ProjectFinancialTab({ projectId }: { projectId: string }) {
           <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
           <TabsTrigger value="notas">Notas Fiscais (Compras)</TabsTrigger>
           <TabsTrigger value="notas_nf">Notas Fiscais</TabsTrigger>
+          <TabsTrigger value="dre">DRE</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pagamentos" className="space-y-4 mt-4">
@@ -211,6 +319,43 @@ export function ProjectFinancialTab({ projectId }: { projectId: string }) {
 
         <TabsContent value="notas_nf" className="space-y-4 mt-4">
           <InvoiceNFList projectId={projectId} />
+        </TabsContent>
+
+        <TabsContent value="dre" className="space-y-4 mt-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-display">Demonstrativo de Resultado (DRE)</h3>
+            <Button size="sm" variant="outline" onClick={() => exportDREPdf(dre, projectName)}>
+              <Download className="h-4 w-4 mr-1" /> Exportar DRE
+            </Button>
+          </div>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-1">
+                <DRERow label="(+) Receita Honorários" value={dre.receitaHonorarios} total={dre.receitaTotal} bold={false} />
+                <DRERow label="(+) Receita Obra" value={dre.receitaObra} total={dre.receitaTotal} bold={false} />
+                <div className="border-t border-border my-2" />
+                <DRERow label="(=) RECEITA TOTAL" value={dre.receitaTotal} total={dre.receitaTotal} bold />
+
+                <div className="h-3" />
+                <DRERow label="(−) Despesas Fornecedores" value={-dre.despesasFornecedores} total={dre.receitaTotal} bold={false} negative />
+                <DRERow label="(−) Compras" value={-dre.despesasCompras} total={dre.receitaTotal} bold={false} negative />
+                <div className="border-t border-border my-2" />
+                <DRERow label="(=) RESULTADO BRUTO" value={dre.resultadoBruto} total={dre.receitaTotal} bold />
+
+                <div className="h-3" />
+                <DRERow label={`(−) Impostos Estimados (${dre.rate}%)`} value={-dre.impostos} total={dre.receitaTotal} bold={false} negative />
+                <div className="border-t border-border my-2" />
+                <DRERow label="(=) RESULTADO LÍQUIDO" value={dre.resultadoLiquido} total={dre.receitaTotal} bold />
+
+                <div className="h-3" />
+                <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
+                  <span className="font-bold text-sm">MARGEM</span>
+                  <MarginBadge margin={dre.margem} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
