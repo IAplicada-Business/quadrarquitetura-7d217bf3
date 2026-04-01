@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,9 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useProjectPayments } from "@/hooks/useProjectPayments";
 import { useInvoices } from "@/hooks/useInvoices";
+import { useProjectPurchases } from "@/hooks/useProjectPurchases";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { PaymentForm } from "./PaymentForm";
 import { InvoiceForm } from "./InvoiceForm";
 import { InvoiceNFList } from "./InvoiceNFList";
+import jsPDF from "jspdf";
 
 function formatCurrency(v: number | null | undefined) {
   if (v == null) return "—";

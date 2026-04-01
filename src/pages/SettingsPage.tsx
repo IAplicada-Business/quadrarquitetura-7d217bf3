@@ -207,6 +207,36 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
+            {/* Tax Rate */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-display flex items-center gap-2">
+                  <Calculator className="h-5 w-5" />
+                  Alíquota de Impostos
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Percentual usado no cálculo do DRE (Demonstrativo de Resultado).
+                </p>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    className="w-28 text-center"
+                    value={settings?.tax_rate_percent ?? 6}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) upsert.mutate({ tax_rate_percent: val });
+                    }}
+                  />
+                  <Label className="text-muted-foreground">%</Label>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Supplier Categories */}
             <SupplierCategoriesManager
               categories={(settings?.supplier_categories as string[]) ?? []}
