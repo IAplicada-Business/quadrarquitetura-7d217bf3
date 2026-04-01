@@ -12,8 +12,161 @@ serve(async (req) => {
   }
 
   try {
-    const { file_url, focus, instructions } = await req.json();
+    const { file_url, focus, instructions, mode, obra_type, ambientes } = await req.json();
 
+    // Mode "activities" — new flow for scope tab
+    if (mode === "activities") {
+      if (!file_url) {
+        return new Response(
+          JSON.stringify({ error: "file_url é obrigatório" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (!LOVABLE_API_KEY) {
+        return new Response(
+          JSON.stringify({ error: "LOVABLE_API_KEY não configurada" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const fileResponse = await fetch(file_url);
+      if (!fileResponse.ok) {
+        return new Response(
+          JSON.stringify({ error: "Não foi possível acessar o arquivo" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const fileBytes = await fileResponse.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(fileBytes)));
+      const contentType = fileResponse.headers.get("content-type") || "image/jpeg";
+
+      const obraLabel = obra_type || "reforma";
+      const ambientesExtra = ambientes ? `\nAmbientes a considerar especificamente: ${ambientes}` : "";
+
+      const systemPrompt = `Você é um assistente especializado em análise de plantas de projetos de arquitetura e construção civil.
+
+Analise a planta baixa anexa de um projeto de ${obraLabel}.
+Identifique todos os ambientes presentes e gere uma lista de atividades sequenciais de obra necessárias para uma ${obraLabel} completa.
+${ambientesExtra}
+
+Para cada ambiente identificado, estime a área em m² baseado nas proporções da planta.
+Para cada atividade, indique a disciplina (Demolição, Alvenaria, Elétrica, Hidráulica, Revestimento, Pintura, Piso, Forro, Marcenaria, Serralheria, Impermeabilização, Limpeza, etc.), a área em m², a duração estimada em dias e o ambiente de origem.
+
+Ordene as atividades pela sequência lógica de execução de obra.
+Se uma atividade depende de outra, indique pelo nome da atividade predecessora.`;
+
+      const userPrompt = `Analise esta planta baixa e extraia os ambientes e atividades usando a ferramenta fornecida.`;
+
+      const messages: any[] = [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            { type: "image_url", image_url: { url: `data:${contentType};base64,${base64}` } },
+            { type: "text", text: userPrompt },
+          ],
+        },
+      ];
+
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-pro",
+          messages,
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "extract_scope",
+                description: "Extrair ambientes e atividades da planta analisada",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    ambientes: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          nome: { type: "string", description: "Nome do ambiente (ex: Sala, Cozinha, Suíte Master)" },
+                          area_m2_estimada: { type: "number", description: "Área estimada em m²" },
+                        },
+                        required: ["nome", "area_m2_estimada"],
+                        additionalProperties: false,
+                      },
+                    },
+                    atividades: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          name: { type: "string", description: "Nome da atividade (ex: Demolição de paredes)" },
+                          discipline: { type: "string", description: "Disciplina (ex: Demolição, Elétrica)" },
+                          area_m2: { type: "number", description: "Área em m² da atividade" },
+                          duration_days: { type: "number", description: "Duração estimada em dias" },
+                          ambiente_origem: { type: "string", description: "Ambiente onde ocorre (ex: Cozinha)" },
+                          depends_on_activity_name: { type: "string", description: "Nome da atividade predecessora, se houver" },
+                        },
+                        required: ["name", "discipline", "area_m2", "duration_days"],
+                        additionalProperties: false,
+                      },
+                    },
+                  },
+                  required: ["ambientes", "atividades"],
+                  additionalProperties: false,
+                },
+              },
+            },
+          ],
+          tool_choice: { type: "function", function: { name: "extract_scope" } },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("AI gateway error:", response.status, errorText);
+        if (response.status === 429) {
+          return new Response(
+            JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns instantes." }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (response.status === 402) {
+          return new Response(
+            JSON.stringify({ error: "Créditos insuficientes. Adicione créditos em Configurações > Workspace > Uso." }),
+            { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        return new Response(
+          JSON.stringify({ error: "Erro ao analisar planta com IA" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const result = await response.json();
+      const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
+
+      if (!toolCall) {
+        return new Response(
+          JSON.stringify({ ambientes: [], atividades: [] }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const parsed = JSON.parse(toolCall.function.arguments);
+      return new Response(
+        JSON.stringify(parsed),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Original flow (focus-based analysis) ──
     if (!file_url || !focus) {
       return new Response(
         JSON.stringify({ error: "file_url e focus são obrigatórios" }),
@@ -29,7 +182,6 @@ serve(async (req) => {
       );
     }
 
-    // Fetch the image/PDF from the public URL
     const fileResponse = await fetch(file_url);
     if (!fileResponse.ok) {
       return new Response(
@@ -67,10 +219,7 @@ Extraia todas as atividades necessárias usando a ferramenta fornecida.`;
       {
         role: "user",
         content: [
-          {
-            type: "image_url",
-            image_url: { url: `data:${contentType};base64,${base64}` },
-          },
+          { type: "image_url", image_url: { url: `data:${contentType};base64,${base64}` } },
           { type: "text", text: userPrompt },
         ],
       },
@@ -99,12 +248,12 @@ Extraia todas as atividades necessárias usando a ferramenta fornecida.`;
                     items: {
                       type: "object",
                       properties: {
-                        activity_name: { type: "string", description: "Nome descritivo da atividade (ex: Instalação de tomadas baixas)" },
-                        environment: { type: "string", description: "Ambiente (ex: Suíte Master, Cozinha, Geral)" },
-                        discipline: { type: "string", description: "Disciplina (ex: Elétrica, Hidráulica)" },
-                        quantity: { type: "number", description: "Quantidade estimada" },
-                        unit: { type: "string", description: "Unidade (un, m, m², ponto)" },
-                        estimated_days: { type: "number", description: "Prazo estimado em dias para execução" },
+                        activity_name: { type: "string" },
+                        environment: { type: "string" },
+                        discipline: { type: "string" },
+                        quantity: { type: "number" },
+                        unit: { type: "string" },
+                        estimated_days: { type: "number" },
                       },
                       required: ["activity_name", "environment", "discipline", "quantity", "unit", "estimated_days"],
                       additionalProperties: false,
@@ -124,7 +273,6 @@ Extraia todas as atividades necessárias usando a ferramenta fornecida.`;
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns instantes." }),
@@ -137,7 +285,6 @@ Extraia todas as atividades necessárias usando a ferramenta fornecida.`;
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-
       return new Response(
         JSON.stringify({ error: "Erro ao analisar planta com IA" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -148,7 +295,6 @@ Extraia todas as atividades necessárias usando a ferramenta fornecida.`;
     const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
 
     if (!toolCall) {
-      // Fallback: try to parse from content
       return new Response(
         JSON.stringify({ activities: [] }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -156,7 +302,6 @@ Extraia todas as atividades necessárias usando a ferramenta fornecida.`;
     }
 
     const activities = JSON.parse(toolCall.function.arguments);
-
     return new Response(
       JSON.stringify(activities),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
