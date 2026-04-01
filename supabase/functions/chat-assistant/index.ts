@@ -34,7 +34,7 @@ serve(async (req) => {
     const userId = claimsData.claims.sub;
 
     // Parse body
-    const { message, conversation_id, history } = await req.json();
+    const { message, conversation_id, history, context } = await req.json();
 
     // Query context data using service role
     const admin = createClient(supabaseUrl, supabaseServiceKey);
