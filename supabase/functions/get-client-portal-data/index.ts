@@ -130,6 +130,7 @@ Deno.serve(async (req) => {
         invoices: invoicesRes.data ?? [],
         photos: photos.slice(0, 12),
         weekly_reports: reportsRes.data ?? [],
+        pending_responses: pendingRes.data ?? [],
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
