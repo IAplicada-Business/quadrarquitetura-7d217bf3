@@ -43,7 +43,7 @@ interface ProjectScenariosTabProps {
   onTabChange?: (tab: string) => void;
 }
 
-export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
+export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenariosTabProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { project, updateProject } = useProjectDetail(projectId);
