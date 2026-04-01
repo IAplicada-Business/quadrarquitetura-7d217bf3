@@ -180,7 +180,6 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
   };
 
   const clientBudget = (project as any)?.client_budget as number | null;
-  const projectData = project as any;
 
   const handleAnalyzeBudget = async () => {
     const approvedScenario = scenarios.find(s => s.is_approved);
