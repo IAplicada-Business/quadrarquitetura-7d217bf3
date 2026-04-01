@@ -337,7 +337,31 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
         </Card>
       )}
 
-      {/* Proposal Reference */}
+      {/* Cotação Aprovada Banner */}
+      {cotacaoAprovada && (
+        <Card className="border-success/30 bg-success/5">
+          <CardContent className="flex items-center gap-4 py-4">
+            <CheckCircle2 className="h-8 w-8 text-success shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium text-sm text-success">
+                Cotação aprovada em {cotacaoAprovadaAt ? new Date(cotacaoAprovadaAt).toLocaleDateString("pt-BR") : "—"}
+              </p>
+              <p className="text-xs text-muted-foreground">Total: {formatCurrency(cotacaoValorTotal)}</p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              {onTabChange && (
+                <Button size="sm" variant="outline" onClick={() => onTabChange("financeiro")}>
+                  Ver pagamentos <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={() => setReviseDialogOpen(true)}>
+                <RotateCcw className="h-4 w-4 mr-1" /> Revisar Cotação
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {sourceProposal && cotacaoImportada && (
         <Card className="bg-muted/30">
           <CardContent className="flex items-center gap-6 py-3 text-sm flex-wrap">
