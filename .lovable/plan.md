@@ -1,114 +1,51 @@
 
 
-## Respostas do Cliente no Portal + Notificações para Equipe
+## Aprovar Cotação + Gerar Pagamentos Automáticos
 
-### 1. Migration SQL
+### Migration SQL
 
 ```sql
--- Adicionar campo de respostas no weekly_reports
-ALTER TABLE weekly_reports
-  ADD COLUMN IF NOT EXISTS client_responses jsonb DEFAULT '[]';
-
--- Tabela de respostas individuais
-CREATE TABLE client_pending_responses (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  weekly_report_id uuid REFERENCES weekly_reports(id) ON DELETE CASCADE NOT NULL,
-  project_id uuid NOT NULL,
-  pending_item text NOT NULL,
-  response_text text,
-  status text DEFAULT 'aguardando',
-  responded_at timestamptz,
-  client_name text,
-  created_at timestamptz DEFAULT now()
-);
-
--- Usar validation trigger em vez de CHECK constraint
-CREATE OR REPLACE FUNCTION validate_pending_response_status()
-RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public' AS $$
-BEGIN
-  IF NEW.status NOT IN ('aguardando','respondido','aprovado','rejeitado') THEN
-    RAISE EXCEPTION 'Status inválido: %', NEW.status;
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER trg_validate_pending_response_status
-  BEFORE INSERT OR UPDATE ON client_pending_responses
-  FOR EACH ROW EXECUTE FUNCTION validate_pending_response_status();
-
-ALTER TABLE client_pending_responses ENABLE ROW LEVEL SECURITY;
-
--- INSERT/UPDATE público (portal sem login, validação via edge function)
-CREATE POLICY "Public can insert responses" ON client_pending_responses
-  FOR INSERT TO anon, authenticated WITH CHECK (true);
-
-CREATE POLICY "Public can update responses" ON client_pending_responses
-  FOR UPDATE TO anon, authenticated USING (true);
-
--- SELECT restrito à equipe
-CREATE POLICY "Team can view responses" ON client_pending_responses
-  FOR SELECT TO authenticated
-  USING (project_id IN (
-    SELECT p.id FROM projects p WHERE p.user_id IN (SELECT get_team_user_ids())
-  ));
-
--- DELETE restrito à equipe
-CREATE POLICY "Team can delete responses" ON client_pending_responses
-  FOR DELETE TO authenticated
-  USING (project_id IN (
-    SELECT p.id FROM projects p WHERE p.user_id IN (SELECT get_team_user_ids())
-  ));
+ALTER TABLE projects
+  ADD COLUMN IF NOT EXISTS cotacao_aprovada boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS cotacao_valor_total numeric,
+  ADD COLUMN IF NOT EXISTS cotacao_aprovada_at timestamptz;
 ```
 
-### 2. Edge Function: `get-client-portal-data/index.ts`
+### `src/components/projects/ProjectScenariosTab.tsx`
 
-Adicionar ao fetch paralelo:
-- Buscar `client_pending_responses` filtradas por `project_id` do token
-- Retornar no JSON como `pending_responses: [...]`
+1. **Banner pós-aprovação**: Quando `project.cotacao_aprovada === true`, exibir banner verde no topo com data, total e botão "Ver pagamentos" (seta para aba financeiro via `onTabChange` prop). Desabilitar edição de valores nos cenários (inputs readonly).
 
-### 3. Nova Edge Function: `submit-client-response/index.ts`
+2. **Botão "Aprovar Cotação"**: Ao lado de "Analisar Orçamento", visível quando há cenário aprovado e `cotacao_aprovada === false`. Abre modal de confirmação.
 
-Recebe: `{ token, weekly_report_id, pending_item, response_text, status, client_name }`
+3. **Modal de Aprovação**: Exibe totais do cenário aprovado (materiais, MO, total). Campos editáveis:
+   - Número de parcelas (number)
+   - Data da primeira parcela (date picker)
+   - Intervalo (select: semanal/quinzenal/mensal)
+   
+   Ao confirmar:
+   - `UPDATE projects SET cotacao_aprovada=true, cotacao_valor_total=X, cotacao_aprovada_at=now()`
+   - Loop de INSERT em `payments` com parcelas calculadas (valor/N, datas espaçadas conforme intervalo)
+   - Cada payment: `{ description: "Parcela N/Total — Obra", source: "cotacao", status: "pendente" }`
+   - Toast com link para aba financeiro
 
-Fluxo:
-1. Validar token em `client_portal_tokens` (ativo + não expirado)
-2. Extrair `project_id` do token
-3. Inserir em `client_pending_responses` usando service_role
-4. Buscar nome do projeto para a notificação
-5. Inserir notificação para admins: `{ type: 'client_response', title: 'Resposta do cliente', message: 'Cliente respondeu pendência no projeto [nome]', related_entity_type: 'project', related_entity_id: project_id }`
-6. Retornar sucesso
+4. **Botão "Revisar Cotação"**: Quando `cotacao_aprovada === true`, substitui o botão aprovar. Abre AlertDialog: "Revisar a cotação irá excluir os pagamentos gerados. Confirmar?" → deleta payments com `source='cotacao'`, reseta `cotacao_aprovada=false`.
 
-Config em `supabase/config.toml`: `[functions.submit-client-response] verify_jwt = false`
+5. **Prop `onTabChange`**: Adicionar ao componente (já existe no ProjectDetail) para navegar à aba financeiro.
 
-### 4. Portal do Cliente: `ClientPortal.tsx`
+### `src/components/projects/ProjectFinancialTab.tsx`
 
-Na seção de cada relatório semanal com `client_pending`:
-- Parsear `client_pending` (texto) como item de pendência
-- Verificar se já existe resposta em `pending_responses` para esse report
-- Se não respondido: exibir textarea + botões "Aprovar" e "Responder"
-- Ao clicar "Aprovar": prompt simples para nome → POST para `submit-client-response` com `status='aprovado'`
-- Ao clicar "Responder": modal com textarea obrigatória + campo nome → POST com `status='respondido'`
-- Se já respondido: exibir resposta, timestamp e badge de status (verde=aprovado, azul=respondido)
+Na tabela de pagamentos, adicionar badge "Gerado da cotação" quando `payment.source === 'cotacao'`, ao lado do status badge existente.
 
-### 5. Sistema Interno: `ProjectTrackingTab.tsx`
+### `src/pages/ProjectDetail.tsx`
 
-Adicionar seção "Respostas do Cliente" no final:
-- Buscar `client_pending_responses` do projeto via hook
-- Agrupar por `weekly_report_id` (mostrar label da semana)
-- Cada resposta: pendência, resposta, nome do cliente, data, badge de status
-- Badge no título da seção quando houver respostas novas (status != 'aguardando' nas últimas 48h)
+Passar `onTabChange={setActiveTab}` como prop para `ProjectScenariosTab`.
 
 ### Arquivos alterados
 
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---|---|
-| Migration SQL | `client_responses` em weekly_reports + tabela `client_pending_responses` |
-| `supabase/functions/get-client-portal-data/index.ts` | Buscar e retornar `pending_responses` |
-| `supabase/functions/submit-client-response/index.ts` | **Novo** — salvar resposta + criar notificação |
-| `supabase/config.toml` | Adicionar `[functions.submit-client-response]` |
-| `src/pages/ClientPortal.tsx` | UI de resposta/aprovação de pendências |
-| `src/components/projects/ProjectTrackingTab.tsx` | Seção "Respostas do Cliente" |
-
-Nenhuma outra rota, aba ou funcionalidade alterada.
+| Migration SQL | 3 colunas em projects |
+| `src/components/projects/ProjectScenariosTab.tsx` | Modal aprovação, banner, botão revisar, geração de payments |
+| `src/components/projects/ProjectFinancialTab.tsx` | Badge "Gerado da cotação" |
+| `src/pages/ProjectDetail.tsx` | Passar onTabChange ao ProjectScenariosTab |
 
