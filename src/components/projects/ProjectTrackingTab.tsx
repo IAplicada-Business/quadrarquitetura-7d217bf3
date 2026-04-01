@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Plus, Trash2, Cloud, Sun, CloudRain, Snowflake, CalendarDays, Users, FileText, BarChart3, Sparkles, Loader2, MessageSquareText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,8 @@ import { useSiteDiary } from "@/hooks/useSiteDiary";
 import { useScopeItems } from "@/hooks/useScopeItems";
 import { useScheduleTasks } from "@/hooks/useScheduleTasks";
 import { useWeeklyReports } from "@/hooks/useWeeklyReports";
+import { useSupplierAllocations } from "@/hooks/useSupplierAllocations";
+import { SupplierRatingDialog } from "@/components/construction/SupplierRatingDialog";
 import { WeeklyReportModal } from "./WeeklyReportModal";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
