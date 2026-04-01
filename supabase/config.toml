@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.get-client-portal-data]
 verify_jwt = false
+
+[functions.analyze-plant]
+verify_jwt = false
