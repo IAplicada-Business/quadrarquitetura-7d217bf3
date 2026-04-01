@@ -1,54 +1,59 @@
 
 
-## Importação de Dados da Proposta na Aba Cotações
+## Refatorar Fluxo de Materiais — Geração Automática por Atividades
 
 ### Migration SQL
 
 ```sql
-ALTER TABLE projects ADD COLUMN IF NOT EXISTS source_proposal_id uuid REFERENCES proposals(id) ON DELETE SET NULL;
-ALTER TABLE projects ADD COLUMN IF NOT EXISTS cotacao_importada boolean DEFAULT false;
+ALTER TABLE material_tracking
+  ADD COLUMN IF NOT EXISTS activity_id uuid REFERENCES project_activities(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS calculated_quantity numeric,
+  ADD COLUMN IF NOT EXISTS adjusted_quantity numeric;
+
+-- Reutilizar coluna 'source' existente (já tem 'manual', 'orcamento', 'indices')
+-- Adicionar valor 'automatico' como convention (sem CHECK constraint por ser text livre)
 ```
 
-### Alteração em `src/hooks/useContracts.ts`
+Nota: a coluna `source` já existe como `text DEFAULT 'manual'`. Usar `source = 'automatico'` para itens calculados, sem necessidade de CHECK constraint adicional.
 
-No `signAndCreateProject` (linha 93-108), adicionar `source_proposal_id` ao insert do projeto. O contrato tem `proposal_id` — usar esse valor:
+### Hook: `useMaterialTracking.ts`
 
-```typescript
-source_proposal_id: contract.proposal_id,
-```
+Adicionar mutation `recalculateFromActivities`:
+1. Buscar `project_activities` com `area_m2 > 0` para o projeto
+2. Buscar todos os `material_indices`
+3. Para cada atividade, filtrar índices pela disciplina (case-insensitive match em `activity_type`)
+4. Para cada par atividade+índice:
+   - Calcular `qty = area_m2 * index_per_m2`
+   - Buscar existente em `material_tracking` com `activity_id = atividade.id AND material_name = indice.material_name`
+   - Se não existe: INSERT com `source='automatico'`, `calculated_quantity=qty`, `quantity_needed=qty`, `activity_id`
+   - Se existe e `source='automatico'`: UPDATE `calculated_quantity` e `quantity_needed`
+   - Se existe e `source!='automatico'`: skip (manual override)
+5. Retornar contagem para toast
 
-### Alteração em `src/components/projects/ProjectScenariosTab.tsx`
+### Aba Materiais: `ProjectMaterialsTab.tsx`
 
-Adicionar lógica no topo do componente:
+Reestruturar a tab "Rastreamento" em duas seções:
 
-1. Buscar `project.source_proposal_id` e `project.cotacao_importada` via `useProjectDetail` (já importado)
-2. Se `source_proposal_id` preenchido e `cotacao_importada` falso e `scenarios.length === 0`: exibir banner com "Importar da Proposta" / "Começar do Zero"
-3. Se `source_proposal_id` preenchido e `cotacao_importada` true: exibir referência no topo (valor contratado + condições)
+**Seção 1 — "Por Atividade"** (materiais com `activity_id != null`):
+- Botão "Recalcular a partir das Atividades" no topo
+- Agrupar por `activity_id` — header mostra nome da atividade, disciplina (badge colorido), área m²
+- Cada item: nome | unidade | qtd calculada | qtd ajustada (editável inline) | status
+- Badge "Ajustado" se `quantity_needed != calculated_quantity`
+- Botão inline "Usar calculado" para reverter `quantity_needed = calculated_quantity`
 
-**Banner de importação**: Card com ícone, texto explicativo e dois botões.
+**Seção 2 — "Manuais"** (materiais com `activity_id = null`):
+- Tabela como hoje, CRUD simples
+- Botão "Novo Material" abre o form existente
 
-**Ao clicar "Importar da Proposta"**:
-- Buscar proposta pelo `source_proposal_id` (query inline com `supabase.from("proposals").select("*").eq("id", id).single()`)
-- Criar um cenário automático com nome "Proposta Aprovada"
-- Para cada item em `proposals.ambientes` (jsonb array): criar `scenario_item` com discipline = ambiente
-- Atualizar `projects.estimated_budget` com `proposals.price_full`
-- Atualizar `projects.total_area` com `proposals.total_area`
-- Marcar `projects.cotacao_importada = true`
-
-**Ao clicar "Começar do Zero"**:
-- Apenas marcar `projects.cotacao_importada = true` (fecha o banner permanentemente)
-
-**Referência no topo** (quando `source_proposal_id` presente):
-- Query para buscar proposta aprovada
-- Exibir card compacto: "Valor contratado: R$ X" | "Parcelas: Xx R$ Y" | "Escopo: [descrição]"
+Manter as tabs existentes (Rastreamento, Por Atividade do cronograma, Memória de Cálculo, Compras) — a Seção 1/2 substitui o conteúdo da tab "Rastreamento". A tab "Por Atividade" (que mostra materiais do `schedule_tasks`) permanece.
 
 ### Arquivos alterados
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | `source_proposal_id` + `cotacao_importada` em projects |
-| `src/hooks/useContracts.ts` | Preencher `source_proposal_id` no insert do projeto |
-| `src/components/projects/ProjectScenariosTab.tsx` | Banner de importação + referência de valor contratado |
+| Migration SQL | `activity_id`, `calculated_quantity`, `adjusted_quantity` em material_tracking |
+| `src/hooks/useMaterialTracking.ts` | Adicionar `recalculateFromActivities` mutation |
+| `src/components/projects/ProjectMaterialsTab.tsx` | Reestruturar tab Rastreamento em 2 seções (por atividade + manuais) |
 
-Nenhuma outra aba, rota ou hook alterado.
+Nenhuma rota, hook ou componente adicional necessário. O `MaterialCalcByActivitiesDialog` existente pode ser mantido como alternativa ou removido (redundante com o novo fluxo).
 
