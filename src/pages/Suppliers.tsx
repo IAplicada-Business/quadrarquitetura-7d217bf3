@@ -26,6 +26,7 @@ export default function Suppliers() {
   const [editing, setEditing] = useState<any>(null);
   const [searchTerm, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
 
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ["suppliers"],
