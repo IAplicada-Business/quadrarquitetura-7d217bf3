@@ -1,16 +1,20 @@
 import { useState, useMemo } from "react";
-import { Plus, Sparkles, GripVertical, Pencil, Trash2, Link2, Users, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Sparkles, GripVertical, Pencil, Trash2, Link2, Users, ChevronDown, ChevronRight, Wand2, Check, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useProjectActivities, ProjectActivity } from "@/hooks/useProjectActivities";
 import { ActivityForm } from "./ActivityForm";
 import { GenerateActivitiesDialog } from "./GenerateActivitiesDialog";
 import { SupplierScopeDialog } from "./SupplierScopeDialog";
 import { MultiSelectFilter } from "@/components/construction/MultiSelectFilter";
 import { getDisciplineColor } from "@/lib/disciplineColors";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface ProjectScopeTabProps {
   projectId: string;
@@ -125,6 +129,10 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
   const [disciplineFilter, setDisciplineFilter] = useState<string[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [sequenceDialogOpen, setSequenceDialogOpen] = useState(false);
+  const [sequenceLoading, setSequenceLoading] = useState(false);
+  const [sequenceSuggestions, setSequenceSuggestions] = useState<any[]>([]);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
 
   const allDisciplines = useMemo(() => {
     const set = new Set<string>();
@@ -194,6 +202,50 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
     allActivities: activities,
   };
 
+  const handleSuggestSequence = async () => {
+    if (activities.length < 2) { toast.error("Adicione pelo menos 2 atividades"); return; }
+    setSequenceLoading(true);
+    setSequenceDialogOpen(true);
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/project-ai-assistant`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          action: "sequence",
+          data: { activities: activities.map(a => ({ id: a.id, name: a.name, discipline: a.discipline, depends_on: a.depends_on })) },
+        }),
+      });
+      if (!resp.ok) throw new Error("Erro ao gerar sugestão");
+      const result = await resp.json();
+      setSequenceSuggestions(result.suggestions || []);
+      setSelectedSuggestions(new Set((result.suggestions || []).map((s: any) => s.activity_id)));
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao sugerir sequenciamento");
+      setSequenceDialogOpen(false);
+    } finally {
+      setSequenceLoading(false);
+    }
+  };
+
+  const handleApplySequence = async () => {
+    for (const s of sequenceSuggestions) {
+      if (!selectedSuggestions.has(s.activity_id)) continue;
+      const updateData: any = { id: s.activity_id, position: s.suggested_position };
+      if (s.depends_on_activity_id) {
+        updateData.depends_on = [s.depends_on_activity_id];
+      }
+      update.mutate(updateData);
+    }
+    toast.success("Sequenciamento aplicado com sucesso");
+    setSequenceDialogOpen(false);
+    setSequenceSuggestions([]);
+  };
+
   let globalIndex = 0;
 
   return (
@@ -218,6 +270,9 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
           </div>
           <Button variant="outline" size="sm" onClick={() => setSupplierDialogOpen(true)}>
             <Users className="h-4 w-4 mr-1" /> Escopo Fornecedor
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleSuggestSequence} disabled={sequenceLoading}>
+            <Wand2 className="h-4 w-4 mr-1" /> Sugerir Sequenciamento
           </Button>
           <Button variant="outline" size="sm" onClick={() => setAiDialogOpen(true)}>
             <Sparkles className="h-4 w-4 mr-1" /> Gerar com IA
@@ -307,6 +362,61 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
         projectId={projectId}
         activities={activities}
       />
+
+      {/* Sequence Suggestion Dialog */}
+      <Dialog open={sequenceDialogOpen} onOpenChange={setSequenceDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Sugestão de Sequenciamento</DialogTitle>
+          </DialogHeader>
+          {sequenceLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Analisando dependências técnicas...</p>
+            </div>
+          ) : sequenceSuggestions.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">Nenhuma sugestão gerada.</p>
+          ) : (
+            <>
+              <div className="border rounded-lg divide-y max-h-[50vh] overflow-y-auto">
+                {sequenceSuggestions.map((s: any) => (
+                  <div key={s.activity_id} className="flex items-start gap-3 px-3 py-2.5 text-sm">
+                    <Checkbox
+                      checked={selectedSuggestions.has(s.activity_id)}
+                      onCheckedChange={(checked) => {
+                        setSelectedSuggestions(prev => {
+                          const next = new Set(prev);
+                          checked ? next.add(s.activity_id) : next.delete(s.activity_id);
+                          return next;
+                        });
+                      }}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-[10px] px-1.5">{s.suggested_position}</Badge>
+                        <span className="font-medium truncate">{s.activity_name}</span>
+                      </div>
+                      {s.depends_on_activity_name && (
+                        <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                          <Link2 className="h-3 w-3" /> Após: {s.depends_on_activity_name}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-0.5">{s.reason}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setSequenceDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={handleApplySequence} disabled={selectedSuggestions.size === 0}>
+                  <Check className="h-4 w-4 mr-1" /> Aplicar Selecionados ({selectedSuggestions.size})
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

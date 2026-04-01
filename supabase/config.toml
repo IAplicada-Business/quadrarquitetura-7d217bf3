@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.search-prices-bh]
 verify_jwt = false
+
+[functions.project-ai-assistant]
+verify_jwt = false

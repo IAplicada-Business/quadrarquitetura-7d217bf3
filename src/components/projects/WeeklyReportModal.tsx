@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,18 +21,28 @@ interface Props {
     photos?: File[];
   }) => void;
   isPending: boolean;
+  prefill?: { summary: string; next_steps: string; client_pending?: string };
 }
 
-export function WeeklyReportModal({ open, onOpenChange, avgProgress, onSubmit, isPending }: Props) {
+export function WeeklyReportModal({ open, onOpenChange, avgProgress, onSubmit, isPending, prefill }: Props) {
   const today = new Date();
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
-  const [summary, setSummary] = useState("");
-  const [nextSteps, setNextSteps] = useState("");
+  const [summary, setSummary] = useState(prefill?.summary || "");
+  const [nextSteps, setNextSteps] = useState(prefill?.next_steps || "");
   const [completionPercent, setCompletionPercent] = useState(avgProgress);
-  const [clientPending, setClientPending] = useState("");
+  const [clientPending, setClientPending] = useState(prefill?.client_pending || "");
   const [photos, setPhotos] = useState<File[]>([]);
+
+  // Update fields when prefill changes
+  useEffect(() => {
+    if (prefill) {
+      setSummary(prefill.summary || "");
+      setNextSteps(prefill.next_steps || "");
+      setClientPending(prefill.client_pending || "");
+    }
+  }, [prefill]);
 
   const weekLabel = useMemo(
     () =>

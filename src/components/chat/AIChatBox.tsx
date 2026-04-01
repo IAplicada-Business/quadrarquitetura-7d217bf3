@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { MessageCircle, X, Send, Plus, History, Trash2, Square } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { useAIChat } from "@/hooks/useAIChat";
+import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-const PREDEFINED_QUESTIONS = [
+const DEFAULT_QUESTIONS = [
   "Quais são meus projetos ativos?",
   "Qual o status financeiro geral?",
   "Quais leads estão pendentes?",
@@ -13,12 +14,58 @@ const PREDEFINED_QUESTIONS = [
   "Resumo das compras pendentes",
 ];
 
+const PROJECT_QUESTIONS = [
+  "Qual o progresso deste projeto?",
+  "Quais atividades estão atrasadas?",
+  "Resumo financeiro deste projeto",
+  "Quais são as próximas etapas?",
+  "Há pendências com fornecedores?",
+];
+
+const LEADS_QUESTIONS = [
+  "Quais leads preciso acompanhar?",
+  "Resumo das propostas enviadas",
+  "Qual a taxa de conversão deste mês?",
+  "Leads sem follow-up há mais de 7 dias",
+];
+
+function getContextFromRoute(pathname: string): {
+  questions: string[];
+  contextPayload: { route: string; project_id?: string; lead_id?: string };
+} {
+  const projectMatch = pathname.match(/^\/projects\/([a-f0-9-]+)/);
+  if (projectMatch) {
+    return {
+      questions: PROJECT_QUESTIONS,
+      contextPayload: { route: pathname, project_id: projectMatch[1] },
+    };
+  }
+
+  if (pathname.startsWith("/leads")) {
+    return {
+      questions: LEADS_QUESTIONS,
+      contextPayload: { route: pathname },
+    };
+  }
+
+  return {
+    questions: DEFAULT_QUESTIONS,
+    contextPayload: { route: pathname },
+  };
+}
+
 export function AIChatBox() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const location = useLocation();
+
+  const { questions, contextPayload } = useMemo(
+    () => getContextFromRoute(location.pathname),
+    [location.pathname]
+  );
 
   const {
     messages,
@@ -46,12 +93,12 @@ export function AIChatBox() {
 
   const handleSend = () => {
     if (!input.trim() || isStreaming) return;
-    sendMessage(input);
+    sendMessage(input, contextPayload);
     setInput("");
   };
 
   const handleQuestionClick = (q: string) => {
-    sendMessage(q);
+    sendMessage(q, contextPayload);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -180,7 +227,7 @@ export function AIChatBox() {
                     </p>
                   </div>
                   <div className="space-y-2">
-                    {PREDEFINED_QUESTIONS.map((q) => (
+                    {questions.map((q) => (
                       <button
                         key={q}
                         onClick={() => handleQuestionClick(q)}

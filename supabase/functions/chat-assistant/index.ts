@@ -34,7 +34,7 @@ serve(async (req) => {
     const userId = claimsData.claims.sub;
 
     // Parse body
-    const { message, conversation_id, history } = await req.json();
+    const { message, conversation_id, history, context } = await req.json();
 
     // Query context data using service role
     const admin = createClient(supabaseUrl, supabaseServiceKey);
@@ -117,6 +117,70 @@ ${suppliers.slice(0, 10).map((s: any) => `- ${s.name} | Categoria: ${s.category 
 ${voiceTasks.slice(0, 10).map((t: any) => `- ${t.title} | Status: ${t.status} | Responsável: ${t.responsible || "N/A"} | Tipo: ${t.task_type} | Prioridade: ${t.priority}`).join("\n")}
 `.trim();
 
+    // Build project-specific context if available
+    let projectContextBlock = "";
+    if (context?.project_id) {
+      const [projRes, actRes, payRes, scenRes] = await Promise.all([
+        admin.from("projects").select("id, name, project_number, status, client_budget, estimated_budget, real_budget, start_date, expected_end_date, client_id, area_sqm").eq("id", context.project_id).single(),
+        admin.from("project_activities").select("id, name, discipline, status, progress_percent, start_date, end_date, duration_days, depends_on").eq("project_id", context.project_id).order("position", { ascending: true }),
+        admin.from("payments").select("id, description, value, status, due_date, supplier_name").eq("project_id", context.project_id),
+        admin.from("scenarios").select("id, name, is_approved, total_value").eq("project_id", context.project_id),
+      ]);
+
+      if (projRes.data) {
+        const p = projRes.data;
+        const acts = actRes.data || [];
+        const pays = payRes.data || [];
+        const scens = scenRes.data || [];
+        const totalPaidProj = pays.filter((x: any) => x.status === "pago").reduce((s: number, x: any) => s + Number(x.value || 0), 0);
+        const totalPendingProj = pays.filter((x: any) => x.status === "pendente").reduce((s: number, x: any) => s + Number(x.value || 0), 0);
+        const pendingActs = acts.filter((a: any) => a.status === "pendente" || a.status === "em_andamento");
+        const approvedScen = scens.find((s: any) => s.is_approved);
+
+        // Get client name if available
+        let clientName = "";
+        if (p.client_id) {
+          const clientRes = await admin.from("clients").select("name").eq("id", p.client_id).single();
+          clientName = clientRes.data?.name || "";
+        }
+
+        projectContextBlock = `
+## CONTEXTO DO PROJETO ATUAL (o usuário está visualizando este projeto)
+- Projeto: ${p.project_number || ""} — ${p.name}
+- Cliente: ${clientName || "Não definido"}
+- Status: ${p.status} | Área: ${p.area_sqm || "N/A"} m²
+- Orçamento cliente: R$${p.client_budget || "N/A"} | Estimado: R$${p.estimated_budget || "N/A"} | Real: R$${p.real_budget || "N/A"}
+- Cenário aprovado: ${approvedScen ? `${approvedScen.name} (R$${approvedScen.total_value})` : "Nenhum"}
+- Total pago neste projeto: R$${totalPaidProj.toLocaleString("pt-BR")}
+- Total pendente neste projeto: R$${totalPendingProj.toLocaleString("pt-BR")}
+- Atividades (${acts.length} total, ${pendingActs.length} pendentes):
+${acts.map((a: any) => `  • ${a.name} | ${a.discipline || "-"} | ${a.status} | ${a.progress_percent || 0}%`).join("\n")}
+
+Responda com foco neste projeto quando a pergunta for sobre "este projeto", "a obra", etc.
+`;
+      }
+    }
+
+    // Build lead-specific context if available
+    let leadContextBlock = "";
+    if (context?.lead_id) {
+      const [leadRes, proposalRes] = await Promise.all([
+        admin.from("leads").select("*").eq("id", context.lead_id).single(),
+        admin.from("proposals").select("id, title, status, value, final_value, sent_at").eq("lead_id", context.lead_id),
+      ]);
+      if (leadRes.data) {
+        const l = leadRes.data;
+        const props = proposalRes.data || [];
+        leadContextBlock = `
+## CONTEXTO DO LEAD ATUAL
+- Lead: ${l.name} | Status: ${l.status} | Tel: ${l.phone}
+- Tipo: ${l.project_type} | Origem: ${l.origin}
+- Propostas (${props.length}):
+${props.map((p: any) => `  • ${p.title || "Sem título"} | ${p.status} | R$${p.final_value || p.value || "N/A"}`).join("\n")}
+`;
+      }
+    }
+
     const systemPrompt = `Você é o assistente inteligente do sistema de gestão de arquitetura e construção Quadra Arquitetura. Você tem acesso aos dados reais da empresa do usuário.
 
 Diretrizes de comunicação:
@@ -138,6 +202,8 @@ O sistema possui as seguintes seções:
 - Obra (Acompanhamento, Tarefas, Fornecedores, Tarefas de Voz, Documentos, Relatórios)
 - Administrativo (Configurações, Usuários)
 
+${projectContextBlock}
+${leadContextBlock}
 ${contextBlock}`;
 
     const messagesForAI = [

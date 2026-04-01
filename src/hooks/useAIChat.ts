@@ -68,7 +68,7 @@ export function useAIChat() {
     });
   }, [user]);
 
-  const sendMessage = useCallback(async (input: string) => {
+  const sendMessage = useCallback(async (input: string, contextPayload?: { route?: string; project_id?: string; lead_id?: string }) => {
     if (!user || !input.trim() || isStreaming) return;
 
     const userMsg: ChatMessage = { role: "user", content: input.trim() };
@@ -108,7 +108,7 @@ export function useAIChat() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
-        body: JSON.stringify({ message: input.trim(), conversation_id: convId, history }),
+        body: JSON.stringify({ message: input.trim(), conversation_id: convId, history, context: contextPayload }),
         signal: controller.signal,
       });
 

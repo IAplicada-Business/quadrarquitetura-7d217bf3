@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Plus, Trash2, Check, DollarSign } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Plus, Trash2, Check, DollarSign, BarChart3, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useScenarios, Scenario } from "@/hooks/useScenarios";
 import { useProjectDetail } from "@/hooks/useProjectDetail";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 function formatCurrency(v: number | null | undefined) {
   if (v == null) return "—";
@@ -45,6 +48,9 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
   const [newItem, setNewItem] = useState({ discipline: "", description: "", estimated_value: "" });
   const [budgetInput, setBudgetInput] = useState((project as any)?.client_budget?.toString() || "");
   const [confirmApproveScenario, setConfirmApproveScenario] = useState<Scenario | null>(null);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<{ analysis_text: string; items: any[] } | null>(null);
 
   const handleCreateScenario = () => {
     if (!newScenarioName.trim()) return;
@@ -87,6 +93,40 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
 
   const clientBudget = (project as any)?.client_budget as number | null;
   const projectData = project as any;
+
+  const handleAnalyzeBudget = async () => {
+    const approvedScenario = scenarios.find(s => s.is_approved);
+    if (!approvedScenario) { toast.error("Aprove um cenário antes de analisar"); return; }
+    setAnalysisLoading(true);
+    setAnalysisOpen(true);
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const { data: priceData } = await supabase.from("price_research").select("*").eq("project_id", projectId);
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/project-ai-assistant`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          action: "analyze_budget",
+          data: {
+            scenario_items: approvedScenario.scenario_items || [],
+            price_research: priceData || [],
+          },
+        }),
+      });
+      if (!resp.ok) throw new Error("Erro ao analisar orçamento");
+      const result = await resp.json();
+      setAnalysisResult(result);
+    } catch (err: any) {
+      toast.error(err.message || "Erro na análise");
+      setAnalysisOpen(false);
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
 
   if (isLoading) {
     return <div className="flex justify-center py-12"><div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" /></div>;
@@ -141,7 +181,7 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
         </CardContent>
       </Card>
 
-      {/* Create Scenario */}
+      {/* Create Scenario + Analyze */}
       <div className="flex items-center gap-3">
         <Input
           placeholder="Nome da cotação (ex: Cotação A)"
@@ -152,6 +192,9 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
         />
         <Button onClick={handleCreateScenario} disabled={!newScenarioName.trim() || createScenario.isPending}>
           <Plus className="h-4 w-4 mr-1" /> Nova Cotação
+        </Button>
+        <Button variant="outline" onClick={handleAnalyzeBudget} disabled={analysisLoading}>
+          <BarChart3 className="h-4 w-4 mr-1" /> Analisar Orçamento
         </Button>
       </div>
 
@@ -277,6 +320,47 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Budget Analysis Dialog */}
+      <Dialog open={analysisOpen} onOpenChange={setAnalysisOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Análise de Orçamento</DialogTitle>
+          </DialogHeader>
+          {analysisLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Comparando com preços de mercado...</p>
+            </div>
+          ) : analysisResult ? (
+            <div className="space-y-4">
+              <div className="text-sm whitespace-pre-wrap">{analysisResult.analysis_text}</div>
+              {analysisResult.items.length > 0 && (
+                <div className="border rounded-lg divide-y">
+                  {analysisResult.items.map((item: any, i: number) => (
+                    <div key={i} className="flex items-center gap-3 px-3 py-2 text-sm">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] px-1.5 shrink-0",
+                          item.status === "above" ? "border-destructive text-destructive" :
+                          item.status === "below" ? "border-green-600 text-green-600" :
+                          "border-muted-foreground text-muted-foreground"
+                        )}
+                      >
+                        {item.status === "above" ? "Acima" : item.status === "below" ? "Economia" : "OK"}
+                      </Badge>
+                      <span className="flex-1">{item.name}</span>
+                      {item.current_price != null && <span className="text-xs">{formatCurrency(item.current_price)}</span>}
+                      {item.note && <span className="text-xs text-muted-foreground">{item.note}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

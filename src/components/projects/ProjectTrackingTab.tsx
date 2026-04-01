@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Trash2, Cloud, Sun, CloudRain, Snowflake, CalendarDays, Users, FileText, BarChart3 } from "lucide-react";
+import { Plus, Trash2, Cloud, Sun, CloudRain, Snowflake, CalendarDays, Users, FileText, BarChart3, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,8 +13,10 @@ import { useScopeItems } from "@/hooks/useScopeItems";
 import { useScheduleTasks } from "@/hooks/useScheduleTasks";
 import { useWeeklyReports } from "@/hooks/useWeeklyReports";
 import { WeeklyReportModal } from "./WeeklyReportModal";
-import { format } from "date-fns";
+import { format, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const weatherOptions = [
   { value: "ensolarado", label: "Ensolarado", icon: Sun },
@@ -31,6 +33,8 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
   const [formOpen, setFormOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState("all");
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [prefillData, setPrefillData] = useState<{ summary: string; next_steps: string; client_pending?: string } | null>(null);
 
   const avgProgress = useMemo(() => {
     const tasks = scheduleTasks.filter((t: any) => t.progress_percentage != null);
@@ -103,6 +107,53 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
     ? Math.round(entries.reduce((s, e) => s + (e.workers_count || 0), 0) / entries.filter(e => e.workers_count).length) || 0
     : 0;
 
+  const handleGenerateAISummary = async () => {
+    const today = new Date();
+    const ws = startOfWeek(today, { weekStartsOn: 1 });
+    const we = endOfWeek(today, { weekStartsOn: 1 });
+    const weekEntries = entries.filter(e => {
+      const d = new Date(e.entry_date);
+      return d >= ws && d <= we;
+    });
+    if (weekEntries.length === 0) { toast.error("Nenhum registro nesta semana para gerar resumo"); return; }
+    setAiSummaryLoading(true);
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/project-ai-assistant`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          action: "weekly_summary",
+          data: {
+            diary_entries: weekEntries.map(e => ({
+              date: e.entry_date,
+              weather: e.weather,
+              workers: e.workers_count,
+              summary: e.summary,
+              observations: e.observations,
+              disciplines: e.disciplines_active,
+            })),
+            week_start: format(ws, "dd/MM/yyyy"),
+            week_end: format(we, "dd/MM/yyyy"),
+          },
+        }),
+      });
+      if (!resp.ok) throw new Error("Erro ao gerar resumo");
+      const result = await resp.json();
+      setPrefillData(result);
+      setReportOpen(true);
+      toast.success("Resumo gerado! Revise e confirme.");
+    } catch (err: any) {
+      toast.error(err.message || "Erro na geração do resumo");
+    } finally {
+      setAiSummaryLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Metrics */}
@@ -137,7 +188,11 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
           </SelectContent>
         </Select>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => setReportOpen(true)}>
+          <Button size="sm" variant="outline" onClick={handleGenerateAISummary} disabled={aiSummaryLoading}>
+            {aiSummaryLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+            Gerar Resumo com IA
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => { setPrefillData(null); setReportOpen(true); }}>
             <BarChart3 className="h-4 w-4 mr-1" /> Gerar Relatório Semanal
           </Button>
           <Button size="sm" onClick={() => { resetForm(); setFormOpen(true); }}>
@@ -268,8 +323,9 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
         onOpenChange={setReportOpen}
         avgProgress={avgProgress}
         isPending={createReport.isPending}
+        prefill={prefillData || undefined}
         onSubmit={(data) => {
-          createReport.mutate(data, { onSuccess: () => setReportOpen(false) });
+          createReport.mutate(data, { onSuccess: () => { setReportOpen(false); setPrefillData(null); } });
         }}
       />
     </div>
