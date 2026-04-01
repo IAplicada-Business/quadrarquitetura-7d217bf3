@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { addDays, differenceInDays } from "date-fns";
 
 export interface ProjectActivity {
   id: string;
@@ -21,10 +22,119 @@ export interface ProjectActivity {
   created_at: string;
 }
 
+export interface CascadeChange {
+  id: string;
+  name: string;
+  oldStart: string;
+  oldEnd: string;
+  newStart: string;
+  newEnd: string;
+}
+
+export function computeCascade(changedId: string, newEndDate: string, activities: ProjectActivity[]): CascadeChange[] {
+  const changes: CascadeChange[] = [];
+  const visited = new Set<string>();
+
+  function propagate(actId: string, endDate: string) {
+    const dependents = activities.filter(a => a.depends_on?.includes(actId));
+    for (const dep of dependents) {
+      if (visited.has(dep.id)) continue;
+      visited.add(dep.id);
+      if (!dep.start_date || !dep.end_date) continue;
+      const duration = differenceInDays(new Date(dep.end_date), new Date(dep.start_date));
+      const newStart = addDays(new Date(endDate), 1).toISOString().split("T")[0];
+      const newEnd = addDays(new Date(newStart), duration).toISOString().split("T")[0];
+      changes.push({ id: dep.id, name: dep.name, oldStart: dep.start_date, oldEnd: dep.end_date, newStart, newEnd });
+      propagate(dep.id, newEnd);
+    }
+  }
+  propagate(changedId, newEndDate);
+  return changes;
+}
+
+export function computeRecalculateAll(activities: ProjectActivity[]): CascadeChange[] {
+  const changes: CascadeChange[] = [];
+  const actMap = new Map<string, ProjectActivity>();
+  activities.forEach(a => actMap.set(a.id, a));
+
+  // Topological sort
+  const inDegree = new Map<string, number>();
+  const dependentsOf = new Map<string, string[]>();
+  activities.forEach(a => {
+    const deps = (a.depends_on || []).filter(d => actMap.has(d));
+    inDegree.set(a.id, deps.length);
+    deps.forEach(d => {
+      const arr = dependentsOf.get(d) || [];
+      arr.push(a.id);
+      dependentsOf.set(d, arr);
+    });
+  });
+
+  const queue: string[] = [];
+  inDegree.forEach((deg, id) => { if (deg === 0) queue.push(id); });
+
+  const topoOrder: string[] = [];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    topoOrder.push(id);
+    (dependentsOf.get(id) || []).forEach(depId => {
+      const nd = (inDegree.get(depId) || 1) - 1;
+      inDegree.set(depId, nd);
+      if (nd === 0) queue.push(depId);
+    });
+  }
+  // Include remaining (cycles)
+  activities.forEach(a => { if (!topoOrder.includes(a.id)) topoOrder.push(a.id); });
+
+  // Compute new dates based on predecessors
+  const newEndMap = new Map<string, string>();
+
+  for (const id of topoOrder) {
+    const act = actMap.get(id)!;
+    if (!act.start_date || !act.duration_days) {
+      if (act.end_date) newEndMap.set(id, act.end_date);
+      continue;
+    }
+
+    const deps = (act.depends_on || []).filter(d => actMap.has(d));
+    let newStart = act.start_date;
+
+    if (deps.length > 0) {
+      const latestPredEnd = deps.reduce((latest, d) => {
+        const predEnd = newEndMap.get(d);
+        if (!predEnd) return latest;
+        return predEnd > latest ? predEnd : latest;
+      }, "");
+
+      if (latestPredEnd) {
+        const candidateStart = addDays(new Date(latestPredEnd), 1).toISOString().split("T")[0];
+        if (candidateStart > newStart) {
+          newStart = candidateStart;
+        }
+      }
+    }
+
+    const newEnd = addDays(new Date(newStart), act.duration_days).toISOString().split("T")[0];
+    newEndMap.set(id, newEnd);
+
+    if (newStart !== act.start_date || newEnd !== (act.end_date || "")) {
+      changes.push({
+        id: act.id,
+        name: act.name,
+        oldStart: act.start_date,
+        oldEnd: act.end_date || act.start_date,
+        newStart,
+        newEnd,
+      });
+    }
+  }
+
+  return changes;
+}
+
 async function autoCalculateMaterials(activity: { id: string; area_m2?: number | null; discipline?: string | null; project_id: string; user_id: string }) {
   if (!activity.area_m2 || activity.area_m2 <= 0 || !activity.discipline) return;
 
-  // Fetch matching material indices
   const { data: indices } = await supabase
     .from("material_indices" as any)
     .select("*");
@@ -39,7 +149,6 @@ async function autoCalculateMaterials(activity: { id: string; area_m2?: number |
   for (const idx of matchingIndices) {
     const qty = activity.area_m2 * Number(idx.index_per_m2);
 
-    // Check if already exists
     const { data: existing } = await supabase
       .from("material_tracking")
       .select("id, source")
@@ -110,7 +219,6 @@ export function useProjectActivities(projectId: string | undefined) {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["project_activities", projectId] });
       toast({ title: "Atividade criada" });
-      // Auto-calculate materials
       autoCalculateMaterials({
         id: data.id,
         area_m2: data.area_m2,
@@ -136,7 +244,6 @@ export function useProjectActivities(projectId: string | undefined) {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["project_activities", projectId] });
       toast({ title: "Atividade atualizada" });
-      // Auto-calculate materials if area or discipline changed
       if (data.area_m2 !== undefined || data.discipline !== undefined) {
         autoCalculateMaterials({
           id: data.id,
@@ -167,5 +274,22 @@ export function useProjectActivities(projectId: string | undefined) {
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
-  return { activities: query.data ?? [], isLoading: query.isLoading, create, update, remove };
+  const batchUpdateDates = useMutation({
+    mutationFn: async (updates: { id: string; start_date: string; end_date: string }[]) => {
+      for (const u of updates) {
+        const { error } = await supabase
+          .from("project_activities" as any)
+          .update({ start_date: u.start_date, end_date: u.end_date } as any)
+          .eq("id", u.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project_activities", projectId] });
+      toast({ title: "Datas recalculadas com sucesso" });
+    },
+    onError: (e: Error) => toast({ title: "Erro ao recalcular", description: e.message, variant: "destructive" }),
+  });
+
+  return { activities: query.data ?? [], isLoading: query.isLoading, create, update, remove, batchUpdateDates };
 }
