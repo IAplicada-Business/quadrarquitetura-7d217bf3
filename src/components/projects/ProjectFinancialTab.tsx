@@ -259,6 +259,43 @@ export function ProjectFinancialTab({ projectId, projectName }: { projectId: str
         <TabsContent value="notas_nf" className="space-y-4 mt-4">
           <InvoiceNFList projectId={projectId} />
         </TabsContent>
+
+        <TabsContent value="dre" className="space-y-4 mt-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-display">Demonstrativo de Resultado (DRE)</h3>
+            <Button size="sm" variant="outline" onClick={() => exportDREPdf(dre, projectName)}>
+              <Download className="h-4 w-4 mr-1" /> Exportar DRE
+            </Button>
+          </div>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-1">
+                <DRERow label="(+) Receita Honorários" value={dre.receitaHonorarios} total={dre.receitaTotal} bold={false} />
+                <DRERow label="(+) Receita Obra" value={dre.receitaObra} total={dre.receitaTotal} bold={false} />
+                <div className="border-t border-border my-2" />
+                <DRERow label="(=) RECEITA TOTAL" value={dre.receitaTotal} total={dre.receitaTotal} bold />
+
+                <div className="h-3" />
+                <DRERow label="(−) Despesas Fornecedores" value={-dre.despesasFornecedores} total={dre.receitaTotal} bold={false} negative />
+                <DRERow label="(−) Compras" value={-dre.despesasCompras} total={dre.receitaTotal} bold={false} negative />
+                <div className="border-t border-border my-2" />
+                <DRERow label="(=) RESULTADO BRUTO" value={dre.resultadoBruto} total={dre.receitaTotal} bold />
+
+                <div className="h-3" />
+                <DRERow label={`(−) Impostos Estimados (${dre.rate}%)`} value={-dre.impostos} total={dre.receitaTotal} bold={false} negative />
+                <div className="border-t border-border my-2" />
+                <DRERow label="(=) RESULTADO LÍQUIDO" value={dre.resultadoLiquido} total={dre.receitaTotal} bold />
+
+                <div className="h-3" />
+                <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
+                  <span className="font-bold text-sm">MARGEM</span>
+                  <MarginBadge margin={dre.margem} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       <PaymentForm
