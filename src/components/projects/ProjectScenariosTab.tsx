@@ -323,6 +323,98 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
     }
   };
 
+  // Fetch project activities for batch search
+  const { data: projectActivities } = useQuery({
+    queryKey: ["project_activities_for_prices", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_activities")
+        .select("id, name, discipline, area_m2")
+        .eq("project_id", projectId)
+        .order("position");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!projectId,
+  });
+
+  const activitiesNeedingSearch = projectActivities
+    ? getActivitiesNeedingSearch(projectActivities)
+    : [];
+  const lastUpdate = getLastUpdateDate();
+
+  const handleBatchSearch = async () => {
+    if (!projectActivities || !user) return;
+    const needsSearch = projectActivities.filter((a) => activitiesNeedingSearch.includes(a.id));
+    const cachedCount = projectActivities.length - needsSearch.length;
+
+    setBatchTotal(needsSearch.length);
+    setBatchCached(cachedCount);
+    setBatchProgress(0);
+    setBatchSearching(true);
+    setBatchSearchOpen(true);
+
+    try {
+      for (const activity of needsSearch) {
+        // Fetch materials for this activity
+        const { data: materials } = await supabase
+          .from("material_tracking")
+          .select("material_name, unit, quantity_needed")
+          .eq("project_id", projectId)
+          .eq("activity_id", activity.id)
+          .eq("is_active", true);
+
+        const materialInputs = materials && materials.length > 0
+          ? materials.map((m) => ({ name: m.material_name, unit: m.unit || "un", quantity: m.quantity_needed || 1 }))
+          : [{ name: activity.name, unit: "un", quantity: 1 }];
+
+        try {
+          const { data, error } = await supabase.functions.invoke("search-prices-bh", {
+            body: { activity_name: activity.name, materials: materialInputs, city: "Belo Horizonte" },
+          });
+
+          if (!error && data?.results) {
+            const searchResults = data.results as any[];
+            const itemsToSave = searchResults
+              .filter((mr: any) => mr.results?.length > 0)
+              .map((mr: any) => ({
+                project_id: projectId,
+                activity_id: activity.id,
+                material_name: mr.material,
+                price_min: Math.min(...mr.results.map((r: any) => r.price_min).filter((p: number) => p > 0)) || null,
+                price_max: Math.max(...mr.results.map((r: any) => r.price_max).filter((p: number) => p > 0)) || null,
+                unit: mr.unit,
+                suppliers: mr.results,
+                user_id: user.id,
+              }));
+
+            if (itemsToSave.length > 0) {
+              await supabase.from("price_research" as any).insert(itemsToSave as any);
+            }
+          }
+        } catch {
+          // Continue with next activity even if one fails
+        }
+
+        setBatchProgress((prev) => prev + 1);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["price_research", projectId] });
+      toast.success(`Preços atualizados para ${needsSearch.length} atividades. ${cachedCount} já estavam em cache.`);
+    } catch (err: any) {
+      toast.error(err.message || "Erro na pesquisa em lote");
+    } finally {
+      setBatchSearching(false);
+    }
+  };
+
+  const priceStatusIcon = (status: PriceStatus) => {
+    if (status === "green") return <span className="cursor-pointer" title="Pesquisado há menos de 7 dias">🟢</span>;
+    if (status === "yellow") return <span className="cursor-pointer" title="Pesquisado entre 7 e 30 dias">🟡</span>;
+    return <span className="cursor-pointer" title="Sem pesquisa ou > 30 dias">🔴</span>;
+  };
+
   if (isLoading) {
     return <div className="flex justify-center py-12"><div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" /></div>;
   }
