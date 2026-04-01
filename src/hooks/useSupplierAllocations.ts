@@ -12,6 +12,9 @@ export interface SupplierAllocation {
   end_date: string | null;
   status: string;
   notes: string | null;
+  contracted_value: number | null;
+  final_value: number | null;
+  rating: number | null;
   suppliers?: { name: string; category: string | null };
   projects?: { name: string };
 }
