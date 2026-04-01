@@ -645,6 +645,7 @@ export default function DashboardEscritorio() {
             <p className="text-xs text-muted-foreground mt-1">Total: {fmt(computed.faturamentoTotal)}</p>
           </CardContent>
         </Card>
+      </div>
 
       {/* Gráfico Leads por Status — Últimos 6 meses */}
       <Card>
