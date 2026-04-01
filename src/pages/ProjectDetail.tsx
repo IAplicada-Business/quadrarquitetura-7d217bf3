@@ -86,7 +86,7 @@ export default function ProjectDetail() {
             <ProjectSummaryTab project={project as Record<string, unknown>} onTabChange={setActiveTab} />
           </TabsContent>
           <TabsContent value="cenarios">
-            <ProjectScenariosTab projectId={project.id} />
+            <ProjectScenariosTab projectId={project.id} onTabChange={setActiveTab} />
           </TabsContent>
           <TabsContent value="escopo">
             <ProjectScopeTab projectId={project.id} />

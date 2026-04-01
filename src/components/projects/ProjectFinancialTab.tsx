@@ -122,7 +122,12 @@ export function ProjectFinancialTab({ projectId }: { projectId: string }) {
                       <TableCell>{formatDate(p.paid_date)}</TableCell>
                       <TableCell>{p.installment_number && p.total_installments ? `${p.installment_number}/${p.total_installments}` : "—"}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={st?.className}>{st?.label || p.status}</Badge>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Badge variant="outline" className={st?.className}>{st?.label || p.status}</Badge>
+                          {p.source === "cotacao" && (
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px]">Gerado da cotação</Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">

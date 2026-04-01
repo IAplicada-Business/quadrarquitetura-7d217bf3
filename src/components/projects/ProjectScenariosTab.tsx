@@ -58,6 +58,13 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<{ analysis_text: string; items: any[] } | null>(null);
   const [importLoading, setImportLoading] = useState(false);
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+  const [approvalInstallments, setApprovalInstallments] = useState("6");
+  const [approvalStartDate, setApprovalStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [approvalInterval, setApprovalInterval] = useState<"semanal" | "quinzenal" | "mensal">("mensal");
+  const [approvalLoading, setApprovalLoading] = useState(false);
+  const [reviseDialogOpen, setReviseDialogOpen] = useState(false);
+  const [reviseLoading, setReviseLoading] = useState(false);
 
   const projectData = project as any;
   const sourceProposalId = projectData?.source_proposal_id as string | null;
