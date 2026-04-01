@@ -103,6 +103,7 @@ export function useContracts() {
           status: "contrato" as any,
           contract_id: contract.id,
           project_number: nextNumber,
+          source_proposal_id: contract.proposal_id,
         } as any)
         .select()
         .single();
