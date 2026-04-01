@@ -44,7 +44,11 @@ function fmt(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 }
 
-const formatCurrency = (v: number) => (v >= 1000 ? `R$${(v / 1000).toFixed(0)}k` : `R$${v}`);
+const yAxisFormatter = (v: number) => {
+  if (v >= 1000000) return `R$${(v / 1000000).toFixed(1)}M`;
+  if (v >= 1000) return `R$${(v / 1000).toFixed(0)}k`;
+  return `R$${v.toFixed(0)}`;
+};
 
 const finChartConfig: ChartConfig = {
   orcado: { label: "Orçado", color: AZUL.fill4 },
@@ -398,7 +402,7 @@ export default function DashboardObras() {
               <BarChart data={finChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="name" className="text-xs" />
-                <YAxis tickFormatter={(v) => formatCurrency(v)} className="text-xs" />
+                <YAxis tickFormatter={yAxisFormatter} className="text-xs" />
                 <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmt(Number(v))} />} />
                 <Bar dataKey="orcado" fill={AZUL.fill4} radius={[4, 4, 0, 0]} />
                 <Bar dataKey="gasto" fill={AZUL.fill1} radius={[4, 4, 0, 0]} />

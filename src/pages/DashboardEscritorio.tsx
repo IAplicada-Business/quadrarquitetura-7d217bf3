@@ -51,7 +51,11 @@ function fmt(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 }
 
-const formatCurrency = (v: number) => (v >= 1000 ? `R$${(v / 1000).toFixed(0)}k` : `R$${v}`);
+const yAxisFormatter = (v: number) => {
+  if (v >= 1000000) return `R$${(v / 1000000).toFixed(1)}M`;
+  if (v >= 1000) return `R$${(v / 1000).toFixed(0)}k`;
+  return `R$${v.toFixed(0)}`;
+};
 
 const receitaChartConfig: ChartConfig = {
   receita: { label: "Receita", color: ROSA.fill1 },
@@ -128,6 +132,10 @@ export default function DashboardEscritorio() {
     const ticketPrev = approvedPrevMonth.length > 0 ? approvedPrevMonth.reduce((s, p) => s + (p.price_full ?? p.final_value ?? 0), 0) / approvedPrevMonth.length : 0;
     const ticketVariation = ticketPrev > 0 ? Math.round(((ticketThis - ticketPrev) / ticketPrev) * 100) : 0;
 
+    // ── Faturamento Fechado + Aprovadas no Mês ──
+    const approvedCount = approvedThisMonth.length;
+    const faturamentoMes = approvedThisMonth.reduce((s, p) => s + (p.price_full ?? p.final_value ?? 0), 0);
+
     // ── Aguardando resposta ──
     const proposalsAwaiting = proposals.filter((p) => p.status === "enviada");
     const hasUrgent = proposalsAwaiting.some((p) => p.sent_at && differenceInDays(today, parseISO(p.sent_at)) > 7);
@@ -168,6 +176,8 @@ export default function DashboardEscritorio() {
       conversionRate,
       ticketThis,
       ticketVariation,
+      approvedCount,
+      faturamentoMes,
       proposalsAwaiting: proposalsAwaiting.length,
       hasUrgentProposal: hasUrgent,
       receitaChartData,
@@ -206,7 +216,7 @@ export default function DashboardEscritorio() {
       </div>
 
       {/* ═══ BLOCO 1 — PULSO COMERCIAL ═══ */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {/* Leads no mês */}
         <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(210, 70%, 50%)" }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -259,6 +269,30 @@ export default function DashboardEscritorio() {
           </CardContent>
         </Card>
 
+        {/* Aprovadas no Mês */}
+        <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(270, 60%, 55%)" }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Aprovadas no Mês</CardTitle>
+            <CheckCircle2 className="h-5 w-5" style={{ color: "hsl(270, 60%, 55%)" }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: "hsl(270, 45%, 35%)" }}>{computed.approvedCount}</p>
+            <p className="text-xs text-muted-foreground mt-1">propostas aprovadas</p>
+          </CardContent>
+        </Card>
+
+        {/* Faturamento Fechado */}
+        <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(152, 70%, 35%)" }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Faturamento Fechado</CardTitle>
+            <FileText className="h-5 w-5" style={{ color: "hsl(152, 70%, 35%)" }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: "hsl(152, 50%, 25%)" }}>{fmt(computed.faturamentoMes)}</p>
+            <p className="text-xs text-muted-foreground mt-1">aprovado este mês</p>
+          </CardContent>
+        </Card>
+
         {/* Aguardando resposta */}
         <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(35, 80%, 50%)" }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -291,7 +325,7 @@ export default function DashboardEscritorio() {
                 <BarChart data={computed.receitaChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="month" className="text-xs" />
-                  <YAxis tickFormatter={(v) => formatCurrency(v)} className="text-xs" />
+                  <YAxis tickFormatter={yAxisFormatter} className="text-xs" />
                   <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmt(Number(v))} />} />
                   <Bar dataKey="receita" fill={ROSA.fill1} radius={[4, 4, 0, 0]} />
                 </BarChart>
