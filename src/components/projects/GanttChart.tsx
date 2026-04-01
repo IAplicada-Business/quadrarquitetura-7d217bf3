@@ -412,7 +412,7 @@ export function GanttChart({ tasks, allTasks, onEdit, viewMode }: GanttChartProp
                               backgroundColor: barColor,
                               borderRadius: `${isStart ? "4px" : "0"} ${isEnd ? "4px" : "0"} ${isEnd ? "4px" : "0"} ${isStart ? "4px" : "0"}`,
                               opacity: barOpacity,
-                              border: isCritical ? "2.5px solid hsl(var(--destructive))" : "none",
+                              border: chainHighlight ? "2px solid hsl(var(--primary))" : isCritical ? "2.5px solid hsl(var(--destructive))" : "none",
                               boxSizing: "border-box",
                             }}
                           >
