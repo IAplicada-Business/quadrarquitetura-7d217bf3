@@ -68,7 +68,7 @@ export function useAIChat() {
     });
   }, [user]);
 
-  const sendMessage = useCallback(async (input: string) => {
+  const sendMessage = useCallback(async (input: string, contextPayload?: { route?: string; project_id?: string; lead_id?: string }) => {
     if (!user || !input.trim() || isStreaming) return;
 
     const userMsg: ChatMessage = { role: "user", content: input.trim() };
