@@ -22,17 +22,6 @@ import { useScenarios, Scenario } from "@/hooks/useScenarios";
 import { useProjectDetail } from "@/hooks/useProjectDetail";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useScenarios, Scenario } from "@/hooks/useScenarios";
-import { useProjectDetail } from "@/hooks/useProjectDetail";
 
 function formatCurrency(v: number | null | undefined) {
   if (v == null) return "—";
