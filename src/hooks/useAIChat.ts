@@ -96,7 +96,8 @@ export function useAIChat() {
       }
 
       // Save user message
-      await saveMessage(convId, "user", input.trim());
+      const ctxProjectId = contextPayload?.project_id;
+      await saveMessage(convId, "user", input.trim(), ctxProjectId);
 
       // Build history for context
       const history = messages.slice(-18).map(m => ({ role: m.role, content: m.content }));
