@@ -33,6 +33,67 @@ const paymentStatusConfig: Record<string, { label: string; className: string }> 
   atrasado: { label: "Atrasado", className: "bg-destructive/15 text-destructive border-destructive/30" },
 };
 
+function MarginBadge({ margin }: { margin: number }) {
+  const color = margin > 20 ? "bg-success/15 text-success" : margin >= 10 ? "bg-warning/15 text-warning" : "bg-destructive/15 text-destructive";
+  return <Badge variant="outline" className={`${color} text-sm font-bold`}>{margin.toFixed(1)}%</Badge>;
+}
+
+function DRERow({ label, value, total, bold, negative }: { label: string; value: number; total: number; bold: boolean; negative?: boolean }) {
+  const pct = total > 0 ? Math.abs(value / total) * 100 : 0;
+  return (
+    <div className={`flex items-center justify-between py-1.5 px-3 ${bold ? "font-bold" : ""}`}>
+      <span className="text-sm">{label}</span>
+      <div className="flex items-center gap-4">
+        <span className={`text-sm tabular-nums ${negative ? "text-destructive" : ""}`}>
+          {formatCurrency(Math.abs(value))}
+        </span>
+        <span className="text-xs text-muted-foreground w-14 text-right tabular-nums">{pct.toFixed(1)}%</span>
+      </div>
+    </div>
+  );
+}
+
+type DREData = {
+  receitaHonorarios: number; receitaObra: number; receitaTotal: number;
+  despesasFornecedores: number; despesasCompras: number; despesasTotal: number;
+  resultadoBruto: number; impostos: number; resultadoLiquido: number;
+  margem: number; rate: number;
+};
+
+function exportDREPdf(dre: DREData, projectName?: string) {
+  const doc = new jsPDF();
+  doc.setFontSize(18);
+  doc.text("Quadra Arquitetura", 20, 20);
+  doc.setFontSize(12);
+  doc.text(`DRE — ${projectName || "Projeto"}`, 20, 30);
+  doc.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")}`, 20, 38);
+  doc.setFontSize(10);
+  const lines: [string, string][] = [
+    ["(+) Receita Honorários", formatCurrency(dre.receitaHonorarios)],
+    ["(+) Receita Obra", formatCurrency(dre.receitaObra)],
+    ["(=) RECEITA TOTAL", formatCurrency(dre.receitaTotal)],
+    ["", ""],
+    ["(−) Despesas Fornecedores", formatCurrency(dre.despesasFornecedores)],
+    ["(−) Compras", formatCurrency(dre.despesasCompras)],
+    ["(=) RESULTADO BRUTO", formatCurrency(dre.resultadoBruto)],
+    ["", ""],
+    [`(−) Impostos (${dre.rate}%)`, formatCurrency(dre.impostos)],
+    ["(=) RESULTADO LÍQUIDO", formatCurrency(dre.resultadoLiquido)],
+    ["", ""],
+    ["MARGEM", `${dre.margem.toFixed(1)}%`],
+  ];
+  let y = 50;
+  for (const [label, val] of lines) {
+    if (!label) { y += 4; continue; }
+    const isBold = label.startsWith("(=)") || label === "MARGEM";
+    doc.setFont("helvetica", isBold ? "bold" : "normal");
+    doc.text(label, 20, y);
+    doc.text(val, 190, y, { align: "right" });
+    y += 7;
+  }
+  doc.save(`DRE_${(projectName || "projeto").replace(/\s+/g, "_")}.pdf`);
+}
+
 export function ProjectFinancialTab({ projectId, projectName }: { projectId: string; projectName?: string }) {
   const { user } = useAuth();
   const payments = useProjectPayments(projectId);
