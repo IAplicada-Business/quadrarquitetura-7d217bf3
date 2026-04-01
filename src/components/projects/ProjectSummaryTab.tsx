@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { format } from "date-fns";
+import { format, subDays, isAfter } from "date-fns";
+import { ProjectOnboardingGuide } from "./ProjectOnboardingGuide";
+import { useProjectActivities } from "@/hooks/useProjectActivities";
 import { ptBR } from "date-fns/locale";
 import { statusLabels } from "@/lib/projectConstants";
 import { Button } from "@/components/ui/button";
@@ -36,9 +38,18 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
   const { updateProject } = useProjectDetail(projectId);
   const { items: tasks } = useScheduleTasks(projectId);
   const { items: payments } = useProjectPayments(projectId);
+  const { activities } = useProjectActivities(projectId);
   const { activeToken, isLoading: tokenLoading, createToken, deactivateToken, isCreating } = useClientPortalToken(projectId);
   const [portalDialogOpen, setPortalDialogOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Onboarding guide criteria
+  const isNewProject =
+    project.onboarding_dismissed !== true &&
+    activities.length === 0 &&
+    project.cotacao_aprovada !== true &&
+    isAfter(new Date(project.created_at as string), subDays(new Date(), 7));
+  const showOnboarding = project.onboarding_dismissed !== true && isNewProject;
 
   const idealBudget = (project.ideal_budget as number) || 0;
   const contractedBudget = (project.estimated_budget as number) || 0;
@@ -58,6 +69,14 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Onboarding Guide */}
+      {showOnboarding && (
+        <ProjectOnboardingGuide
+          project={project}
+          onTabChange={onTabChange}
+          onDismiss={() => updateProject.mutate({ onboarding_dismissed: true })}
+        />
+      )}
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-primary/5 border-primary/20">

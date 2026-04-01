@@ -1,0 +1,1 @@
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS onboarding_dismissed boolean DEFAULT false;
