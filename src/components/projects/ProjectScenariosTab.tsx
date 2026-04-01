@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { PriceSearchDialog } from "@/components/projects/PriceSearchDialog";
+import { usePriceResearch, PriceStatus } from "@/hooks/usePriceResearch";
 import {
   AlertDialog,
   AlertDialogAction,
