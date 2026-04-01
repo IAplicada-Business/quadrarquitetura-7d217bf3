@@ -132,6 +132,10 @@ export default function DashboardEscritorio() {
     const ticketPrev = approvedPrevMonth.length > 0 ? approvedPrevMonth.reduce((s, p) => s + (p.price_full ?? p.final_value ?? 0), 0) / approvedPrevMonth.length : 0;
     const ticketVariation = ticketPrev > 0 ? Math.round(((ticketThis - ticketPrev) / ticketPrev) * 100) : 0;
 
+    // ── Faturamento Fechado + Aprovadas no Mês ──
+    const approvedCount = approvedThisMonth.length;
+    const faturamentoMes = approvedThisMonth.reduce((s, p) => s + (p.price_full ?? p.final_value ?? 0), 0);
+
     // ── Aguardando resposta ──
     const proposalsAwaiting = proposals.filter((p) => p.status === "enviada");
     const hasUrgent = proposalsAwaiting.some((p) => p.sent_at && differenceInDays(today, parseISO(p.sent_at)) > 7);
