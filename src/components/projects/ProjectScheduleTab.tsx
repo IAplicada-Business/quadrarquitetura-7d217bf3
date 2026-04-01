@@ -179,8 +179,28 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   }, [items]);
 
   const handleEdit = (task: any) => {
-    setEditing(task as Record<string, unknown>);
-    setFormOpen(true);
+    if (useActivitiesSource) {
+      const act = activities.find(a => a.id === task.id);
+      setEditingActivity(act || null);
+      setActivityFormOpen(true);
+    } else {
+      setEditing(task as Record<string, unknown>);
+      setFormOpen(true);
+    }
+  };
+
+  const handleRecalculateAll = () => {
+    const changes = computeRecalculateAll(activities);
+    if (changes.length === 0) {
+      toast({ title: "Nenhuma alteração necessária. Todas as datas estão consistentes." });
+      return;
+    }
+    setRecalcChanges(changes);
+  };
+
+  const handleRecalcConfirm = () => {
+    batchUpdateDates.mutate(recalcChanges.map(c => ({ id: c.id, start_date: c.newStart, end_date: c.newEnd })));
+    setRecalcChanges([]);
   };
 
   const handleImportFromScope = async () => {
