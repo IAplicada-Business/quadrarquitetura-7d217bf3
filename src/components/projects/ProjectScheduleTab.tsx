@@ -463,6 +463,34 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
         isLoading={create.isPending || update.isPending}
         scopeItems={scopeItems.filter((s) => !s.parent_id).map((s) => ({ id: s.id, discipline: s.discipline }))}
       />
+
+      <ActivityForm
+        open={activityFormOpen}
+        onOpenChange={setActivityFormOpen}
+        onSubmit={(data) => {
+          if (editingActivity?.id) {
+            updateActivity.mutate({ id: editingActivity.id, ...data });
+          } else {
+            createActivity.mutate(data);
+          }
+          setEditingActivity(null);
+        }}
+        onCascade={(updates) => {
+          batchUpdateDates.mutate(updates);
+        }}
+        initialData={editingActivity}
+        allActivities={activities}
+        isLoading={createActivity.isPending || updateActivity.isPending}
+      />
+
+      <CascadePreviewDialog
+        open={recalcChanges.length > 0}
+        onOpenChange={(open) => { if (!open) setRecalcChanges([]); }}
+        changes={recalcChanges}
+        onConfirm={handleRecalcConfirm}
+        isLoading={batchUpdateDates.isPending}
+        title="Recalcular todo o cronograma"
+      />
     </div>
   );
 }
