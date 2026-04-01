@@ -826,6 +826,46 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Batch Price Search Progress Modal */}
+      <Dialog open={batchSearchOpen} onOpenChange={(open) => { if (!batchSearching) setBatchSearchOpen(open); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pesquisa de Preços em Lote</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <Progress value={batchTotal > 0 ? (batchProgress / batchTotal) * 100 : 0} className="h-3" />
+            <p className="text-sm text-center">
+              {batchSearching
+                ? `Pesquisando preços: ${batchProgress} de ${batchTotal} atividades...`
+                : `Concluído: ${batchTotal} atividades pesquisadas.`}
+            </p>
+            {batchCached > 0 && (
+              <p className="text-xs text-center text-muted-foreground">
+                {batchCached} atividade(s) usando cache (pesquisadas há menos de 7 dias)
+              </p>
+            )}
+          </div>
+          {!batchSearching && (
+            <DialogFooter>
+              <Button onClick={() => setBatchSearchOpen(false)}>Fechar</Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Individual Price Search Dialog */}
+      {priceDialogActivity && (
+        <PriceSearchDialog
+          open={priceDialogOpen}
+          onOpenChange={setPriceDialogOpen}
+          activityName={priceDialogActivity.name}
+          activityId={priceDialogActivity.id}
+          projectId={projectId}
+          materials={[{ name: priceDialogActivity.name, unit: "un", quantity: 1 }]}
+          existingResearch={research.filter((r) => r.activity_id === priceDialogActivity.id)}
+        />
+      )}
     </div>
   );
 }
