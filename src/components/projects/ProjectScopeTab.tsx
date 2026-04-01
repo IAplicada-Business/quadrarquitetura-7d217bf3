@@ -1,16 +1,20 @@
 import { useState, useMemo } from "react";
-import { Plus, Sparkles, GripVertical, Pencil, Trash2, Link2, Users, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Sparkles, GripVertical, Pencil, Trash2, Link2, Users, ChevronDown, ChevronRight, Wand2, Check, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useProjectActivities, ProjectActivity } from "@/hooks/useProjectActivities";
 import { ActivityForm } from "./ActivityForm";
 import { GenerateActivitiesDialog } from "./GenerateActivitiesDialog";
 import { SupplierScopeDialog } from "./SupplierScopeDialog";
 import { MultiSelectFilter } from "@/components/construction/MultiSelectFilter";
 import { getDisciplineColor } from "@/lib/disciplineColors";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface ProjectScopeTabProps {
   projectId: string;
