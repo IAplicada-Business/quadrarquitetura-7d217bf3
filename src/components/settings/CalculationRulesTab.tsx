@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useCalculationRules, type CalculationRule } from "@/hooks/useCalculationRules";
 import { useMaterialIndices, type MaterialIndex } from "@/hooks/useMaterialIndices";
 import { Button } from "@/components/ui/button";
@@ -10,17 +10,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Calculator, Layers, Wrench } from "lucide-react";
+import { Plus, Pencil, Trash2, Calculator, Layers, Wrench, Upload } from "lucide-react";
 import { useLaborCosts, type LaborCost } from "@/hooks/useLaborCosts";
+import { toast } from "@/hooks/use-toast";
 
 const DISCIPLINE_OPTIONS = [
   "Alvenaria", "Elétrica", "Hidráulica", "Pintura", "Acabamento",
   "Demolição", "Estrutura", "Impermeabilização", "Esquadrias",
   "Automação", "Ar-condicionado", "Gesso/Forro", "Revestimento",
-  "Marcenaria", "Piso", "Outros",
+  "Marcenaria", "Piso", "Limpeza", "Outros",
 ];
 
-const UNIT_OPTIONS = ["un", "m", "m²", "m³", "kg", "litro", "pacote", "rolo", "saco"];
+const INDEX_DISCIPLINE_OPTIONS = [
+  "Alvenaria", "Elétrica", "Hidráulica", "Pintura", "Piso",
+  "Forro", "Esquadria", "Marcenaria", "Limpeza", "Outros",
+];
+
+const UNIT_OPTIONS = ["un", "m", "m²", "m³", "kg", "L", "pacote", "rolo", "saco"];
 
 interface FormState {
   discipline: string;
@@ -53,6 +59,7 @@ export default function CalculationRulesTab() {
   const [indexDialogOpen, setIndexDialogOpen] = useState(false);
   const [editingIndexId, setEditingIndexId] = useState<string | null>(null);
   const [indexForm, setIndexForm] = useState({ activity_type: "", material_name: "", unit: "un", index_per_m2: 0, notes: "" });
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   // Labor Costs state
   const { laborCosts, isLoading: laborLoading, create: createLabor, update: updateLabor, remove: removeLabor } = useLaborCosts();
@@ -94,143 +101,72 @@ export default function CalculationRulesTab() {
     updateRule.mutate({ id: rule.id, is_active: !rule.is_active });
   };
 
-  // Group by discipline
+  // CSV Import
+  const handleCsvImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const lines = text.split("\n").filter(l => l.trim());
+      // Skip header if present
+      const start = lines[0]?.toLowerCase().includes("disciplina") ? 1 : 0;
+      let count = 0;
+      for (let i = start; i < lines.length; i++) {
+        const cols = lines[i].split(/[,;]/).map(c => c.trim());
+        if (cols.length >= 4) {
+          const [discipline, material, unit, indexStr] = cols;
+          const idx = parseFloat(indexStr);
+          if (discipline && material && unit && !isNaN(idx) && idx > 0) {
+            createIndex.mutate({ activity_type: discipline, material_name: material, unit, index_per_m2: idx, notes: null });
+            count++;
+          }
+        }
+      }
+      toast({ title: `${count} índices importados do CSV` });
+    };
+    reader.readAsText(file);
+    // Reset input
+    if (csvInputRef.current) csvInputRef.current.value = "";
+  };
+
+  // Group rules by discipline
   const grouped = rules.reduce<Record<string, CalculationRule[]>>((acc, r) => {
     (acc[r.discipline] ??= []).push(r);
     return acc;
   }, {});
 
-  if (isLoading) return <p className="text-muted-foreground py-8 text-center">Carregando...</p>;
+  if (isLoading && indicesLoading) return <p className="text-muted-foreground py-8 text-center">Carregando...</p>;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-lg font-semibold font-display flex items-center gap-2">
-            <Calculator className="h-5 w-5" /> Regras de Cálculo
-          </h2>
-          <p className="text-sm text-muted-foreground">Fórmulas de referência para cálculo automático de materiais</p>
-        </div>
-        <Button size="sm" onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-1.5" /> Nova Regra
-        </Button>
-      </div>
-
-      {Object.keys(grouped).length === 0 ? (
-        <p className="text-muted-foreground text-center py-12">Nenhuma regra cadastrada. Clique em "Nova Regra" para começar.</p>
-      ) : (
-        <div className="space-y-6">
-          {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([disc, items]) => (
-            <div key={disc}>
-              <Badge variant="secondary" className="mb-2">{disc}</Badge>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Variável</TableHead>
-                    <TableHead>Fórmula</TableHead>
-                    <TableHead>Resultado</TableHead>
-                    <TableHead>Unidade</TableHead>
-                    <TableHead className="text-center">Ativo</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((rule) => (
-                    <TableRow key={rule.id} className={!rule.is_active ? "opacity-50" : ""}>
-                      <TableCell>{rule.variable_name}</TableCell>
-                      <TableCell className="font-mono text-xs">{rule.formula}</TableCell>
-                      <TableCell>{rule.result_name}</TableCell>
-                      <TableCell>{rule.unit}</TableCell>
-                      <TableCell className="text-center">
-                        <Switch checked={rule.is_active} onCheckedChange={() => handleToggle(rule)} />
-                      </TableCell>
-                      <TableCell className="text-right space-x-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(rule)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => deleteRule.mutate(rule.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Editar Regra" : "Nova Regra"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Disciplina</Label>
-              <Select value={form.discipline} onValueChange={(v) => setForm({ ...form, discipline: v })}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {DISCIPLINE_OPTIONS.map((d) => (
-                    <SelectItem key={d} value={d}>{d}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Nome da variável de entrada</Label>
-              <Input placeholder="Ex: Área da parede (m²)" value={form.variable_name} onChange={(e) => setForm({ ...form, variable_name: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Fórmula</Label>
-              <Input placeholder="Ex: m² × 25" value={form.formula} onChange={(e) => setForm({ ...form, formula: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nome do resultado</Label>
-                <Input placeholder="Ex: Tijolos" value={form.result_name} onChange={(e) => setForm({ ...form, result_name: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label>Unidade</Label>
-                <Select value={form.unit} onValueChange={(v) => setForm({ ...form, unit: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {UNIT_OPTIONS.map((u) => (
-                      <SelectItem key={u} value={u}>{u}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Textarea placeholder="Notas adicionais..." value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
-              <Label>Regra ativa</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={createRule.isPending || updateRule.isPending}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ===== ÍNDICES DE MATERIAL ===== */}
-      <div className="mt-10 pt-6 border-t">
+      {/* ===== SEÇÃO 1: ÍNDICES DE MATERIAL (topo) ===== */}
+      <div className="mb-10">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-semibold font-display flex items-center gap-2">
-              <Layers className="h-5 w-5" /> Índices de Material por m²
+              <Layers className="h-5 w-5" /> Índices de Materiais (Memória de Cálculo)
             </h2>
-            <p className="text-sm text-muted-foreground">Consumo de materiais por tipo de atividade, usado no cálculo automático da aba Materiais</p>
+            <p className="text-sm text-muted-foreground max-w-xl">
+              Estes índices são usados automaticamente para calcular quantidades de materiais ao cadastrar atividades de obra.
+              São valores globais do escritório — valem para todos os projetos.
+            </p>
           </div>
-          <Button size="sm" onClick={() => { setEditingIndexId(null); setIndexForm({ activity_type: "", material_name: "", unit: "un", index_per_m2: 0, notes: "" }); setIndexDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-1.5" /> Novo Índice
-          </Button>
+          <div className="flex gap-2">
+            <input
+              ref={csvInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleCsvImport}
+            />
+            <Button size="sm" variant="outline" onClick={() => csvInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-1.5" /> Importar CSV
+            </Button>
+            <Button size="sm" onClick={() => { setEditingIndexId(null); setIndexForm({ activity_type: "", material_name: "", unit: "un", index_per_m2: 0, notes: "" }); setIndexDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-1.5" /> Adicionar Índice
+            </Button>
+          </div>
         </div>
 
         {indicesLoading ? (
@@ -241,10 +177,11 @@ export default function CalculationRulesTab() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Tipo de Atividade</TableHead>
+                <TableHead>Disciplina</TableHead>
                 <TableHead>Material</TableHead>
                 <TableHead>Unidade</TableHead>
                 <TableHead className="text-right">Índice/m²</TableHead>
+                <TableHead>Obs</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -255,6 +192,7 @@ export default function CalculationRulesTab() {
                   <TableCell>{idx.material_name}</TableCell>
                   <TableCell>{idx.unit}</TableCell>
                   <TableCell className="text-right font-mono">{idx.index_per_m2}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{idx.notes || "—"}</TableCell>
                   <TableCell className="text-right space-x-1">
                     <Button variant="ghost" size="icon" onClick={() => {
                       setEditingIndexId(idx.id);
@@ -274,6 +212,7 @@ export default function CalculationRulesTab() {
         )}
       </div>
 
+      {/* Index Dialog */}
       <Dialog open={indexDialogOpen} onOpenChange={setIndexDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -281,8 +220,13 @@ export default function CalculationRulesTab() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Tipo de Atividade</Label>
-              <Input placeholder="Ex: alvenaria, piso, pintura" value={indexForm.activity_type} onChange={e => setIndexForm({ ...indexForm, activity_type: e.target.value })} />
+              <Label>Disciplina</Label>
+              <Select value={indexForm.activity_type} onValueChange={v => setIndexForm({ ...indexForm, activity_type: v })}>
+                <SelectTrigger><SelectValue placeholder="Selecione a disciplina" /></SelectTrigger>
+                <SelectContent>
+                  {INDEX_DISCIPLINE_OPTIONS.map(d => <SelectItem key={d} value={d.toLowerCase()}>{d}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Nome do Material</Label>
@@ -325,8 +269,8 @@ export default function CalculationRulesTab() {
         </DialogContent>
       </Dialog>
 
-      {/* ===== CUSTOS DE MÃO DE OBRA ===== */}
-      <div className="mt-10 pt-6 border-t">
+      {/* ===== SEÇÃO 2: CUSTOS DE MÃO DE OBRA ===== */}
+      <div className="pt-6 border-t mb-10">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-semibold font-display flex items-center gap-2">
@@ -390,6 +334,7 @@ export default function CalculationRulesTab() {
         )}
       </div>
 
+      {/* Labor Dialog */}
       <Dialog open={laborDialogOpen} onOpenChange={setLaborDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -444,6 +389,125 @@ export default function CalculationRulesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ===== SEÇÃO 3: REGRAS DE CÁLCULO (final) ===== */}
+      <div className="pt-6 border-t">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold font-display flex items-center gap-2">
+              <Calculator className="h-5 w-5" /> Regras de Cálculo
+            </h2>
+            <p className="text-sm text-muted-foreground">Fórmulas de referência para cálculo automático de materiais</p>
+          </div>
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="h-4 w-4 mr-1.5" /> Nova Regra
+          </Button>
+        </div>
+
+        {Object.keys(grouped).length === 0 ? (
+          <p className="text-muted-foreground text-center py-12">Nenhuma regra cadastrada. Clique em "Nova Regra" para começar.</p>
+        ) : (
+          <div className="space-y-6">
+            {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([disc, items]) => (
+              <div key={disc}>
+                <Badge variant="secondary" className="mb-2">{disc}</Badge>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Variável</TableHead>
+                      <TableHead>Fórmula</TableHead>
+                      <TableHead>Resultado</TableHead>
+                      <TableHead>Unidade</TableHead>
+                      <TableHead className="text-center">Ativo</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((rule) => (
+                      <TableRow key={rule.id} className={!rule.is_active ? "opacity-50" : ""}>
+                        <TableCell>{rule.variable_name}</TableCell>
+                        <TableCell className="font-mono text-xs">{rule.formula}</TableCell>
+                        <TableCell>{rule.result_name}</TableCell>
+                        <TableCell>{rule.unit}</TableCell>
+                        <TableCell className="text-center">
+                          <Switch checked={rule.is_active} onCheckedChange={() => handleToggle(rule)} />
+                        </TableCell>
+                        <TableCell className="text-right space-x-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(rule)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => deleteRule.mutate(rule.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Rules Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{editingId ? "Editar Regra" : "Nova Regra"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Disciplina</Label>
+                <Select value={form.discipline} onValueChange={(v) => setForm({ ...form, discipline: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {DISCIPLINE_OPTIONS.map((d) => (
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Nome da variável de entrada</Label>
+                <Input placeholder="Ex: Área da parede (m²)" value={form.variable_name} onChange={(e) => setForm({ ...form, variable_name: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Fórmula</Label>
+                <Input placeholder="Ex: m² × 25" value={form.formula} onChange={(e) => setForm({ ...form, formula: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Nome do resultado</Label>
+                  <Input placeholder="Ex: Tijolos" value={form.result_name} onChange={(e) => setForm({ ...form, result_name: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Unidade</Label>
+                  <Select value={form.unit} onValueChange={(v) => setForm({ ...form, unit: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {UNIT_OPTIONS.map((u) => (
+                        <SelectItem key={u} value={u}>{u}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Observações</Label>
+                <Textarea placeholder="Notas adicionais..." value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+              </div>
+              <div className="flex items-center gap-3">
+                <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
+                <Label>Regra ativa</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={handleSave} disabled={createRule.isPending || updateRule.isPending}>Salvar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2, Download, ExternalLink, ShoppingCart, Package, Filter, Copy, RefreshCw, RotateCcw } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, ExternalLink, ShoppingCart, Package, Filter, Copy, RefreshCw, RotateCcw, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,12 +7,10 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useMaterialCalc } from "@/hooks/useMaterialCalc";
 import { useMaterialTracking } from "@/hooks/useMaterialTracking";
 import { useProjectPurchases } from "@/hooks/useProjectPurchases";
 import { useScopeItems } from "@/hooks/useScopeItems";
 import { useProjectActivities } from "@/hooks/useProjectActivities";
-import { MaterialCalcForm } from "./MaterialCalcForm";
 import { MaterialTrackingForm } from "./MaterialTrackingForm";
 import { ProjectPurchasesTab } from "./ProjectPurchasesTab";
 import { SupplierPurchaseList } from "./SupplierPurchaseList";
@@ -22,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { getDisciplineColor } from "@/lib/disciplineColors";
 import { Input } from "@/components/ui/input";
+import { useNavigate } from "react-router-dom";
 
 function formatDate(d: string | null) {
   if (!d) return "—";
@@ -29,19 +28,17 @@ function formatDate(d: string | null) {
 }
 
 export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId: string; projectName?: string }) {
-  const calc = useMaterialCalc(projectId);
   const tracking = useMaterialTracking(projectId);
   const purchases = useProjectPurchases(projectId);
   const { items: scopeItems } = useScopeItems(projectId);
   const { activities } = useProjectActivities(projectId);
-  const [calcFormOpen, setCalcFormOpen] = useState(false);
   const [trackFormOpen, setTrackFormOpen] = useState(false);
-  const [editingCalc, setEditingCalc] = useState<Record<string, unknown> | null>(null);
   const [editingTrack, setEditingTrack] = useState<Record<string, unknown> | null>(null);
   const [supplierListOpen, setSupplierListOpen] = useState(false);
   const [filterDiscipline, setFilterDiscipline] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [shoppingListOpen, setShoppingListOpen] = useState(false);
+  const navigate = useNavigate();
 
   // Query schedule_tasks with materials
   const { data: taskMaterials = [] } = useQuery({
@@ -106,13 +103,6 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
     ? Math.round((tracking.items.filter((m: any) => (m.quantity_delivered ?? 0) >= (m.quantity_needed ?? 1)).length / totalItems) * 100)
     : 0;
 
-  const grouped = calc.items.reduce<Record<string, typeof calc.items>>((acc, item) => {
-    const cat = item.category || "Outros";
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(item);
-    return acc;
-  }, {});
-
   const handleGeneratePurchase = (item: any) => {
     purchases.create.mutate({
       name: item.material_name,
@@ -143,7 +133,6 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
         <TabsList>
           <TabsTrigger value="rastreamento">Rastreamento</TabsTrigger>
           <TabsTrigger value="atividades">Por Atividade (Cronograma)</TabsTrigger>
-          <TabsTrigger value="calculo">Memória de Cálculo</TabsTrigger>
           <TabsTrigger value="compras">Compras</TabsTrigger>
         </TabsList>
 
@@ -434,69 +423,18 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
               </div>
             )}
           </div>
-        </TabsContent>
 
-        {/* ===== MEMÓRIA DE CÁLCULO ===== */}
-        <TabsContent value="calculo" className="space-y-4 mt-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-foreground">Memória de Cálculo</h3>
-              <p className="text-sm text-muted-foreground">Cálculo de quantidades por categoria. Regras configuráveis em Configurações.</p>
-            </div>
-            <Button size="sm" onClick={() => { setEditingCalc(null); setCalcFormOpen(true); }}>
-              <Plus className="h-4 w-4 mr-1" /> Novo Item
-            </Button>
+          {/* Link to Settings */}
+          <div className="pt-4 border-t text-center">
+            <button
+              onClick={() => navigate("/admin/settings")}
+              className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
+            >
+              <Settings className="h-3 w-3" />
+              Para editar os índices de cálculo, acesse Configurações → Regras de Cálculo
+              <ExternalLink className="h-3 w-3" />
+            </button>
           </div>
-
-          {calc.isLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
-            </div>
-          ) : Object.keys(grouped).length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-              Nenhum item de cálculo cadastrado.
-            </div>
-          ) : (
-            Object.entries(grouped).map(([category, items]) => (
-              <div key={category} className="space-y-2">
-                <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
-                  <Badge variant="outline">{category}</Badge>
-                  <span className="text-muted-foreground text-xs">({items.length} itens)</span>
-                </h4>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Item</TableHead>
-                      <TableHead className="w-20">Qtd</TableHead>
-                      <TableHead className="w-16">Unid.</TableHead>
-                      <TableHead>Observações</TableHead>
-                      <TableHead className="w-24" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.item_name}</TableCell>
-                        <TableCell>{item.quantity ?? "—"}</TableCell>
-                        <TableCell>{item.unit || "—"}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs max-w-[200px] truncate">{item.notes || "—"}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingCalc(item as Record<string, unknown>); setCalcFormOpen(true); }}>
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => calc.remove.mutate(item.id)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ))
-          )}
         </TabsContent>
 
         {/* ===== POR ATIVIDADE (cronograma) ===== */}
@@ -570,18 +508,6 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
           <ProjectPurchasesTab projectId={projectId} />
         </TabsContent>
       </Tabs>
-
-      <MaterialCalcForm
-        open={calcFormOpen}
-        onOpenChange={setCalcFormOpen}
-        onSubmit={(data) => {
-          if (editingCalc) calc.update.mutate({ id: editingCalc.id as string, ...data });
-          else calc.create.mutate(data);
-          setEditingCalc(null);
-        }}
-        initialData={editingCalc}
-        isLoading={calc.create.isPending || calc.update.isPending}
-      />
 
       <MaterialTrackingForm
         open={trackFormOpen}
