@@ -1333,6 +1333,7 @@ export type Database = {
           pix_key: string | null
           project_id: string | null
           receipt_url: string | null
+          source: string | null
           status: Database["public"]["Enums"]["payment_status"] | null
           supplier_id: string | null
           supplier_name: string | null
@@ -1354,6 +1355,7 @@ export type Database = {
           pix_key?: string | null
           project_id?: string | null
           receipt_url?: string | null
+          source?: string | null
           status?: Database["public"]["Enums"]["payment_status"] | null
           supplier_id?: string | null
           supplier_name?: string | null
@@ -1375,6 +1377,7 @@ export type Database = {
           pix_key?: string | null
           project_id?: string | null
           receipt_url?: string | null
+          source?: string | null
           status?: Database["public"]["Enums"]["payment_status"] | null
           supplier_id?: string | null
           supplier_name?: string | null
@@ -1671,7 +1674,7 @@ export type Database = {
           name: string
           neighborhood: string | null
           notes: string | null
-          project_number: number | null
+          project_number: string | null
           project_type: Database["public"]["Enums"]["client_type"] | null
           real_budget: number | null
           real_end_date: string | null
@@ -1701,7 +1704,7 @@ export type Database = {
           name: string
           neighborhood?: string | null
           notes?: string | null
-          project_number?: number | null
+          project_number?: string | null
           project_type?: Database["public"]["Enums"]["client_type"] | null
           real_budget?: number | null
           real_end_date?: string | null
@@ -1731,7 +1734,7 @@ export type Database = {
           name?: string
           neighborhood?: string | null
           notes?: string | null
-          project_number?: number | null
+          project_number?: string | null
           project_type?: Database["public"]["Enums"]["client_type"] | null
           real_budget?: number | null
           real_end_date?: string | null
