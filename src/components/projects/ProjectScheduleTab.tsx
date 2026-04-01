@@ -37,17 +37,20 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const { items, isLoading, create, update, remove } = useScheduleTasks(projectId);
   const { items: scopeItems } = useScopeItems(projectId);
-  const { activities, isLoading: activitiesLoading } = useProjectActivities(projectId);
+  const { activities, isLoading: activitiesLoading, create: createActivity, update: updateActivity, remove: removeActivity, batchUpdateDates } = useProjectActivities(projectId);
   const useActivitiesSource = activities.length > 0;
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
+  const [activityFormOpen, setActivityFormOpen] = useState(false);
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
+  const [editingActivity, setEditingActivity] = useState<any>(null);
   const [ganttView, setGanttView] = useState<"day" | "week" | "month">("week");
   const [filterDiscipline, setFilterDiscipline] = useState("all");
   const [filterSupplier, setFilterSupplier] = useState("all");
   const [filterEnvironment, setFilterEnvironment] = useState("all");
   const [importing, setImporting] = useState(false);
+  const [recalcChanges, setRecalcChanges] = useState<CascadeChange[]>([]);
 
   const disciplines = useMemo(() => {
     const set = new Set<string>();
