@@ -148,7 +148,7 @@ export function ProjectOnboardingGuide({ project, onTabChange, onDismiss }: Proj
                   {/* Icon */}
                   <div className="absolute -left-8 top-3 z-10 flex items-center justify-center">
                     {step.completed ? (
-                      <CheckCircle className="h-5 w-5 text-green-500 fill-green-500/20" />
+                      <CheckCircle className="h-5 w-5 text-primary fill-primary/20" />
                     ) : isCurrent ? (
                       <div className="animate-pulse">
                         <Circle className="h-5 w-5 text-primary fill-primary/20" />
