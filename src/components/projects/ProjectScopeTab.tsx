@@ -271,6 +271,9 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
           <Button variant="outline" size="sm" onClick={() => setSupplierDialogOpen(true)}>
             <Users className="h-4 w-4 mr-1" /> Escopo Fornecedor
           </Button>
+          <Button variant="outline" size="sm" onClick={handleSuggestSequence} disabled={sequenceLoading}>
+            <Wand2 className="h-4 w-4 mr-1" /> Sugerir Sequenciamento
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setAiDialogOpen(true)}>
             <Sparkles className="h-4 w-4 mr-1" /> Gerar com IA
           </Button>
