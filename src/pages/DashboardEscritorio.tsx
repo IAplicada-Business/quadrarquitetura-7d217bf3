@@ -224,8 +224,8 @@ export default function DashboardEscritorio() {
     const paymentsMonthlyData = monthLabels.map((label, i) => {
       const m = subMonths(today, 5 - i);
       const ms = format(startOfMonth(m), "yyyy-MM");
-      const recebido = payments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
-      const pendente = payments.filter((p) => p.status === "pendente" && p.due_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
+      const recebido = escPayments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
+      const pendente = escPayments.filter((p) => p.status === "pendente" && p.due_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
       return { month: label.charAt(0).toUpperCase() + label.slice(1), recebido, pendente };
     });
 
