@@ -144,7 +144,7 @@ export default function DashboardEscritorio() {
   const { data: allProposals = [] } = useQuery({
     queryKey: ["dash-esc-proposals-metrics"],
     queryFn: async () => {
-      const { data } = await supabase.from("proposals").select("id, status, price_full, created_at");
+      const { data } = await supabase.from("proposals").select("id, status, price_full, final_value, approved_at, created_at");
       return data ?? [];
     },
     enabled: !!user,
