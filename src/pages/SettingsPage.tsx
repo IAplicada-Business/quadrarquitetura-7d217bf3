@@ -226,7 +226,7 @@ export default function SettingsPage() {
                     max={100}
                     step={0.5}
                     className="w-28 text-center"
-                    value={settings?.tax_rate_percent ?? 6}
+                    value={(settings as any)?.tax_rate_percent ?? 6}
                     onChange={(e) => {
                       const val = parseFloat(e.target.value);
                       if (!isNaN(val)) upsert.mutate({ tax_rate_percent: val });
