@@ -107,6 +107,53 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
     ? Math.round(entries.reduce((s, e) => s + (e.workers_count || 0), 0) / entries.filter(e => e.workers_count).length) || 0
     : 0;
 
+  const handleGenerateAISummary = async () => {
+    const today = new Date();
+    const ws = startOfWeek(today, { weekStartsOn: 1 });
+    const we = endOfWeek(today, { weekStartsOn: 1 });
+    const weekEntries = entries.filter(e => {
+      const d = new Date(e.entry_date);
+      return d >= ws && d <= we;
+    });
+    if (weekEntries.length === 0) { toast.error("Nenhum registro nesta semana para gerar resumo"); return; }
+    setAiSummaryLoading(true);
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/project-ai-assistant`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          action: "weekly_summary",
+          data: {
+            diary_entries: weekEntries.map(e => ({
+              date: e.entry_date,
+              weather: e.weather,
+              workers: e.workers_count,
+              summary: e.summary,
+              observations: e.observations,
+              disciplines: e.disciplines_active,
+            })),
+            week_start: format(ws, "dd/MM/yyyy"),
+            week_end: format(we, "dd/MM/yyyy"),
+          },
+        }),
+      });
+      if (!resp.ok) throw new Error("Erro ao gerar resumo");
+      const result = await resp.json();
+      setPrefillData(result);
+      setReportOpen(true);
+      toast.success("Resumo gerado! Revise e confirme.");
+    } catch (err: any) {
+      toast.error(err.message || "Erro na geração do resumo");
+    } finally {
+      setAiSummaryLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Metrics */}
