@@ -1,57 +1,78 @@
 
 
-## Parcelamento Automático de Pagamentos
+## Historico de Contratacoes de Fornecedores
 
 ### Migration SQL
 
 ```sql
-ALTER TABLE payments
-  ADD COLUMN IF NOT EXISTS parent_payment_id uuid REFERENCES payments(id) ON DELETE CASCADE;
+-- Use validation trigger instead of CHECK constraint
+ALTER TABLE supplier_allocations
+  ADD COLUMN IF NOT EXISTS contracted_value numeric,
+  ADD COLUMN IF NOT EXISTS final_value numeric,
+  ADD COLUMN IF NOT EXISTS rating integer;
+
+CREATE OR REPLACE FUNCTION public.validate_supplier_allocation_rating()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path TO 'public'
+AS $$
+BEGIN
+  IF NEW.rating IS NOT NULL AND (NEW.rating < 1 OR NEW.rating > 5) THEN
+    RAISE EXCEPTION 'Rating deve ser entre 1 e 5';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_validate_supplier_allocation_rating
+  BEFORE INSERT OR UPDATE ON supplier_allocations
+  FOR EACH ROW EXECUTE FUNCTION validate_supplier_allocation_rating();
 ```
 
-### `src/components/projects/PaymentForm.tsx`
+### Novo componente: `src/components/construction/SupplierDetailSheet.tsx`
 
-Replace manual installment fields with toggle-based auto-parcelamento:
+Sheet lateral aberto ao clicar no card do fornecedor. Tres secoes:
 
-- **Toggle "Parcelar pagamento"** (Switch component) — hidden when editing
-- When enabled, show:
-  - Número de parcelas (1-24, Input number)
-  - Data da primeira parcela (Input date)
-  - Intervalo (Select: Semanal 7d / Quinzenal 15d / Mensal 30d / Personalizado + Input dias)
-- **Preview automático**: `useMemo` calculates N installment rows with dates and values (`total / N`, last absorbs cents rounding)
-- When toggle OFF, form works as today (single payment)
-- **onSubmit change**: When parcelamento active, return array-like data structure with `installments` array instead of single payment. New prop `onSubmitInstallments` or modify `onSubmit` signature to accept installments mode.
+1. **Historico de Obras**: Query `supplier_allocations` filtrado por `supplier_id`, join com `projects(name)`. Tabela com Projeto, Disciplina, Valor Contratado, Valor Final, Avaliacao (estrelas), Data, Observacoes. Rodape com totais: N obras, valor medio contratado, desvio medio contratado-final em %.
 
-### `src/hooks/useProjectPayments.ts`
+2. **Comparativo de Precos**: Query todos os `supplier_allocations` da mesma disciplina/categoria, agrupados por supplier. Grafico de barras (Recharts `BarChart`) com valor medio por fornecedor, ordenado do mais barato ao mais caro. Destaque visual no fornecedor atual.
 
-Add `createInstallments` mutation:
-- Receives: `{ base data, numParcelas, firstDate, intervalDays }`
-- Calculates dates and values
-- Inserts first payment, gets its ID back
-- Inserts remaining N-1 payments with `parent_payment_id = first.id`
-- Each has `installment_number`, `total_installments`, `description = "[desc] — Parcela X/N"`
+3. **Avaliacao Consolidada**: Media das avaliacoes com estrelas. Ultimas 3 observacoes com data.
 
-Add `payRemaining` mutation:
-- Takes `parent_payment_id` (or first installment ID)
-- Updates all unpaid payments in the group to `status = 'pago'`, `paid_date = today`
+### `src/pages/Suppliers.tsx`
 
-### `src/components/projects/ProjectFinancialTab.tsx`
+- Adicionar estado `selectedSupplier` para controlar abertura do Sheet
+- Ao clicar no Card (area do card, nao nos botoes edit/delete), abrir `SupplierDetailSheet`
+- Manter CRUD existente intacto
 
-**Payments table changes**:
-- Group installments visually: show parent row with badge "X/N" clickable
-- When badge clicked, toggle showing child installments inline (indented)
-- Add "Quitar restantes" button on parent row when group has unpaid items
-- Wire `createInstallments` from hook when form submits with parcelamento
-- Non-installment payments (no `installment_number`) unchanged
+### `src/hooks/useSupplierAllocations.ts`
 
-### Dashboard Obras — not changing per user request scope (only mentions it but says "não altere nenhuma outra aba")
+- Atualizar interface `SupplierAllocation` com `contracted_value`, `final_value`, `rating`
+- Adicionar mutation `update` para editar alocacoes existentes (usado na avaliacao)
+- Adicionar query `bySupplier(supplierId)` — busca todas as alocacoes de um fornecedor especifico
+
+### Novo componente: `src/components/construction/SupplierRatingDialog.tsx`
+
+Modal de avaliacao rapida:
+- Estrelas (1-5) clicaveis
+- Campo de observacao (textarea opcional)
+- Valor final pago (input numeric, pre-preenchido com contracted_value)
+- Salva via update mutation no `supplier_allocations`
+
+### `src/components/projects/ProjectTrackingTab.tsx`
+
+Quando uma atividade vinculada a fornecedor (via `supplier_allocations`) for marcada como concluida, exibir toast com acao: "Avaliar [nome] para esta etapa?" que abre `SupplierRatingDialog`.
 
 ### Arquivos alterados
 
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---|---|
-| Migration SQL | Add `parent_payment_id` to payments |
-| `src/components/projects/PaymentForm.tsx` | Toggle parcelamento, preview de parcelas, intervalo |
-| `src/hooks/useProjectPayments.ts` | `createInstallments` + `payRemaining` mutations |
-| `src/components/projects/ProjectFinancialTab.tsx` | Badge X/N expandível, botão "Quitar restantes" |
+| Migration SQL | 3 colunas + trigger de validacao em `supplier_allocations` |
+| `src/components/construction/SupplierDetailSheet.tsx` | **Novo** — painel lateral com historico, comparativo e avaliacao |
+| `src/components/construction/SupplierRatingDialog.tsx` | **Novo** — modal de avaliacao rapida |
+| `src/pages/Suppliers.tsx` | Abrir Sheet ao clicar no fornecedor |
+| `src/hooks/useSupplierAllocations.ts` | Campos novos, mutation update, query por supplier |
+| `src/components/projects/ProjectTrackingTab.tsx` | Sugestao de avaliacao ao concluir atividade |
+
+Nenhuma outra rota, aba ou funcionalidade alterada.
 
