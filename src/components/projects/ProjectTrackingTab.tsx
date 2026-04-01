@@ -33,8 +33,11 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
   const { items: scopeItems } = useScopeItems(projectId);
   const { items: scheduleTasks } = useScheduleTasks(projectId);
   const { reports, create: createReport } = useWeeklyReports(projectId);
+  const { allocations } = useSupplierAllocations(projectId);
   const [formOpen, setFormOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [ratingAllocation, setRatingAllocation] = useState<any>(null);
+  const completedActivitiesRef = useRef<Set<string>>(new Set());
 
   // Fetch client responses
   const { data: clientResponses = [] } = useQuery({
