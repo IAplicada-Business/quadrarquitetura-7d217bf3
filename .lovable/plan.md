@@ -1,59 +1,46 @@
 
 
-## Refatorar Fluxo de Materiais — Geração Automática por Atividades
+## Mover Memória de Cálculo para Configurações + Auto-cálculo ao salvar atividade
 
-### Migration SQL
+### 1. CalculationRulesTab — Reorganizar ordem das seções
 
-```sql
-ALTER TABLE material_tracking
-  ADD COLUMN IF NOT EXISTS activity_id uuid REFERENCES project_activities(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS calculated_quantity numeric,
-  ADD COLUMN IF NOT EXISTS adjusted_quantity numeric;
+O arquivo já tem as 3 seções (Regras, Índices, Custos de MO). Reorganizar para:
 
--- Reutilizar coluna 'source' existente (já tem 'manual', 'orcamento', 'indices')
--- Adicionar valor 'automatico' como convention (sem CHECK constraint por ser text livre)
-```
+1. **Índices de Materiais** (mover para o topo, antes das Regras de Cálculo)
+   - Melhorar descrição: "Estes índices são usados automaticamente para calcular quantidades de materiais ao cadastrar atividades de obra. São valores globais do escritório — valem para todos os projetos."
+   - Trocar campo texto "Tipo de Atividade" por Select com disciplinas: alvenaria, elétrica, hidráulica, pintura, piso, forro, esquadria, marcenaria, limpeza, outros
+   - Adicionar coluna "Obs" na tabela
+   - Adicionar botão "Importar CSV" com input file que parseia CSV (disciplina, material, unidade, index_per_m2) e faz bulk insert
+2. **Custos de Mão de Obra** (mantém como está)
+3. **Regras de Cálculo** (desce para o final)
 
-Nota: a coluna `source` já existe como `text DEFAULT 'manual'`. Usar `source = 'automatico'` para itens calculados, sem necessidade de CHECK constraint adicional.
+### 2. ProjectMaterialsTab — Remover tab "Memória de Cálculo"
 
-### Hook: `useMaterialTracking.ts`
+- Remover a tab "calculo" e todo o TabsContent associado (linhas 439-500)
+- Remover imports/state de `useMaterialCalc`, `MaterialCalcForm`, `editingCalc`, `calcFormOpen`
+- Adicionar link no rodapé da seção de rastreamento: "Para editar os índices de cálculo, acesse Configurações → Regras de Cálculo" com ícone ExternalLink e `<a href="/admin/settings">` (ou `useNavigate`)
 
-Adicionar mutation `recalculateFromActivities`:
-1. Buscar `project_activities` com `area_m2 > 0` para o projeto
-2. Buscar todos os `material_indices`
-3. Para cada atividade, filtrar índices pela disciplina (case-insensitive match em `activity_type`)
-4. Para cada par atividade+índice:
-   - Calcular `qty = area_m2 * index_per_m2`
-   - Buscar existente em `material_tracking` com `activity_id = atividade.id AND material_name = indice.material_name`
-   - Se não existe: INSERT com `source='automatico'`, `calculated_quantity=qty`, `quantity_needed=qty`, `activity_id`
-   - Se existe e `source='automatico'`: UPDATE `calculated_quantity` e `quantity_needed`
-   - Se existe e `source!='automatico'`: skip (manual override)
-5. Retornar contagem para toast
+### 3. Auto-cálculo ao salvar atividade
 
-### Aba Materiais: `ProjectMaterialsTab.tsx`
+No `useProjectActivities.ts`, nos callbacks `onSuccess` de `create` e `update`:
+- Chamar uma função async `autoCalculateMaterials(activityData)` que:
+  1. Verifica se `area_m2 > 0` e `discipline` está preenchido
+  2. Busca `material_indices` onde `activity_type` = discipline (case-insensitive)
+  3. Para cada índice: calcula `qty = area_m2 * index_per_m2`
+  4. Verifica existência em `material_tracking` (activity_id + material_name)
+  5. Se não existe: INSERT com `source='automatico'`, `calculated_quantity=qty`
+  6. Se existe e `source='automatico'`: UPDATE `calculated_quantity` e `quantity_needed`
+  7. Toast: "X materiais calculados para esta atividade"
 
-Reestruturar a tab "Rastreamento" em duas seções:
-
-**Seção 1 — "Por Atividade"** (materiais com `activity_id != null`):
-- Botão "Recalcular a partir das Atividades" no topo
-- Agrupar por `activity_id` — header mostra nome da atividade, disciplina (badge colorido), área m²
-- Cada item: nome | unidade | qtd calculada | qtd ajustada (editável inline) | status
-- Badge "Ajustado" se `quantity_needed != calculated_quantity`
-- Botão inline "Usar calculado" para reverter `quantity_needed = calculated_quantity`
-
-**Seção 2 — "Manuais"** (materiais com `activity_id = null`):
-- Tabela como hoje, CRUD simples
-- Botão "Novo Material" abre o form existente
-
-Manter as tabs existentes (Rastreamento, Por Atividade do cronograma, Memória de Cálculo, Compras) — a Seção 1/2 substitui o conteúdo da tab "Rastreamento". A tab "Por Atividade" (que mostra materiais do `schedule_tasks`) permanece.
+O hook `create` retorna `data` (a atividade criada) — usar o `id` dela. Para `update`, já temos o `id` no payload.
 
 ### Arquivos alterados
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | `activity_id`, `calculated_quantity`, `adjusted_quantity` em material_tracking |
-| `src/hooks/useMaterialTracking.ts` | Adicionar `recalculateFromActivities` mutation |
-| `src/components/projects/ProjectMaterialsTab.tsx` | Reestruturar tab Rastreamento em 2 seções (por atividade + manuais) |
+| `src/components/settings/CalculationRulesTab.tsx` | Reordenar seções (Índices → MO → Regras), select de disciplina, import CSV |
+| `src/components/projects/ProjectMaterialsTab.tsx` | Remover tab "calculo", adicionar link para Configurações |
+| `src/hooks/useProjectActivities.ts` | Auto-cálculo de materiais no onSuccess de create/update |
 
-Nenhuma rota, hook ou componente adicional necessário. O `MaterialCalcByActivitiesDialog` existente pode ser mantido como alternativa ou removido (redundante com o novo fluxo).
+Nenhuma migration, rota ou estrutura de tabela alterada.
 
