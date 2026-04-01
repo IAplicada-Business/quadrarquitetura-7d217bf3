@@ -1,78 +1,57 @@
 
 
-## Historico de Contratacoes de Fornecedores
+## Guia de Primeiros Passos na Aba Resumo
 
 ### Migration SQL
 
 ```sql
--- Use validation trigger instead of CHECK constraint
-ALTER TABLE supplier_allocations
-  ADD COLUMN IF NOT EXISTS contracted_value numeric,
-  ADD COLUMN IF NOT EXISTS final_value numeric,
-  ADD COLUMN IF NOT EXISTS rating integer;
-
-CREATE OR REPLACE FUNCTION public.validate_supplier_allocation_rating()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path TO 'public'
-AS $$
-BEGIN
-  IF NEW.rating IS NOT NULL AND (NEW.rating < 1 OR NEW.rating > 5) THEN
-    RAISE EXCEPTION 'Rating deve ser entre 1 e 5';
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER trg_validate_supplier_allocation_rating
-  BEFORE INSERT OR UPDATE ON supplier_allocations
-  FOR EACH ROW EXECUTE FUNCTION validate_supplier_allocation_rating();
+ALTER TABLE projects
+  ADD COLUMN IF NOT EXISTS onboarding_dismissed boolean DEFAULT false;
 ```
 
-### Novo componente: `src/components/construction/SupplierDetailSheet.tsx`
+### Novo componente: `src/components/projects/ProjectOnboardingGuide.tsx`
 
-Sheet lateral aberto ao clicar no card do fornecedor. Tres secoes:
+Componente de checklist visual com 6 etapas em timeline vertical.
 
-1. **Historico de Obras**: Query `supplier_allocations` filtrado por `supplier_id`, join com `projects(name)`. Tabela com Projeto, Disciplina, Valor Contratado, Valor Final, Avaliacao (estrelas), Data, Observacoes. Rodape com totais: N obras, valor medio contratado, desvio medio contratado-final em %.
+**Props**: `project`, `onTabChange`, `onDismiss`
 
-2. **Comparativo de Precos**: Query todos os `supplier_allocations` da mesma disciplina/categoria, agrupados por supplier. Grafico de barras (Recharts `BarChart`) com valor medio por fornecedor, ordenado do mais barato ao mais caro. Destaque visual no fornecedor atual.
+**Dados necessários** (queries dentro do componente):
+- `useProjectActivities(projectId)` → count para etapas 2 e 6
+- `useMaterialTracking(projectId)` → count para etapa 3
+- `usePriceResearch(projectId)` → count para etapa 4
 
-3. **Avaliacao Consolidada**: Media das avaliacoes com estrelas. Ultimas 3 observacoes com data.
+**Lógica de cada etapa**:
+1. Importar proposta: `source_proposal_id && cotacao_importada === true`
+2. Gerar atividades: `activities.length > 0`
+3. Verificar materiais: `materials.length > 0`
+4. Pesquisar preços: `priceResearch.length > 0`
+5. Aprovar cotação: `cotacao_aprovada === true`
+6. Montar cronograma: `activities.some(a => a.start_date)`
 
-### `src/pages/Suppliers.tsx`
+**Visual**:
+- Timeline vertical com linha conectando os 6 passos
+- Concluído: ícone `CheckCircle` verde, texto com opacity reduzida
+- Próximo pendente: borda azul, CTA Button ativo, seta animada (pulse)
+- Futuros: cinza, sem CTA
+- Quando todos concluídos: mensagem de celebração (confetti/emoji) por 3s, depois auto-dismiss via `updateProject({ onboarding_dismissed: true })`
 
-- Adicionar estado `selectedSupplier` para controlar abertura do Sheet
-- Ao clicar no Card (area do card, nao nos botoes edit/delete), abrir `SupplierDetailSheet`
-- Manter CRUD existente intacto
+**Botão "Ocultar guia"**: Checkbox "Não mostrar novamente" + botão. Salva `onboarding_dismissed: true`.
 
-### `src/hooks/useSupplierAllocations.ts`
+### `src/components/projects/ProjectSummaryTab.tsx`
 
-- Atualizar interface `SupplierAllocation` com `contracted_value`, `final_value`, `rating`
-- Adicionar mutation `update` para editar alocacoes existentes (usado na avaliacao)
-- Adicionar query `bySupplier(supplierId)` — busca todas as alocacoes de um fornecedor especifico
+**Critério de exibição**: Renderizar `ProjectOnboardingGuide` antes dos KPI cards quando:
+- `project.onboarding_dismissed !== true`
+- `activities.length === 0 && cotacao_aprovada !== true && created_at > 7 dias atrás`
 
-### Novo componente: `src/components/construction/SupplierRatingDialog.tsx`
-
-Modal de avaliacao rapida:
-- Estrelas (1-5) clicaveis
-- Campo de observacao (textarea opcional)
-- Valor final pago (input numeric, pre-preenchido com contracted_value)
-- Salva via update mutation no `supplier_allocations`
-
-### `src/components/projects/ProjectTrackingTab.tsx`
-
-Quando uma atividade vinculada a fornecedor (via `supplier_allocations`) for marcada como concluida, exibir toast com acao: "Avaliar [nome] para esta etapa?" que abre `SupplierRatingDialog`.
+Usar `useProjectActivities` já disponível no contexto (ou importar). Passar `onTabChange` e `onDismiss` (que chama `updateProject`).
 
 ### Arquivos alterados
 
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---|---|
-| Migration SQL | 3 colunas + trigger de validacao em `supplier_allocations` |
-| `src/components/construction/SupplierDetailSheet.tsx` | **Novo** — painel lateral com historico, comparativo e avaliacao |
-| `src/components/construction/SupplierRatingDialog.tsx` | **Novo** — modal de avaliacao rapida |
-| `src/pages/Suppliers.tsx` | Abrir Sheet ao clicar no fornecedor |
-| `src/hooks/useSupplierAllocations.ts` | Campos novos, mutation update, query por supplier |
-| `src/components/projects/ProjectTrackingTab.tsx` | Sugestao de avaliacao ao concluir atividade |
+| Migration SQL | `onboarding_dismissed` em projects |
+| `src/components/projects/ProjectOnboardingGuide.tsx` | **Novo** — checklist timeline 6 etapas |
+| `src/components/projects/ProjectSummaryTab.tsx` | Renderizar guia condicionalmente no topo |
 
-Nenhuma outra rota, aba ou funcionalidade alterada.
+Nenhuma outra aba, rota ou funcionalidade alterada.
 
