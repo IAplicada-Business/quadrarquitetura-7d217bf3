@@ -319,6 +319,47 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Budget Analysis Dialog */}
+      <Dialog open={analysisOpen} onOpenChange={setAnalysisOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Análise de Orçamento</DialogTitle>
+          </DialogHeader>
+          {analysisLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Comparando com preços de mercado...</p>
+            </div>
+          ) : analysisResult ? (
+            <div className="space-y-4">
+              <div className="text-sm whitespace-pre-wrap">{analysisResult.analysis_text}</div>
+              {analysisResult.items.length > 0 && (
+                <div className="border rounded-lg divide-y">
+                  {analysisResult.items.map((item: any, i: number) => (
+                    <div key={i} className="flex items-center gap-3 px-3 py-2 text-sm">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] px-1.5 shrink-0",
+                          item.status === "above" ? "border-destructive text-destructive" :
+                          item.status === "below" ? "border-green-600 text-green-600" :
+                          "border-muted-foreground text-muted-foreground"
+                        )}
+                      >
+                        {item.status === "above" ? "Acima" : item.status === "below" ? "Economia" : "OK"}
+                      </Badge>
+                      <span className="flex-1">{item.name}</span>
+                      {item.current_price != null && <span className="text-xs">{formatCurrency(item.current_price)}</span>}
+                      {item.note && <span className="text-xs text-muted-foreground">{item.note}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
