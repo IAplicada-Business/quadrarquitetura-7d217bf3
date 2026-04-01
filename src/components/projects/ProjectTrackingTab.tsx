@@ -30,9 +30,24 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
   const { entries, isLoading, create, remove } = useSiteDiary(projectId);
   const { items: scopeItems } = useScopeItems(projectId);
   const { items: scheduleTasks } = useScheduleTasks(projectId);
-  const { create: createReport } = useWeeklyReports(projectId);
+  const { reports, create: createReport } = useWeeklyReports(projectId);
   const [formOpen, setFormOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+
+  // Fetch client responses
+  const { data: clientResponses = [] } = useQuery({
+    queryKey: ["client_pending_responses", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("client_pending_responses" as any)
+        .select("*")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+    enabled: !!projectId,
+  });
   const [filterPeriod, setFilterPeriod] = useState("all");
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [prefillData, setPrefillData] = useState<{ summary: string; next_steps: string; client_pending?: string } | null>(null);
