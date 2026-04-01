@@ -108,7 +108,7 @@ export function useAIChat() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
-        body: JSON.stringify({ message: input.trim(), conversation_id: convId, history }),
+        body: JSON.stringify({ message: input.trim(), conversation_id: convId, history, context: contextPayload }),
         signal: controller.signal,
       });
 
