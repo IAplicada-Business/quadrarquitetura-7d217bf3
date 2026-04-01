@@ -62,14 +62,13 @@ export default function Projects() {
 
   const createMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
-      // Get next project_number
-      const { data: maxRow } = await supabase
-        .from("projects")
-        .select("project_number")
-        .order("project_number", { ascending: false })
-        .limit(1)
-        .single();
-      const nextNumber = ((maxRow as any)?.project_number || 0) + 1;
+      // Get next Q-prefixed project_number
+      const { data: rows } = await supabase.from("projects").select("project_number");
+      const maxNum = (rows ?? []).reduce((max, r) => {
+        const n = parseInt(String(r.project_number ?? "").replace("Q", ""), 10);
+        return isNaN(n) ? max : Math.max(max, n);
+      }, 0);
+      const nextNumber = `Q${maxNum + 1}`;
 
       const insertData = {
         name: data.name as string,
