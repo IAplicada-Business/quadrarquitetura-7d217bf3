@@ -2677,6 +2677,60 @@ export type Database = {
           },
         ]
       }
+      supplier_scopes: {
+        Row: {
+          activities: Json | null
+          created_at: string | null
+          discipline: string | null
+          id: string
+          project_id: string
+          quoted_value: number | null
+          sent_at: string | null
+          status: string | null
+          supplier_id: string
+          user_id: string
+        }
+        Insert: {
+          activities?: Json | null
+          created_at?: string | null
+          discipline?: string | null
+          id?: string
+          project_id: string
+          quoted_value?: number | null
+          sent_at?: string | null
+          status?: string | null
+          supplier_id: string
+          user_id: string
+        }
+        Update: {
+          activities?: Json | null
+          created_at?: string | null
+          discipline?: string | null
+          id?: string
+          project_id?: string
+          quoted_value?: number | null
+          sent_at?: string | null
+          status?: string | null
+          supplier_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_scopes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_scopes_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           category: string | null
