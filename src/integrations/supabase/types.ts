@@ -331,6 +331,50 @@ export type Database = {
           },
         ]
       }
+      client_pending_responses: {
+        Row: {
+          client_name: string | null
+          created_at: string | null
+          id: string
+          pending_item: string
+          project_id: string
+          responded_at: string | null
+          response_text: string | null
+          status: string | null
+          weekly_report_id: string
+        }
+        Insert: {
+          client_name?: string | null
+          created_at?: string | null
+          id?: string
+          pending_item: string
+          project_id: string
+          responded_at?: string | null
+          response_text?: string | null
+          status?: string | null
+          weekly_report_id: string
+        }
+        Update: {
+          client_name?: string | null
+          created_at?: string | null
+          id?: string
+          pending_item?: string
+          project_id?: string
+          responded_at?: string | null
+          response_text?: string | null
+          status?: string | null
+          weekly_report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_pending_responses_weekly_report_id_fkey"
+            columns: ["weekly_report_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_portal_tokens: {
         Row: {
           created_at: string
@@ -2955,6 +2999,7 @@ export type Database = {
       weekly_reports: {
         Row: {
           client_pending: string | null
+          client_responses: Json | null
           completion_percent: number
           created_at: string
           created_by: string | null
@@ -2968,6 +3013,7 @@ export type Database = {
         }
         Insert: {
           client_pending?: string | null
+          client_responses?: Json | null
           completion_percent?: number
           created_at?: string
           created_by?: string | null
@@ -2981,6 +3027,7 @@ export type Database = {
         }
         Update: {
           client_pending?: string | null
+          client_responses?: Json | null
           completion_percent?: number
           created_at?: string
           created_by?: string | null
