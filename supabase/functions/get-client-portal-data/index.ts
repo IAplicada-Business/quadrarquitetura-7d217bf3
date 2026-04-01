@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     const projectId = tokenData.project_id;
 
     // Fetch all data in parallel
-    const [projectRes, tasksRes, paymentsRes, invoicesRes, diaryRes, reportsRes] =
+    const [projectRes, tasksRes, paymentsRes, invoicesRes, diaryRes, reportsRes, pendingRes] =
       await Promise.all([
         supabase
           .from("projects")
@@ -95,6 +95,11 @@ Deno.serve(async (req) => {
           .eq("project_id", projectId)
           .order("week_start", { ascending: false })
           .limit(20),
+        supabase
+          .from("client_pending_responses")
+          .select("id, weekly_report_id, pending_item, response_text, status, responded_at, client_name, created_at")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: false }),
       ]);
 
     if (projectRes.error) {
