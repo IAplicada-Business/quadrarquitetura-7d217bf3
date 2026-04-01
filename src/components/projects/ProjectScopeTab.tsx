@@ -362,6 +362,61 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
         projectId={projectId}
         activities={activities}
       />
+
+      {/* Sequence Suggestion Dialog */}
+      <Dialog open={sequenceDialogOpen} onOpenChange={setSequenceDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Sugestão de Sequenciamento</DialogTitle>
+          </DialogHeader>
+          {sequenceLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Analisando dependências técnicas...</p>
+            </div>
+          ) : sequenceSuggestions.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">Nenhuma sugestão gerada.</p>
+          ) : (
+            <>
+              <div className="border rounded-lg divide-y max-h-[50vh] overflow-y-auto">
+                {sequenceSuggestions.map((s: any) => (
+                  <div key={s.activity_id} className="flex items-start gap-3 px-3 py-2.5 text-sm">
+                    <Checkbox
+                      checked={selectedSuggestions.has(s.activity_id)}
+                      onCheckedChange={(checked) => {
+                        setSelectedSuggestions(prev => {
+                          const next = new Set(prev);
+                          checked ? next.add(s.activity_id) : next.delete(s.activity_id);
+                          return next;
+                        });
+                      }}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-[10px] px-1.5">{s.suggested_position}</Badge>
+                        <span className="font-medium truncate">{s.activity_name}</span>
+                      </div>
+                      {s.depends_on_activity_name && (
+                        <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                          <Link2 className="h-3 w-3" /> Após: {s.depends_on_activity_name}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-0.5">{s.reason}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setSequenceDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={handleApplySequence} disabled={selectedSuggestions.size === 0}>
+                  <Check className="h-4 w-4 mr-1" /> Aplicar Selecionados ({selectedSuggestions.size})
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
