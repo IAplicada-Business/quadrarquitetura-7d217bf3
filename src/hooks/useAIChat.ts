@@ -220,6 +220,20 @@ export function useAIChat() {
     queryClient.invalidateQueries({ queryKey: ["chat-conversations"] });
   }, [currentConversationId, startNewConversation, queryClient]);
 
+  const loadProjectContext = useCallback(async (projectId: string) => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("chat_messages")
+      .select("role, content, created_at")
+      .eq("user_id", user.id)
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    if (error || !data || data.length === 0) return;
+    const msgs = data.reverse().map((m: any) => ({ role: m.role as "user" | "assistant", content: m.content }));
+    setMessages(msgs);
+  }, [user]);
+
   return {
     messages,
     isStreaming,
@@ -230,5 +244,6 @@ export function useAIChat() {
     loadConversation,
     startNewConversation,
     deleteConversation,
+    loadProjectContext,
   };
 }
