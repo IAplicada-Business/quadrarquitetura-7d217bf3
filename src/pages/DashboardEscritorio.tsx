@@ -203,7 +203,7 @@ export default function DashboardEscritorio() {
     const pctRecebido = totalOrcado > 0 ? Math.round((pagoTotal / totalOrcado) * 100) : 0;
 
     // Alertas
-    const pagamentosAtrasados = payments.filter((p) => p.status === "pendente" && p.due_date && p.due_date < todayStr);
+    const pagamentosAtrasados = escPayments.filter((p) => p.status === "pendente" && p.due_date && p.due_date < todayStr);
     const fiveDaysAgo = format(subMonths(today, 0).setDate(today.getDate() - 5) ? new Date(today.getTime() - 5 * 86400000) : today, "yyyy-MM-dd");
     const orcamentosSemResposta = budgetQuotes.filter((bq) => bq.status === "cotado" && bq.created_at && bq.created_at.slice(0, 10) <= fiveDaysAgo);
 
