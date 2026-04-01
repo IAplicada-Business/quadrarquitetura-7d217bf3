@@ -309,6 +309,8 @@ export default function DashboardEscritorio() {
       ticketMedio,
       propostasAguardando,
       propostasAprovadasMes,
+      faturamentoMes,
+      faturamentoTotal,
       leadsChartData,
     };
   }, [projects, payments, budgetQuotes, leads, allProposals, monthStart, monthEnd, weekStart, weekEnd, todayStr, today]);
