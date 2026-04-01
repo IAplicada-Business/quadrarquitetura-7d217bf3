@@ -155,7 +155,32 @@ function computeCpm(allTasks: GanttTask[]): CpmResult {
 export function GanttChart({ tasks, allTasks, onEdit, viewMode }: GanttChartProps) {
   const [offset, setOffset] = useState(0);
   const [showCriticalPath, setShowCriticalPath] = useState(true);
+  const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Get full dependency chain (all dependents recursively)
+  const getDependencyChain = useMemo(() => {
+    const allSource = allTasks || tasks;
+    return (taskId: string): Set<string> => {
+      const chain = new Set<string>();
+      function traverse(id: string) {
+        const dependents = allSource.filter(a => a.dependencies?.includes(id));
+        for (const dep of dependents) {
+          if (!chain.has(dep.id)) {
+            chain.add(dep.id);
+            traverse(dep.id);
+          }
+        }
+      }
+      traverse(taskId);
+      return chain;
+    };
+  }, [allTasks, tasks]);
+
+  const hoveredChain = useMemo(() => {
+    if (!hoveredTaskId) return null;
+    return getDependencyChain(hoveredTaskId);
+  }, [hoveredTaskId, getDependencyChain]);
 
   const { rangeStart, rangeEnd, days } = useMemo(() => {
     const today = new Date();
