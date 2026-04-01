@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, Check, DollarSign, BarChart3, Loader2, FileDown, FileX, Info, CheckCircle2, ArrowRight, RotateCcw } from "lucide-react";
+import { Plus, Trash2, Check, DollarSign, BarChart3, Loader2, FileDown, FileX, Info, CheckCircle2, ArrowRight, RotateCcw, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { PriceSearchDialog } from "@/components/projects/PriceSearchDialog";
+import { usePriceResearch, PriceStatus } from "@/hooks/usePriceResearch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,6 +68,17 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
   const [approvalLoading, setApprovalLoading] = useState(false);
   const [reviseDialogOpen, setReviseDialogOpen] = useState(false);
   const [reviseLoading, setReviseLoading] = useState(false);
+
+  // Batch price search state
+  const [batchSearchOpen, setBatchSearchOpen] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(0);
+  const [batchTotal, setBatchTotal] = useState(0);
+  const [batchCached, setBatchCached] = useState(0);
+  const [batchSearching, setBatchSearching] = useState(false);
+  const [priceDialogOpen, setPriceDialogOpen] = useState(false);
+  const [priceDialogActivity, setPriceDialogActivity] = useState<{ id: string; name: string } | null>(null);
+
+  const { research, getPriceStatus, getActivitiesNeedingSearch, getLastUpdateDate } = usePriceResearch(projectId);
 
   const projectData = project as any;
   const sourceProposalId = projectData?.source_proposal_id as string | null;
@@ -309,6 +323,98 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
     }
   };
 
+  // Fetch project activities for batch search
+  const { data: projectActivities } = useQuery({
+    queryKey: ["project_activities_for_prices", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_activities")
+        .select("id, name, discipline, area_m2")
+        .eq("project_id", projectId)
+        .order("position");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!projectId,
+  });
+
+  const activitiesNeedingSearch = projectActivities
+    ? getActivitiesNeedingSearch(projectActivities)
+    : [];
+  const lastUpdate = getLastUpdateDate();
+
+  const handleBatchSearch = async () => {
+    if (!projectActivities || !user) return;
+    const needsSearch = projectActivities.filter((a) => activitiesNeedingSearch.includes(a.id));
+    const cachedCount = projectActivities.length - needsSearch.length;
+
+    setBatchTotal(needsSearch.length);
+    setBatchCached(cachedCount);
+    setBatchProgress(0);
+    setBatchSearching(true);
+    setBatchSearchOpen(true);
+
+    try {
+      for (const activity of needsSearch) {
+        // Fetch materials for this activity
+        const { data: materials } = await supabase
+          .from("material_tracking")
+          .select("material_name, unit, quantity_needed")
+          .eq("project_id", projectId)
+          .eq("activity_id", activity.id)
+          .eq("is_active", true);
+
+        const materialInputs = materials && materials.length > 0
+          ? materials.map((m) => ({ name: m.material_name, unit: m.unit || "un", quantity: m.quantity_needed || 1 }))
+          : [{ name: activity.name, unit: "un", quantity: 1 }];
+
+        try {
+          const { data, error } = await supabase.functions.invoke("search-prices-bh", {
+            body: { activity_name: activity.name, materials: materialInputs, city: "Belo Horizonte" },
+          });
+
+          if (!error && data?.results) {
+            const searchResults = data.results as any[];
+            const itemsToSave = searchResults
+              .filter((mr: any) => mr.results?.length > 0)
+              .map((mr: any) => ({
+                project_id: projectId,
+                activity_id: activity.id,
+                material_name: mr.material,
+                price_min: Math.min(...mr.results.map((r: any) => r.price_min).filter((p: number) => p > 0)) || null,
+                price_max: Math.max(...mr.results.map((r: any) => r.price_max).filter((p: number) => p > 0)) || null,
+                unit: mr.unit,
+                suppliers: mr.results,
+                user_id: user.id,
+              }));
+
+            if (itemsToSave.length > 0) {
+              await supabase.from("price_research" as any).insert(itemsToSave as any);
+            }
+          }
+        } catch {
+          // Continue with next activity even if one fails
+        }
+
+        setBatchProgress((prev) => prev + 1);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["price_research", projectId] });
+      toast.success(`Preços atualizados para ${needsSearch.length} atividades. ${cachedCount} já estavam em cache.`);
+    } catch (err: any) {
+      toast.error(err.message || "Erro na pesquisa em lote");
+    } finally {
+      setBatchSearching(false);
+    }
+  };
+
+  const priceStatusIcon = (status: PriceStatus) => {
+    if (status === "green") return <span className="cursor-pointer" title="Pesquisado há menos de 7 dias">🟢</span>;
+    if (status === "yellow") return <span className="cursor-pointer" title="Pesquisado entre 7 e 30 dias">🟡</span>;
+    return <span className="cursor-pointer" title="Sem pesquisa ou > 30 dias">🔴</span>;
+  };
+
   if (isLoading) {
     return <div className="flex justify-center py-12"><div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" /></div>;
   }
@@ -450,6 +556,17 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
         <Button variant="outline" onClick={handleAnalyzeBudget} disabled={analysisLoading}>
           <BarChart3 className="h-4 w-4 mr-1" /> Analisar Orçamento
         </Button>
+        <Button variant="outline" onClick={handleBatchSearch} disabled={batchSearching || !projectActivities?.length}>
+          <RefreshCw className={cn("h-4 w-4 mr-1", batchSearching && "animate-spin")} /> Atualizar Preços de BH
+          {projectActivities && activitiesNeedingSearch.length > 0 && (
+            <Badge variant="destructive" className="ml-2 text-[10px] px-1.5">{activitiesNeedingSearch.length}</Badge>
+          )}
+          {projectActivities && activitiesNeedingSearch.length === 0 && lastUpdate && (
+            <Badge variant="secondary" className="ml-2 text-[10px] px-1.5">
+              {lastUpdate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+            </Badge>
+          )}
+        </Button>
         {approvedScenario && !cotacaoAprovada && (
           <Button variant="default" className="bg-success hover:bg-success/90" onClick={() => setApprovalModalOpen(true)}>
             <DollarSign className="h-4 w-4 mr-1" /> Aprovar Cotação
@@ -505,27 +622,48 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
 
                   {items.length > 0 && (
                     <div className="border rounded-lg divide-y max-h-[400px] overflow-y-auto">
-                      {items.map((item) => (
-                        <div key={item.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-                          <Checkbox
-                            checked={item.is_included}
-                            onCheckedChange={(checked) => updateItem.mutate({ id: item.id, is_included: !!checked })}
-                          />
-                          <span className={`flex-1 ${!item.is_included ? "line-through text-muted-foreground" : ""}`}>
-                            {item.discipline}
-                            {item.description && <span className="text-muted-foreground ml-1 text-xs">— {item.description}</span>}
-                          </span>
-                          <Input
-                            type="number"
-                            className="w-28 h-7 text-xs"
-                            value={item.estimated_value || ""}
-                            onChange={(e) => updateItem.mutate({ id: item.id, estimated_value: Number(e.target.value) || 0 })}
-                          />
-                          <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeItem.mutate(item.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
+                      {items.map((item) => {
+                        // Find matching activity by discipline name
+                        const matchingActivity = projectActivities?.find(
+                          (a) => a.discipline?.toLowerCase() === item.discipline?.toLowerCase() || a.name?.toLowerCase() === item.discipline?.toLowerCase()
+                        );
+                        const status = matchingActivity ? getPriceStatus(matchingActivity.id) : "red";
+
+                        return (
+                          <div key={item.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                            <Checkbox
+                              checked={item.is_included}
+                              onCheckedChange={(checked) => updateItem.mutate({ id: item.id, is_included: !!checked })}
+                            />
+                            <button
+                              type="button"
+                              className="shrink-0"
+                              onClick={() => {
+                                if (matchingActivity) {
+                                  setPriceDialogActivity({ id: matchingActivity.id, name: matchingActivity.name });
+                                  setPriceDialogOpen(true);
+                                }
+                              }}
+                              title={matchingActivity ? "Ver pesquisa de preços" : "Sem atividade vinculada"}
+                            >
+                              {priceStatusIcon(status)}
+                            </button>
+                            <span className={`flex-1 ${!item.is_included ? "line-through text-muted-foreground" : ""}`}>
+                              {item.discipline}
+                              {item.description && <span className="text-muted-foreground ml-1 text-xs">— {item.description}</span>}
+                            </span>
+                            <Input
+                              type="number"
+                              className="w-28 h-7 text-xs"
+                              value={item.estimated_value || ""}
+                              onChange={(e) => updateItem.mutate({ id: item.id, estimated_value: Number(e.target.value) || 0 })}
+                            />
+                            <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeItem.mutate(item.id)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 
@@ -688,6 +826,46 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Batch Price Search Progress Modal */}
+      <Dialog open={batchSearchOpen} onOpenChange={(open) => { if (!batchSearching) setBatchSearchOpen(open); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pesquisa de Preços em Lote</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <Progress value={batchTotal > 0 ? (batchProgress / batchTotal) * 100 : 0} className="h-3" />
+            <p className="text-sm text-center">
+              {batchSearching
+                ? `Pesquisando preços: ${batchProgress} de ${batchTotal} atividades...`
+                : `Concluído: ${batchTotal} atividades pesquisadas.`}
+            </p>
+            {batchCached > 0 && (
+              <p className="text-xs text-center text-muted-foreground">
+                {batchCached} atividade(s) usando cache (pesquisadas há menos de 7 dias)
+              </p>
+            )}
+          </div>
+          {!batchSearching && (
+            <DialogFooter>
+              <Button onClick={() => setBatchSearchOpen(false)}>Fechar</Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Individual Price Search Dialog */}
+      {priceDialogActivity && (
+        <PriceSearchDialog
+          open={priceDialogOpen}
+          onOpenChange={setPriceDialogOpen}
+          activityName={priceDialogActivity.name}
+          activityId={priceDialogActivity.id}
+          projectId={projectId}
+          materials={[{ name: priceDialogActivity.name, unit: "un", quantity: 1 }]}
+          existingResearch={research.filter((r) => r.activity_id === priceDialogActivity.id)}
+        />
+      )}
     </div>
   );
 }
