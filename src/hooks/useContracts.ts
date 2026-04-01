@@ -81,14 +81,13 @@ export function useContracts() {
       const lead = contract.proposals?.leads;
       const leadId = contract.proposals?.lead_id;
 
-      // Get next project_number
-      const { data: maxRow } = await supabase
-        .from("projects")
-        .select("project_number")
-        .order("project_number", { ascending: false })
-        .limit(1)
-        .single();
-      const nextNumber = ((maxRow as any)?.project_number || 0) + 1;
+      // Get next Q-prefixed project_number
+      const { data: rows } = await supabase.from("projects").select("project_number");
+      const maxNum = (rows ?? []).reduce((max: number, r: any) => {
+        const n = parseInt(String(r.project_number ?? "").replace("Q", ""), 10);
+        return isNaN(n) ? max : Math.max(max, n);
+      }, 0);
+      const nextNumber = `Q${maxNum + 1}`;
 
       // 1. Create project
       const { data: project, error: projError } = await supabase
@@ -121,14 +120,15 @@ export function useContracts() {
         await supabase.from("leads").update({ status: "fechado" }).eq("id", leadId);
       }
 
-      // 4. Insert revenue payment
+      // 4. Insert revenue payment (source: escritorio)
       await supabase.from("payments").insert({
         user_id: user!.id,
         project_id: project.id,
-        description: `Receita: ${lead?.name || "Projeto"}`,
+        description: `Honorários — ${lead?.name || "Projeto"}`,
         value: contract.value || contract.proposals?.value || 0,
         status: "pendente" as any,
         supplier_name: "Receita Escritório",
+        source: "escritorio",
       } as any);
 
       return project;

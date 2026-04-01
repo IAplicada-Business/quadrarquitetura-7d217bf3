@@ -189,18 +189,21 @@ export default function DashboardEscritorio() {
     const activeProjects = projects.filter((p) => p.status !== "concluido");
     const totalOrcado = activeProjects.reduce((s, p) => s + (p.estimated_budget ?? 0), 0);
 
-    const pagoTotal = payments.filter((p) => p.status === "pago").reduce((s, p) => s + p.value, 0);
-    const pagoMesAtual = payments.filter((p) => p.status === "pago" && p.paid_date && p.paid_date >= monthStart && p.paid_date <= monthEnd).reduce((s, p) => s + p.value, 0);
+    // Filtrar apenas pagamentos do escritório
+    const escPayments = payments.filter((p: any) => p.source === "escritorio");
 
-    const pendentesSemana = payments.filter((p) => p.status === "pendente" && p.due_date && p.due_date >= weekStart && p.due_date <= weekEnd);
+    const pagoTotal = escPayments.filter((p) => p.status === "pago").reduce((s, p) => s + p.value, 0);
+    const pagoMesAtual = escPayments.filter((p) => p.status === "pago" && p.paid_date && p.paid_date >= monthStart && p.paid_date <= monthEnd).reduce((s, p) => s + p.value, 0);
+
+    const pendentesSemana = escPayments.filter((p) => p.status === "pendente" && p.due_date && p.due_date >= weekStart && p.due_date <= weekEnd);
     const pendentesTotal = pendentesSemana.reduce((s, p) => s + p.value, 0);
 
-    const aReceber = payments.filter((p) => p.status === "pendente").reduce((s, p) => s + p.value, 0);
+    const aReceber = escPayments.filter((p) => p.status === "pendente").reduce((s, p) => s + p.value, 0);
 
     const pctRecebido = totalOrcado > 0 ? Math.round((pagoTotal / totalOrcado) * 100) : 0;
 
     // Alertas
-    const pagamentosAtrasados = payments.filter((p) => p.status === "pendente" && p.due_date && p.due_date < todayStr);
+    const pagamentosAtrasados = escPayments.filter((p) => p.status === "pendente" && p.due_date && p.due_date < todayStr);
     const fiveDaysAgo = format(subMonths(today, 0).setDate(today.getDate() - 5) ? new Date(today.getTime() - 5 * 86400000) : today, "yyyy-MM-dd");
     const orcamentosSemResposta = budgetQuotes.filter((bq) => bq.status === "cotado" && bq.created_at && bq.created_at.slice(0, 10) <= fiveDaysAgo);
 
@@ -221,8 +224,8 @@ export default function DashboardEscritorio() {
     const paymentsMonthlyData = monthLabels.map((label, i) => {
       const m = subMonths(today, 5 - i);
       const ms = format(startOfMonth(m), "yyyy-MM");
-      const recebido = payments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
-      const pendente = payments.filter((p) => p.status === "pendente" && p.due_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
+      const recebido = escPayments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
+      const pendente = escPayments.filter((p) => p.status === "pendente" && p.due_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
       return { month: label.charAt(0).toUpperCase() + label.slice(1), recebido, pendente };
     });
 
@@ -244,8 +247,8 @@ export default function DashboardEscritorio() {
     const receitaDespesaData = monthLabels.map((label, i) => {
       const m = subMonths(today, 5 - i);
       const ms = format(startOfMonth(m), "yyyy-MM");
-      const receita = payments.filter((p) => p.status === "pago" && p.client_id && p.paid_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
-      const despesa = payments.filter((p) => p.status === "pago" && p.supplier_id && p.paid_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
+      const receita = escPayments.filter((p) => p.status === "pago" && p.client_id && p.paid_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
+      const despesa = escPayments.filter((p) => p.status === "pago" && p.supplier_id && p.paid_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
       return { month: label.charAt(0).toUpperCase() + label.slice(1), receita, despesa };
     });
 

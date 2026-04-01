@@ -52,7 +52,7 @@ export default function ProjectDetail() {
           <div className="flex items-center gap-3 flex-wrap">
             {(project as any).project_number && (
               <Badge variant="outline" className="text-xs font-mono">
-                #{String((project as any).project_number).padStart(3, "0")}
+                {(project as any).project_number}
               </Badge>
             )}
             <h1 className="text-2xl font-bold text-display">{project.name}</h1>

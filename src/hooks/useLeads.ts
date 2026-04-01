@@ -113,35 +113,100 @@ export function useLeads() {
 
   const convertToClient = useMutation({
     mutationFn: async (lead: Lead) => {
-      // Create client from lead data
-      const { data: client, error: clientError } = await supabase
-        .from("clients")
-        .insert({
-          user_id: user!.id,
-          name: lead.name,
-          email: lead.email,
-          phone: lead.phone,
-          phone_secondary: lead.phone_secondary,
-          client_type: lead.project_type as any,
-          origin: lead.origin as any,
-        })
-        .select()
-        .single();
-      if (clientError) throw clientError;
+      // 1. Check for existing client by email or phone
+      let clientId: string | null = null;
+      if (lead.email) {
+        const { data: existing } = await supabase.from("clients").select("id").eq("email", lead.email).limit(1).single();
+        if (existing) clientId = existing.id;
+      }
+      if (!clientId && lead.phone) {
+        const { data: existing } = await supabase.from("clients").select("id").eq("phone", lead.phone).limit(1).single();
+        if (existing) clientId = existing.id;
+      }
 
-      // Update lead with converted_client_id and status
+      // 2. Create client if not found
+      if (!clientId) {
+        const { data: client, error: clientError } = await supabase
+          .from("clients")
+          .insert({
+            user_id: user!.id,
+            name: lead.name,
+            email: lead.email,
+            phone: lead.phone,
+            phone_secondary: lead.phone_secondary,
+            client_type: lead.project_type as any,
+            origin: lead.origin as any,
+          })
+          .select()
+          .single();
+        if (clientError) throw clientError;
+        clientId = client.id;
+      }
+
+      // 3. Update lead with converted_client_id and status
       const { error: leadError } = await supabase
         .from("leads")
-        .update({ converted_client_id: client.id, status: "fechado", converted_at: new Date().toISOString() })
+        .update({ converted_client_id: clientId, status: "fechado", converted_at: new Date().toISOString() })
         .eq("id", lead.id);
       if (leadError) throw leadError;
 
-      return client;
+      // 4. Fetch approved proposal for this lead (if any)
+      const { data: proposal } = await supabase
+        .from("proposals")
+        .select("id, price_full, final_value, project_name, project_type")
+        .eq("lead_id", lead.id)
+        .eq("status", "aprovada")
+        .limit(1)
+        .single();
+
+      // 5. Get next Q-prefixed project_number
+      const { data: rows } = await supabase.from("projects").select("project_number");
+      const maxNum = (rows ?? []).reduce((max: number, r: any) => {
+        const n = parseInt(String(r.project_number ?? "").replace("Q", ""), 10);
+        return isNaN(n) ? max : Math.max(max, n);
+      }, 0);
+      const nextNumber = `Q${maxNum + 1}`;
+
+      // 6. Create project
+      const projectName = `${lead.name} — ${lead.project_type || "projeto"}`;
+      const { data: project, error: projError } = await supabase
+        .from("projects")
+        .insert({
+          user_id: user!.id,
+          name: projectName,
+          client_id: clientId,
+          status: "planejamento" as any,
+          project_type: (lead.project_type as any) || "residencial",
+          project_number: nextNumber,
+          estimated_budget: proposal?.price_full ?? proposal?.final_value ?? null,
+        } as any)
+        .select()
+        .single();
+      if (projError) throw projError;
+
+      // 7. Create revenue payment if proposal exists
+      if (proposal) {
+        await supabase.from("payments").insert({
+          user_id: user!.id,
+          project_id: project.id,
+          description: `Honorários — ${lead.name}`,
+          value: proposal.price_full ?? proposal.final_value ?? 0,
+          status: "pendente" as any,
+          supplier_name: "Receita Escritório",
+          source: "escritorio",
+        } as any);
+      }
+
+      return project;
     },
-    onSuccess: () => {
+    onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
-      toast({ title: "Lead convertido em cliente!" });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast({
+        title: `Projeto ${(project as any).project_number} criado para ${(project as any).name?.split(" — ")[0]}`,
+        description: "Lead convertido em cliente e projeto criado",
+      });
     },
     onError: (e: Error) => toast({ title: "Erro ao converter lead", description: e.message, variant: "destructive" }),
   });

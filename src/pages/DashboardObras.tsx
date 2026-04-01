@@ -117,8 +117,8 @@ export default function DashboardObras() {
   const { data: payments = [] } = useQuery({
     queryKey: ["dash-obras-payments"],
     queryFn: async () => {
-      const { data } = await supabase.from("payments").select("id, value, due_date, status, supplier_name, description, project_id, projects(name)");
-      return data ?? [];
+      const { data } = await supabase.from("payments").select("id, value, due_date, status, supplier_name, description, project_id, source, projects(name)");
+      return (data ?? []).filter((p: any) => p.source !== 'escritorio');
     },
     enabled: !!user,
   });

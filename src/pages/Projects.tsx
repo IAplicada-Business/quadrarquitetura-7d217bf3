@@ -62,14 +62,13 @@ export default function Projects() {
 
   const createMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
-      // Get next project_number
-      const { data: maxRow } = await supabase
-        .from("projects")
-        .select("project_number")
-        .order("project_number", { ascending: false })
-        .limit(1)
-        .single();
-      const nextNumber = ((maxRow as any)?.project_number || 0) + 1;
+      // Get next Q-prefixed project_number
+      const { data: rows } = await supabase.from("projects").select("project_number");
+      const maxNum = (rows ?? []).reduce((max, r) => {
+        const n = parseInt(String(r.project_number ?? "").replace("Q", ""), 10);
+        return isNaN(n) ? max : Math.max(max, n);
+      }, 0);
+      const nextNumber = `Q${maxNum + 1}`;
 
       const insertData = {
         name: data.name as string,
@@ -231,7 +230,7 @@ export default function Projects() {
                 >
                   <TableCell className="font-medium">
                     {(p as any).project_number ? (
-                      <span className="text-muted-foreground font-mono text-xs mr-2">#{String((p as any).project_number).padStart(3, "0")}</span>
+                      <Badge variant="outline" className="text-xs font-mono mr-2">{(p as any).project_number}</Badge>
                     ) : null}
                     {p.name}
                   </TableCell>
