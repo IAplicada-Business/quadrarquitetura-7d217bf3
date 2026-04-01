@@ -1198,7 +1198,10 @@ export type Database = {
       }
       material_tracking: {
         Row: {
+          activity_id: string | null
+          adjusted_quantity: number | null
           budget_quote_id: string | null
+          calculated_quantity: number | null
           created_at: string
           delivery_date: string | null
           discipline: string | null
@@ -1220,7 +1223,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          activity_id?: string | null
+          adjusted_quantity?: number | null
           budget_quote_id?: string | null
+          calculated_quantity?: number | null
           created_at?: string
           delivery_date?: string | null
           discipline?: string | null
@@ -1242,7 +1248,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          activity_id?: string | null
+          adjusted_quantity?: number | null
           budget_quote_id?: string | null
+          calculated_quantity?: number | null
           created_at?: string
           delivery_date?: string | null
           discipline?: string | null
@@ -1276,6 +1285,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_tracking_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "project_activities"
             referencedColumns: ["id"]
           },
         ]
