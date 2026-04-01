@@ -620,6 +620,74 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {/* Approval Modal */}
+      <Dialog open={approvalModalOpen} onOpenChange={setApprovalModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Aprovar Cotação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-xs text-muted-foreground">Total Geral</p>
+                <p className="text-lg font-bold">{formatCurrency(approvedTotal)}</p>
+              </div>
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-xs text-muted-foreground">Valor por parcela</p>
+                <p className="text-lg font-bold">
+                  {formatCurrency(approvedTotal / Math.max(1, parseInt(approvalInstallments) || 1))}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Número de parcelas</Label>
+              <Input type="number" min="1" value={approvalInstallments} onChange={(e) => setApprovalInstallments(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Data da primeira parcela</Label>
+              <Input type="date" value={approvalStartDate} onChange={(e) => setApprovalStartDate(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Intervalo entre parcelas</Label>
+              <Select value={approvalInterval} onValueChange={(v) => setApprovalInterval(v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="semanal">Semanal</SelectItem>
+                  <SelectItem value="quinzenal">Quinzenal</SelectItem>
+                  <SelectItem value="mensal">Mensal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApprovalModalOpen(false)}>Cancelar</Button>
+            <Button onClick={handleApproveCotacao} disabled={approvalLoading}>
+              {approvalLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+              Confirmar Aprovação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revise Cotação Dialog */}
+      <AlertDialog open={reviseDialogOpen} onOpenChange={setReviseDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revisar cotação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Revisar a cotação irá excluir os pagamentos gerados automaticamente. Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reviseLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReviseCotacao} disabled={reviseLoading}>
+              {reviseLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+              Sim, revisar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
