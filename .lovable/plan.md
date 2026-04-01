@@ -1,61 +1,71 @@
 
 
-## Integrar analyze-plant na Aba Escopo — Tab "Planta Baixa"
+## Pesquisa de Preços em Lote na Aba Cotações
 
-### 1. Atualizar Edge Function `analyze-plant`
+### Contexto
 
-Adicionar suporte a `mode = 'activities'` no request body. Quando `mode === 'activities'`:
-- Aceitar campos opcionais `obra_type` e `ambientes`
-- Usar prompt específico que retorna `{ ambientes: [{nome, area_m2_estimada}], atividades: [{name, discipline, area_m2, duration_days, ambiente_origem, depends_on_activity_name}] }`
-- Tool call `extract_scope` com schema que inclui ambientes + atividades
-- Manter o fluxo existente (sem `mode`) inalterado
-
-### 2. Adicionar Tab "Planta Baixa" no `GenerateActivitiesDialog.tsx`
-
-Nova quarta tab no `TabsList`:
-
-**Inputs:**
-- Upload de imagem (PNG/JPG/PDF) — reutilizar lógica existente de upload
-- Select "Tipo de obra": reforma / construção / acabamento
-- Textarea "Ambientes a considerar" (texto livre)
-- Botão "Analisar Planta e Gerar Atividades"
-
-**Ao clicar:** upload para storage → chamar `analyze-plant` com `mode: 'activities'`
-
-**Resultado em duas colunas:**
-- Esquerda: ambientes identificados (nome + área editável)
-- Direita: atividades com checkbox, disciplina, duração (editáveis inline)
-
-**Botão "Importar Selecionados":**
-1. Cria atividades via `onCreate`
-2. Dispara auto-cálculo de materiais (via `autoCalculateMaterials` já existente no hook)
-3. Toast: "X atividades criadas. Y materiais calculados."
-
-### 3. Novo state no dialog
-
-```typescript
-interface PlantAmbiente { nome: string; area_m2_estimada: number; }
-interface PlantActivity extends GeneratedActivity { ambiente_origem?: string; depends_on_activity_name?: string; }
-
-const [plantAmbientes, setPlantAmbientes] = useState<PlantAmbiente[] | null>(null);
-const [plantActivities, setPlantActivities] = useState<PlantActivity[] | null>(null);
-const [obraType, setObraType] = useState("reforma");
-const [ambientesInput, setAmbientesInput] = useState("");
-const [plantFile, setPlantFile] = useState<File | null>(null);
-const [plantPreview, setPlantPreview] = useState<string | null>(null);
-```
-
-### 4. Auto-cálculo de materiais pós-importação
-
-O `autoCalculateMaterials` já é chamado no `onSuccess` do `create` mutation em `useProjectActivities.ts`. Logo, ao chamar `onCreate` para cada atividade com `area_m2 > 0`, os materiais são calculados automaticamente. Apenas precisamos contar quantos materiais foram gerados para o toast — faremos isso consultando `material_tracking` após um delay curto, ou simplesmente exibindo o toast genérico.
+A aba Cotações (`ProjectScenariosTab`) já tem cenários com itens (disciplinas). O `PriceSearchDialog` já faz pesquisa individual via `search-prices-bh`. O hook `usePriceResearch` já tem `getRecentForActivity` com cache de 7 dias. Precisamos buscar as **atividades do projeto** (não os scenario_items) para pesquisar preços em lote.
 
 ### Arquivos alterados
 
 | Arquivo | Ação |
 |---|---|
-| `supabase/functions/analyze-plant/index.ts` | Adicionar modo `activities` com prompt e schema específicos |
-| `src/components/projects/GenerateActivitiesDialog.tsx` | Nova tab "Planta Baixa" com upload, resultado em 2 colunas, importação |
-| `supabase/config.toml` | Adicionar `[functions.analyze-plant] verify_jwt = false` |
+| `src/components/projects/ProjectScenariosTab.tsx` | Botão "Atualizar Preços de BH" + badge + modal de progresso + indicadores visuais por item |
+| `src/hooks/usePriceResearch.ts` | Adicionar `searchAllActivities` helper + helper para status de cache |
 
-Nenhuma migration, rota ou outra aba alterada.
+### 1. `usePriceResearch.ts` — Novos helpers
+
+- **`getPriceStatus(activityId)`**: Retorna `'green'` (< 7d), `'yellow'` (7-30d), `'red'` (> 30d ou sem pesquisa) baseado no `searched_at` mais recente.
+- **`getActivitiesNeedingSearch(activities)`**: Filtra atividades sem pesquisa recente (> 7 dias).
+- **`getLastUpdateDate()`**: Retorna a data mais recente de `searched_at` de toda a pesquisa do projeto.
+
+### 2. `ProjectScenariosTab.tsx` — Botão + Modal + Indicadores
+
+**Botão no topo** (ao lado de "Analisar Orçamento"):
+- "Atualizar Preços de BH" com ícone `RefreshCw`
+- Badge: "X atividades sem pesquisa" ou "Atualizado em DD/MM"
+
+**Ao clicar**: busca `project_activities` do projeto. Separa em `precisam_pesquisar` vs `atualizados` (cache 7d). Abre modal de progresso.
+
+**Modal de progresso**:
+- Barra de progresso (`Progress` component)
+- "Pesquisando preços para X de Y atividades..."
+- "Usando cache para Z atividades"
+- Loop sequencial com `delay(1000)` entre chamadas à edge function `search-prices-bh`
+- Para cada atividade: busca `material_tracking` vinculado como input de materiais; se não houver, usa nome da atividade como material
+- Toast final: "Preços atualizados para X atividades. Y já estavam em cache."
+
+**Indicadores visuais nos items do cenário**:
+- Ao lado de cada item, ícone colorido (🟢🟡🔴) baseado no status do cache da pesquisa
+- Clicável: abre `PriceSearchDialog` para aquela disciplina
+- Botão inline "Pesquisar Preços" por item para forçar atualização individual ignorando cache
+
+**Estado adicional**:
+```typescript
+const [batchSearchOpen, setBatchSearchOpen] = useState(false);
+const [batchProgress, setBatchProgress] = useState(0);
+const [batchTotal, setBatchTotal] = useState(0);
+const [batchCached, setBatchCached] = useState(0);
+const [batchSearching, setBatchSearching] = useState(false);
+```
+
+### Fluxo do batch search
+
+```text
+1. Fetch project_activities para o projectId
+2. Fetch all price_research para o projectId (já no hook)
+3. Para cada atividade: verificar se tem pesquisa < 7 dias
+4. Separar em needsSearch vs cached
+5. Modal: "X para pesquisar, Y em cache"
+6. Loop sequencial:
+   - Buscar material_tracking da atividade para obter lista de materiais
+   - Se não houver materiais, usar [{name: activity.name, unit: 'un', quantity: 1}]
+   - Chamar search-prices-bh
+   - Salvar em price_research
+   - Incrementar progresso
+   - await delay(1000)
+7. Toast final + invalidar queries
+```
+
+Nenhuma migration, rota ou edge function alterada.
 
