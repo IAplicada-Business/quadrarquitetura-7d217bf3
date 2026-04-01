@@ -1,73 +1,67 @@
 
 
-## Reformulação dos Dashboards + Sidebar Auto-Expand
+## Chat IA Contextual + 3 Atalhos de IA nos Projetos
 
-### Dashboard Escritorio — Reescrita completa
+### 1. Chat IA com contexto da rota atual
 
-**Consolidar queries**: Substituir as 7 queries atuais por 2 hooks:
-- `useEscritorioMetrics()`: busca `leads`, `proposals`, `payments` (source=escritorio) em paralelo com `Promise.all` dentro de uma única `queryFn`
-- `useEscritorioAlertas()`: busca `schedule_tasks` atrasadas, `invoices_nf` pendentes, leads sem follow-up (created_at < 7 dias, status=novo) em paralelo
+**`src/hooks/useAIChat.ts`**: Adicionar parâmetro `contextPayload` ao `sendMessage`, que será enviado ao edge function junto com `message`, `conversation_id` e `history`.
 
-**Layout em 3 blocos horizontais**:
+**`src/components/chat/AIChatBox.tsx`**:
+- Importar `useLocation` e `useParams` (via wrapper ou prop)
+- Detectar rota `/projects/:id`: buscar projeto (nome, Q-number, cliente), atividades, pagamentos do projeto via queries existentes
+- Detectar rota `/leads/*`: buscar lead selecionado se houver
+- Passar `contextPayload: { route, project_context?, lead_context? }` ao `sendMessage`
+- Atualizar perguntas pré-definidas conforme contexto (ex: dentro de projeto mostrar "Qual o progresso deste projeto?")
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ BLOCO 1 — PULSO COMERCIAL (4 KPIs em linha)                │
-│ [Leads mês ▲12%] [Conversão 25% ~] [Ticket R$X ▼5%] [Aguardando 3 ⚠] │
-└─────────────────────────────────────────────────────────────┘
-┌──────────────────────────┬──────────────────────────────────┐
-│ BLOCO 2a — Gráfico       │ BLOCO 2b — Próximos Recebimentos│
-│ Barras Receita 6 meses   │ Top 5 pagamentos pendentes      │
-│ Eixo Y: formatCurrency   │ com badge dias restantes         │
-└──────────────────────────┴──────────────────────────────────┘
-┌──────────────┬──────────────┬───────────────────────────────┐
-│ Tarefas      │ NFs pendentes│ Leads sem follow-up +7d       │
-│ atrasadas: 3 │ envio: 2     │ 4 leads                       │
-│ → link       │ → link       │ → link                        │
-└──────────────┴──────────────┴───────────────────────────────┘
-```
+**`supabase/functions/chat-assistant/index.ts`**:
+- Receber `context` no body
+- Se `context.project_id` presente: buscar `projects`, `project_activities`, `payments`, `scenarios` desse projeto e injetar bloco extra no system prompt com dados específicos do projeto
+- Se `context.lead_id` presente: buscar lead e propostas associadas
 
-- Variação % mês anterior para Leads e Ticket Médio (comparar mês atual vs `subMonths(1)`)
-- Badge de urgência em "Aguardando Resposta" se alguma proposta enviada há >7 dias
-- **Corrigir eixo Y**: `const formatCurrency = (v) => v >= 1000 ? \`R$${(v/1000).toFixed(0)}k\` : \`R$${v}\``
-- **Estados vazios informativos**: cada bloco sem dados mostra ícone outline + texto "Nenhum [item] ainda" + botão de ação (ex: "Adicionar lead" → navigate)
-- Remover: gráficos de pizza orçamentos, leads por status vertical, "Receitas vs Despesas", propostas recentes, cards duplicados de resumo financeiro inferior
+### 2. Edge Function `project-ai-assistant`
 
----
+**`supabase/functions/project-ai-assistant/index.ts`** — Nova function que recebe `{ project_id, action, data }`:
 
-### Dashboard Obras — Reescrita do layout
+- **`action: 'sequence'`**: Recebe lista de atividades, envia ao Lovable AI com prompt para sequenciamento lógico de obra, retorna JSON estruturado via tool calling `{ suggestions: [{ activity_id, suggested_position, depends_on_id, reason }] }`
 
-**Remover Tabs** (operacional/financeiro) → layout direto em 3 blocos. Manter toda a lógica Multi-Obras existente abaixo.
+- **`action: 'analyze_budget'`**: Recebe itens do orçamento + dados de `price_research`, envia ao Lovable AI pedindo análise comparativa, retorna `{ analysis_text, items: [{ name, current_price, avg_price, status: 'above'|'below'|'ok' }] }`
 
-**BLOCO 1 — Visão Geral**: Barra horizontal de projetos ativos (reutilizar `projectProgress` + Q-number). Cada projeto: nome Q(n), progress bar, status badge, próxima atividade. Clicável → `/projects/:id`.
+- **`action: 'weekly_summary'`**: Recebe `site_diary_entries` da semana, retorna `{ summary, next_steps, client_pending }`
 
-**BLOCO 2 — Alertas Consolidados**: 3 colunas em grid:
-- Atividades atrasadas (já calculado em `multiObras.alerts.overdueTasks`)
-- Materiais não entregues (usar `delayedMaterials`)
-- Pagamentos de obra vencidos (usar `overduePayments`)
-Cada com contagem + badge de urgência + itens clicáveis.
+### 3. Atalho "Sugerir Sequenciamento" — Aba Escopo
 
-**BLOCO 3 — Financeiro de Obras**: Gráfico de barras por projeto (orçado vs gasto). Eixo Y com mesmo `formatCurrency`. Reutilizar `fin.financeiroObras`. Manter Multi-Obras (fornecedores, timeline) abaixo.
+**`src/components/projects/ProjectScopeTab.tsx`**:
+- Adicionar botão "Sugerir Sequenciamento" (ícone Sparkles)
+- Ao clicar: chama `project-ai-assistant` com `action: 'sequence'` + lista de atividades
+- Exibe modal com tabela: atividade | posição sugerida | predecessora | motivo | checkbox aceitar
+- Ao confirmar: atualiza `depends_on` e `position` das atividades selecionadas via `useProjectActivities.update`
 
----
+### 4. Atalho "Analisar Orçamento" — Aba Cotações
 
-### Sidebar — Auto-expand grupo ativo
+**`src/components/projects/ProjectScenariosTab.tsx`**:
+- Adicionar botão "Analisar Orçamento" (ícone BarChart)
+- Ao clicar: busca cenário aprovado + `price_research` do projeto, envia ao `project-ai-assistant` com `action: 'analyze_budget'`
+- Exibe modal com itens coloridos (vermelho = acima, verde = economia) + texto de análise
 
-**`AppSidebar.tsx`**:
-- Importar `useEffect`
-- Computar `activeGroup` a partir de `location.pathname`: mapear prefixos de rota para labels de grupo (`/dashboard` → "Dashboard", `/leads` → "Leads", `/clients` → "Clientes", `/projects` ou `/construction` → "Projetos", `/admin` → "Administrativo")
-- No `useEffect`, quando a rota muda: expandir o grupo ativo, colapsar os demais
-- Salvar/restaurar estado de sidebar colapsada em `localStorage` (chave `sidebar-collapsed`)
+### 5. Atalho "Gerar Resumo Semanal" — Aba Acompanhamento
 
----
+**`src/components/projects/ProjectTrackingTab.tsx`**:
+- Adicionar botão "Gerar Resumo Semanal" (ícone Sparkles)
+- Ao clicar: busca `site_diary_entries` da semana atual, envia ao `project-ai-assistant` com `action: 'weekly_summary'`
+- Preenche automaticamente o formulário do `WeeklyReportModal` com os campos retornados
+- Usuária revisa e confirma antes de salvar
 
-### Arquivos alterados
+### Arquivos
 
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---|---|
-| `src/pages/DashboardEscritorio.tsx` | Reescrita completa: 2 hooks, 3 blocos, estados vazios, eixo Y corrigido |
-| `src/pages/DashboardObras.tsx` | Remover tabs, reestruturar em 3 blocos + manter Multi-Obras |
-| `src/components/layout/AppSidebar.tsx` | Auto-expand grupo ativo + localStorage |
+| `supabase/functions/project-ai-assistant/index.ts` | **Novo** — Edge function para 3 ações de IA |
+| `src/hooks/useAIChat.ts` | Adicionar suporte a `contextPayload` |
+| `src/components/chat/AIChatBox.tsx` | Detectar rota, injetar contexto, perguntas dinâmicas |
+| `supabase/functions/chat-assistant/index.ts` | Receber e processar contexto de projeto/lead |
+| `src/components/projects/ProjectScopeTab.tsx` | Botão + modal "Sugerir Sequenciamento" |
+| `src/components/projects/ProjectScenariosTab.tsx` | Botão + modal "Analisar Orçamento" |
+| `src/components/projects/ProjectTrackingTab.tsx` | Botão "Gerar Resumo Semanal" |
 
-Nenhuma rota, migration ou funcionalidade existente alterada.
+Nenhuma rota ou migration necessária.
 
