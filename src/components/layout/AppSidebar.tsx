@@ -3,7 +3,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import logoLight from "@/assets/logo-light.png";
@@ -72,6 +72,23 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   );
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({});
   const location = useLocation();
+
+  // Auto-expand active group based on route
+  useEffect(() => {
+    const routeGroupMap: Record<string, string> = {
+      "/dashboard": "Dashboard",
+      "/leads": "Leads",
+      "/clients": "Clientes",
+      "/projects": "Projetos",
+      "/construction": "Projetos",
+      "/admin": "Administrativo",
+    };
+    const prefix = Object.keys(routeGroupMap).find((p) => location.pathname.startsWith(p));
+    if (prefix) {
+      const activeLabel = routeGroupMap[prefix];
+      setOpenGroups(Object.fromEntries(menuGroups.map((g) => [g.label, g.label === activeLabel])));
+    }
+  }, [location.pathname]);
 
   const toggleGroup = (label: string) => {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
