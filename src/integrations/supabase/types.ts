@@ -1751,6 +1751,7 @@ export type Database = {
           name: string
           neighborhood: string | null
           notes: string | null
+          onboarding_dismissed: boolean | null
           project_number: string | null
           project_type: Database["public"]["Enums"]["client_type"] | null
           real_budget: number | null
@@ -1786,6 +1787,7 @@ export type Database = {
           name: string
           neighborhood?: string | null
           notes?: string | null
+          onboarding_dismissed?: boolean | null
           project_number?: string | null
           project_type?: Database["public"]["Enums"]["client_type"] | null
           real_budget?: number | null
@@ -1821,6 +1823,7 @@ export type Database = {
           name?: string
           neighborhood?: string | null
           notes?: string | null
+          onboarding_dismissed?: boolean | null
           project_number?: string | null
           project_type?: Database["public"]["Enums"]["client_type"] | null
           real_budget?: number | null
