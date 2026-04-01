@@ -33,13 +33,54 @@ const paymentStatusConfig: Record<string, { label: string; className: string }> 
   atrasado: { label: "Atrasado", className: "bg-destructive/15 text-destructive border-destructive/30" },
 };
 
-export function ProjectFinancialTab({ projectId }: { projectId: string }) {
+export function ProjectFinancialTab({ projectId, projectName }: { projectId: string; projectName?: string }) {
+  const { user } = useAuth();
   const payments = useProjectPayments(projectId);
   const invoices = useInvoices(projectId);
+  const purchases = useProjectPurchases(projectId);
   const [paymentFormOpen, setPaymentFormOpen] = useState(false);
   const [invoiceFormOpen, setInvoiceFormOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Record<string, unknown> | null>(null);
   const [editingInvoice, setEditingInvoice] = useState<Record<string, unknown> | null>(null);
+
+  // Tax rate from settings
+  const { data: taxRate } = useQuery({
+    queryKey: ["settings-tax-rate"],
+    queryFn: async () => {
+      const { data } = await supabase.from("settings").select("*").limit(1).maybeSingle();
+      return (data as any)?.tax_rate_percent ?? 6;
+    },
+    enabled: !!user,
+  });
+
+  // DRE calculations
+  const dre = useMemo(() => {
+    const rate = taxRate ?? 6;
+    const receitaHonorarios = payments.items
+      .filter((p) => p.source === "escritorio" && p.status === "pago")
+      .reduce((s, p) => s + p.value, 0);
+    const receitaObra = payments.items
+      .filter((p) => p.source === "obra" && p.value > 0 && p.description?.toLowerCase().includes("receita"))
+      .reduce((s, p) => s + p.value, 0);
+    const receitaTotal = receitaHonorarios + receitaObra;
+
+    const despesasFornecedores = payments.items
+      .filter((p) => (p.source === "obra" || p.source === "cotacao") && p.status === "pago" && !p.description?.toLowerCase().includes("receita"))
+      .reduce((s, p) => s + p.value, 0);
+    const despesasCompras = purchases.items.reduce((s, p) => s + (p.value || 0), 0);
+    const despesasTotal = despesasFornecedores + despesasCompras;
+
+    const resultadoBruto = receitaTotal - despesasTotal;
+    const impostos = receitaTotal * (rate / 100);
+    const resultadoLiquido = resultadoBruto - impostos;
+    const margem = receitaTotal > 0 ? (resultadoLiquido / receitaTotal) * 100 : 0;
+
+    return {
+      receitaHonorarios, receitaObra, receitaTotal,
+      despesasFornecedores, despesasCompras, despesasTotal,
+      resultadoBruto, impostos, resultadoLiquido, margem, rate,
+    };
+  }, [payments.items, purchases.items, taxRate]);
 
   // Payment totals
   const paymentTotals = useMemo(() => {
