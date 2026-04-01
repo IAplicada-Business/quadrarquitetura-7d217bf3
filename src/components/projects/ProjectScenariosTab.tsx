@@ -556,6 +556,17 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
         <Button variant="outline" onClick={handleAnalyzeBudget} disabled={analysisLoading}>
           <BarChart3 className="h-4 w-4 mr-1" /> Analisar Orçamento
         </Button>
+        <Button variant="outline" onClick={handleBatchSearch} disabled={batchSearching || !projectActivities?.length}>
+          <RefreshCw className={cn("h-4 w-4 mr-1", batchSearching && "animate-spin")} /> Atualizar Preços de BH
+          {projectActivities && activitiesNeedingSearch.length > 0 && (
+            <Badge variant="destructive" className="ml-2 text-[10px] px-1.5">{activitiesNeedingSearch.length}</Badge>
+          )}
+          {projectActivities && activitiesNeedingSearch.length === 0 && lastUpdate && (
+            <Badge variant="secondary" className="ml-2 text-[10px] px-1.5">
+              {lastUpdate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+            </Badge>
+          )}
+        </Button>
         {approvedScenario && !cotacaoAprovada && (
           <Button variant="default" className="bg-success hover:bg-success/90" onClick={() => setApprovalModalOpen(true)}>
             <DollarSign className="h-4 w-4 mr-1" /> Aprovar Cotação
