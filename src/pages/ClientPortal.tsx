@@ -4,11 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ClientScheduleView } from "@/components/projects/ClientScheduleView";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Wallet, Camera, MessageCircle, AlertTriangle, FileBarChart } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Calendar, Wallet, Camera, MessageCircle, AlertTriangle, FileBarChart, Check, Send } from "lucide-react";
+import { toast } from "sonner";
 
 function formatCurrency(v: number | null | undefined) {
   if (v == null) return "R$ 0,00";
@@ -37,6 +42,17 @@ interface WeeklyReport {
   created_at: string;
 }
 
+interface PendingResponse {
+  id: string;
+  weekly_report_id: string;
+  pending_item: string;
+  response_text: string | null;
+  status: string;
+  responded_at: string | null;
+  client_name: string | null;
+  created_at: string;
+}
+
 interface PortalData {
   project: { name: string; address: string | null; city: string | null; estimated_budget: number | null; ideal_budget: number | null };
   tasks: any[];
@@ -44,6 +60,7 @@ interface PortalData {
   invoices: any[];
   photos: { url: string; date: string }[];
   weekly_reports: WeeklyReport[];
+  pending_responses: PendingResponse[];
 }
 
 export default function ClientPortal() {
@@ -52,6 +69,10 @@ export default function ClientPortal() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [respondModal, setRespondModal] = useState<{ reportId: string; item: string } | null>(null);
+  const [responseText, setResponseText] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -69,6 +90,61 @@ export default function ClientPortal() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [token]);
+
+  const submitResponse = async (reportId: string, pendingItem: string, status: "aprovado" | "respondido", text?: string) => {
+    let name = clientName;
+    if (!name) {
+      name = prompt("Seu nome (para registro):") || "";
+      if (!name) { toast.error("Nome é obrigatório para registrar a resposta"); return; }
+      setClientName(name);
+    }
+
+    setSubmitting(true);
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-client-response`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+        body: JSON.stringify({
+          token,
+          weekly_report_id: reportId,
+          pending_item: pendingItem,
+          response_text: text || null,
+          status,
+          client_name: name,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Erro ao enviar resposta");
+
+      // Update local state
+      if (data) {
+        setData({
+          ...data,
+          pending_responses: [
+            ...(data.pending_responses || []),
+            {
+              id: json.data?.id || crypto.randomUUID(),
+              weekly_report_id: reportId,
+              pending_item: pendingItem,
+              response_text: text || null,
+              status,
+              responded_at: new Date().toISOString(),
+              client_name: name,
+              created_at: new Date().toISOString(),
+            },
+          ],
+        });
+      }
+      toast.success(status === "aprovado" ? "Aprovado com sucesso!" : "Resposta enviada!");
+      setRespondModal(null);
+      setResponseText("");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -98,12 +174,15 @@ export default function ClientPortal() {
     );
   }
 
-  const { project, tasks, payments, invoices, photos, weekly_reports } = data;
+  const { project, tasks, payments, invoices, photos, weekly_reports, pending_responses = [] } = data;
   const contracted = project.estimated_budget || 0;
   const paid = payments
     .filter((p: any) => p.status === "pago")
     .reduce((s: number, p: any) => s + (p.value || 0), 0);
   const balance = contracted - paid;
+
+  const getResponseForReport = (reportId: string, item: string) =>
+    pending_responses.find(r => r.weekly_report_id === reportId && r.pending_item === item && r.status !== "aguardando");
 
   return (
     <div className="min-h-screen bg-background">
@@ -138,53 +217,103 @@ export default function ClientPortal() {
               <h2 className="text-lg font-semibold">Relatórios Semanais</h2>
             </div>
             <div className="space-y-4">
-              {weekly_reports.map((report) => (
-                <Card key={report.id}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-semibold">
-                      {formatWeekLabel(report.week_start)}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="text-muted-foreground">Conclusão geral</span>
-                        <span className="font-semibold">{report.completion_percent}%</span>
+              {weekly_reports.map((report) => {
+                const existingResponse = report.client_pending
+                  ? getResponseForReport(report.id, report.client_pending)
+                  : null;
+
+                return (
+                  <Card key={report.id}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-semibold">
+                        {formatWeekLabel(report.week_start)}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-muted-foreground">Conclusão geral</span>
+                          <span className="font-semibold">{report.completion_percent}%</span>
+                        </div>
+                        <Progress value={report.completion_percent} className="h-2" />
                       </div>
-                      <Progress value={report.completion_percent} className="h-2" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-0.5">Resumo</p>
-                      <p className="text-sm whitespace-pre-line">{report.summary}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-0.5">Próximas etapas</p>
-                      <p className="text-sm whitespace-pre-line">{report.next_steps}</p>
-                    </div>
-                    {report.photo_urls && report.photo_urls.length > 0 && (
-                      <div className="grid grid-cols-3 gap-2">
-                        {report.photo_urls.slice(0, 6).map((url, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setLightboxUrl(url)}
-                            className="aspect-square rounded-lg overflow-hidden border hover:opacity-80 transition-opacity"
-                          >
-                            <img src={url} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
-                          </button>
-                        ))}
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-0.5">Resumo</p>
+                        <p className="text-sm whitespace-pre-line">{report.summary}</p>
                       </div>
-                    )}
-                    {report.client_pending && (
-                      <div className="border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-950/20 rounded-r-md p-3">
-                        <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1">
-                          Precisamos de você:
-                        </p>
-                        <p className="text-sm whitespace-pre-line">{report.client_pending}</p>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-0.5">Próximas etapas</p>
+                        <p className="text-sm whitespace-pre-line">{report.next_steps}</p>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                      {report.photo_urls && report.photo_urls.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2">
+                          {report.photo_urls.slice(0, 6).map((url, i) => (
+                            <button
+                              key={i}
+                              onClick={() => setLightboxUrl(url)}
+                              className="aspect-square rounded-lg overflow-hidden border hover:opacity-80 transition-opacity"
+                            >
+                              <img src={url} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {report.client_pending && (
+                        <div className="border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-950/20 rounded-r-md p-3 space-y-3">
+                          <div>
+                            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1">
+                              Precisamos de você:
+                            </p>
+                            <p className="text-sm whitespace-pre-line">{report.client_pending}</p>
+                          </div>
+
+                          {existingResponse ? (
+                            <div className="bg-background/80 rounded-md p-3 space-y-1">
+                              <div className="flex items-center gap-2">
+                                <Badge variant={existingResponse.status === "aprovado" ? "default" : "secondary"} className="text-[10px]">
+                                  {existingResponse.status === "aprovado" ? "✓ Aprovado" : "Respondido"}
+                                </Badge>
+                                {existingResponse.client_name && (
+                                  <span className="text-xs text-muted-foreground">por {existingResponse.client_name}</span>
+                                )}
+                                {existingResponse.responded_at && (
+                                  <span className="text-xs text-muted-foreground">
+                                    em {format(new Date(existingResponse.responded_at), "dd/MM HH:mm", { locale: ptBR })}
+                                  </span>
+                                )}
+                              </div>
+                              {existingResponse.response_text && (
+                                <p className="text-sm">{existingResponse.response_text}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs"
+                                disabled={submitting}
+                                onClick={() => submitResponse(report.id, report.client_pending!, "aprovado")}
+                              >
+                                <Check className="h-3.5 w-3.5 mr-1" /> Aprovar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs"
+                                disabled={submitting}
+                                onClick={() => setRespondModal({ reportId: report.id, item: report.client_pending! })}
+                              >
+                                <Send className="h-3.5 w-3.5 mr-1" /> Responder
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </section>
         )}
@@ -290,6 +419,52 @@ export default function ClientPortal() {
       <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>
         <DialogContent className="max-w-[90vw] max-h-[90vh] p-1">
           {lightboxUrl && <img src={lightboxUrl} alt="Foto da obra" className="w-full h-full object-contain rounded" />}
+        </DialogContent>
+      </Dialog>
+
+      {/* Response Modal */}
+      <Dialog open={!!respondModal} onOpenChange={() => { setRespondModal(null); setResponseText(""); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Responder Pendência</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-950/20 rounded-r-md p-3">
+              <p className="text-sm">{respondModal?.item}</p>
+            </div>
+            <div>
+              <Label>Seu nome</Label>
+              <Input
+                value={clientName}
+                onChange={e => setClientName(e.target.value)}
+                placeholder="Nome para registro"
+                required
+              />
+            </div>
+            <div>
+              <Label>Sua resposta</Label>
+              <Textarea
+                value={responseText}
+                onChange={e => setResponseText(e.target.value)}
+                placeholder="Escreva sua resposta..."
+                rows={4}
+                required
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRespondModal(null); setResponseText(""); }}>Cancelar</Button>
+            <Button
+              disabled={submitting || !responseText.trim() || !clientName.trim()}
+              onClick={() => {
+                if (respondModal) {
+                  submitResponse(respondModal.reportId, respondModal.item, "respondido", responseText);
+                }
+              }}
+            >
+              <Send className="h-4 w-4 mr-1" /> Enviar Resposta
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Trash2, Cloud, Sun, CloudRain, Snowflake, CalendarDays, Users, FileText, BarChart3, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Trash2, Cloud, Sun, CloudRain, Snowflake, CalendarDays, Users, FileText, BarChart3, Sparkles, Loader2, MessageSquareText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import { format, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 const weatherOptions = [
   { value: "ensolarado", label: "Ensolarado", icon: Sun },
@@ -29,9 +30,24 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
   const { entries, isLoading, create, remove } = useSiteDiary(projectId);
   const { items: scopeItems } = useScopeItems(projectId);
   const { items: scheduleTasks } = useScheduleTasks(projectId);
-  const { create: createReport } = useWeeklyReports(projectId);
+  const { reports, create: createReport } = useWeeklyReports(projectId);
   const [formOpen, setFormOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+
+  // Fetch client responses
+  const { data: clientResponses = [] } = useQuery({
+    queryKey: ["client_pending_responses", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("client_pending_responses" as any)
+        .select("*")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+    enabled: !!projectId,
+  });
   const [filterPeriod, setFilterPeriod] = useState("all");
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [prefillData, setPrefillData] = useState<{ summary: string; next_steps: string; client_pending?: string } | null>(null);
@@ -317,7 +333,59 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
         </DialogContent>
       </Dialog>
 
-      {/* Weekly Report Modal */}
+      {/* Respostas do Cliente */}
+      {clientResponses.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center gap-2 mb-4">
+            <MessageSquareText className="h-5 w-5 text-primary" />
+            <h3 className="text-base font-semibold">Respostas do Cliente</h3>
+            {clientResponses.some((r: any) => {
+              const d = new Date(r.responded_at || r.created_at);
+              return r.status !== "aguardando" && (Date.now() - d.getTime()) < 48 * 60 * 60 * 1000;
+            }) && (
+              <Badge className="text-[10px]">Novo</Badge>
+            )}
+          </div>
+          <div className="space-y-3">
+            {(() => {
+              const grouped = clientResponses.reduce((acc: Record<string, any[]>, r: any) => {
+                const key = r.weekly_report_id;
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(r);
+                return acc;
+              }, {});
+              return Object.entries(grouped).map(([reportId, responses]) => {
+                const report = reports.find((r: any) => r.id === reportId);
+                const weekLabel = report ? format(new Date(report.week_start + "T00:00:00"), "dd/MM", { locale: ptBR }) : reportId.slice(0, 8);
+                return (
+                  <Card key={reportId}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-xs text-muted-foreground">Semana de {weekLabel}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {(responses as any[]).map((r: any) => (
+                        <div key={r.id} className="border rounded-md p-3 space-y-1">
+                          <p className="text-xs text-muted-foreground">Pendência: <span className="text-foreground">{r.pending_item}</span></p>
+                          {r.response_text && <p className="text-sm">{r.response_text}</p>}
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant={r.status === "aprovado" ? "default" : "secondary"} className="text-[10px]">
+                              {r.status === "aprovado" ? "✓ Aprovado" : r.status === "respondido" ? "Respondido" : r.status}
+                            </Badge>
+                            {r.client_name && <span>por {r.client_name}</span>}
+                            {r.responded_at && <span>em {format(new Date(r.responded_at), "dd/MM HH:mm", { locale: ptBR })}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                );
+              });
+            })()}
+          </div>
+        </section>
+      )}
+
+
       <WeeklyReportModal
         open={reportOpen}
         onOpenChange={setReportOpen}

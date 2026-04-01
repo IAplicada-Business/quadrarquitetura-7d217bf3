@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.project-ai-assistant]
 verify_jwt = false
+
+[functions.submit-client-response]
+verify_jwt = false
+
+[functions.get-client-portal-data]
+verify_jwt = false
