@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, ChevronDown, ChevronRight, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,6 +103,7 @@ export function ProjectFinancialTab({ projectId, projectName }: { projectId: str
   const [invoiceFormOpen, setInvoiceFormOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Record<string, unknown> | null>(null);
   const [editingInvoice, setEditingInvoice] = useState<Record<string, unknown> | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // Tax rate from settings
   const { data: taxRate } = useQuery({
@@ -150,6 +151,35 @@ export function ProjectFinancialTab({ projectId, projectName }: { projectId: str
     return { paid, pending, total: paid + pending };
   }, [payments.items]);
 
+  // Group payments: parent rows + children
+  const { parentRows, childrenMap } = useMemo(() => {
+    const children = new Map<string, typeof payments.items>();
+    const parentIds = new Set<string>();
+
+    // Find all children (have parent_payment_id)
+    for (const p of payments.items) {
+      const parentId = (p as any).parent_payment_id as string | null;
+      if (parentId) {
+        if (!children.has(parentId)) children.set(parentId, []);
+        children.get(parentId)!.push(p);
+        parentIds.add(parentId);
+      }
+    }
+
+    // Parent rows = items that are NOT children themselves
+    const parents = payments.items.filter((p) => !(p as any).parent_payment_id);
+
+    return { parentRows: parents, childrenMap: children };
+  }, [payments.items]);
+
+  const toggleGroup = (id: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
   // Invoice totals grouped by category
   const invoiceGroups = useMemo(() => {
     const groups: Record<string, { items: typeof invoices.items; total: number }> = {};
@@ -163,6 +193,75 @@ export function ProjectFinancialTab({ projectId, projectName }: { projectId: str
   }, [invoices.items]);
 
   const invoiceTotal = invoices.items.reduce((s, i) => s + (i.value || 0), 0);
+
+  const renderPaymentRow = (p: typeof payments.items[0], isChild = false) => {
+    const st = paymentStatusConfig[p.status || "pendente"];
+    const kids = childrenMap.get(p.id);
+    const hasKids = !!kids && kids.length > 0;
+    const isExpanded = expandedGroups.has(p.id);
+    const groupHasUnpaid = hasKids && (
+      p.status !== "pago" || kids.some((k) => k.status !== "pago")
+    );
+
+    return (
+      <TableRow key={p.id} className={isChild ? "bg-muted/30" : ""}>
+        <TableCell className={`font-medium ${isChild ? "pl-8" : ""}`}>
+          <div className="flex items-center gap-1.5">
+            {hasKids && (
+              <Button size="icon" variant="ghost" className="h-5 w-5 p-0" onClick={() => toggleGroup(p.id)}>
+                {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              </Button>
+            )}
+            <span>{p.description || "—"}</span>
+          </div>
+        </TableCell>
+        <TableCell className="text-right font-semibold">{formatCurrency(p.value)}</TableCell>
+        <TableCell>{formatDate(p.due_date)}</TableCell>
+        <TableCell>{formatDate(p.paid_date)}</TableCell>
+        <TableCell>
+          {p.installment_number && p.total_installments ? (
+            <Badge
+              variant="outline"
+              className="cursor-pointer bg-primary/10 text-primary border-primary/30 text-xs"
+              onClick={() => hasKids && toggleGroup(p.id)}
+            >
+              {p.installment_number}/{p.total_installments}
+            </Badge>
+          ) : "—"}
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Badge variant="outline" className={st?.className}>{st?.label || p.status}</Badge>
+            {p.source === "cotacao" && (
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px]">Gerado da cotação</Badge>
+            )}
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex gap-1">
+            {groupHasUnpaid && !isChild && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs text-success"
+                onClick={() => payments.payRemaining.mutate(p.id)}
+                disabled={payments.payRemaining.isPending}
+                title="Quitar restantes"
+              >
+                <CheckCheck className="h-3.5 w-3.5 mr-1" /> Quitar
+              </Button>
+            )}
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingPayment(p as Record<string, unknown>); setPaymentFormOpen(true); }}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => payments.remove.mutate(p.id)}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  };
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -216,38 +315,17 @@ export function ProjectFinancialTab({ projectId, projectName }: { projectId: str
                   <TableHead>Pagamento</TableHead>
                   <TableHead>Parcela</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="w-20" />
+                  <TableHead className="w-28" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {payments.items.map((p) => {
-                  const st = paymentStatusConfig[p.status || "pendente"];
+                {parentRows.map((p) => {
+                  const kids = childrenMap.get(p.id);
+                  const isExpanded = expandedGroups.has(p.id);
                   return (
-                    <TableRow key={p.id}>
-                      <TableCell className="font-medium">{p.description || "—"}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(p.value)}</TableCell>
-                      <TableCell>{formatDate(p.due_date)}</TableCell>
-                      <TableCell>{formatDate(p.paid_date)}</TableCell>
-                      <TableCell>{p.installment_number && p.total_installments ? `${p.installment_number}/${p.total_installments}` : "—"}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <Badge variant="outline" className={st?.className}>{st?.label || p.status}</Badge>
-                          {p.source === "cotacao" && (
-                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px]">Gerado da cotação</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingPayment(p as Record<string, unknown>); setPaymentFormOpen(true); }}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => payments.remove.mutate(p.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    <>{renderPaymentRow(p)}
+                      {isExpanded && kids?.map((child) => renderPaymentRow(child, true))}
+                    </>
                   );
                 })}
               </TableBody>
@@ -370,8 +448,12 @@ export function ProjectFinancialTab({ projectId, projectName }: { projectId: str
           }
           setEditingPayment(null);
         }}
+        onSubmitInstallments={(data) => {
+          payments.createInstallments.mutate(data);
+          setEditingPayment(null);
+        }}
         initialData={editingPayment}
-        isLoading={payments.create.isPending || payments.update.isPending}
+        isLoading={payments.create.isPending || payments.update.isPending || payments.createInstallments.isPending}
       />
 
       <InvoiceForm
