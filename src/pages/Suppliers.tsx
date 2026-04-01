@@ -128,7 +128,7 @@ export default function Suppliers() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map(s => (
-          <Card key={s.id} className="hover:shadow-md transition-shadow">
+          <Card key={s.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedSupplier(s)}>
             <CardHeader className="pb-2">
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
