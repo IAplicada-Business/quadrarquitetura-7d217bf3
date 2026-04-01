@@ -69,6 +69,91 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
   const projectData = project as any;
   const sourceProposalId = projectData?.source_proposal_id as string | null;
   const cotacaoImportada = projectData?.cotacao_importada as boolean;
+  const cotacaoAprovada = projectData?.cotacao_aprovada as boolean;
+  const cotacaoValorTotal = projectData?.cotacao_valor_total as number | null;
+  const cotacaoAprovadaAt = projectData?.cotacao_aprovada_at as string | null;
+
+  const approvedScenario = scenarios.find(s => s.is_approved);
+  const approvedTotal = approvedScenario
+    ? (approvedScenario.scenario_items || []).filter(i => i.is_included).reduce((s, i) => s + (i.estimated_value || 0), 0)
+    : 0;
+
+  const handleApproveCotacao = async () => {
+    if (!user || !approvedScenario) return;
+    setApprovalLoading(true);
+    try {
+      const numInstallments = Math.max(1, parseInt(approvalInstallments) || 1);
+      const valorParcela = approvedTotal / numInstallments;
+      const startDate = new Date(approvalStartDate);
+
+      // 1. Update project
+      await supabase.from("projects").update({
+        cotacao_aprovada: true,
+        cotacao_valor_total: approvedTotal,
+        cotacao_aprovada_at: new Date().toISOString(),
+      } as any).eq("id", projectId);
+
+      // 2. Generate payments
+      const payments = [];
+      for (let i = 0; i < numInstallments; i++) {
+        let dueDate: Date;
+        if (approvalInterval === "semanal") {
+          dueDate = addWeeks(startDate, i);
+        } else if (approvalInterval === "quinzenal") {
+          dueDate = addDays(startDate, i * 15);
+        } else {
+          dueDate = addDays(startDate, i * 30);
+        }
+        payments.push({
+          project_id: projectId,
+          user_id: user.id,
+          description: `Parcela ${i + 1}/${numInstallments} — Obra`,
+          value: Math.round(valorParcela * 100) / 100,
+          due_date: format(dueDate, "yyyy-MM-dd"),
+          status: "pendente" as const,
+          source: "cotacao",
+          installment_number: i + 1,
+          total_installments: numInstallments,
+        });
+      }
+      const { error: payErr } = await supabase.from("payments").insert(payments);
+      if (payErr) throw payErr;
+
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["payments", projectId] });
+      setApprovalModalOpen(false);
+      toast.success(`Cotação aprovada. ${numInstallments} pagamentos criados em Prestação de Contas.`, {
+        action: onTabChange ? { label: "Ver pagamentos", onClick: () => onTabChange("financeiro") } : undefined,
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao aprovar cotação");
+    } finally {
+      setApprovalLoading(false);
+    }
+  };
+
+  const handleReviseCotacao = async () => {
+    setReviseLoading(true);
+    try {
+      // Delete payments generated from cotacao
+      await supabase.from("payments").delete().eq("project_id", projectId).eq("source", "cotacao");
+      // Reset project flags
+      await supabase.from("projects").update({
+        cotacao_aprovada: false,
+        cotacao_valor_total: null,
+        cotacao_aprovada_at: null,
+      } as any).eq("id", projectId);
+
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["payments", projectId] });
+      setReviseDialogOpen(false);
+      toast.success("Cotação desbloqueada para revisão. Pagamentos gerados foram excluídos.");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao revisar cotação");
+    } finally {
+      setReviseLoading(false);
+    }
+  };
 
   // Fetch source proposal data when available
   const { data: sourceProposal } = useQuery({
