@@ -58,6 +58,9 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
   const [newItem, setNewItem] = useState({ discipline: "", description: "", estimated_value: "" });
   const [budgetInput, setBudgetInput] = useState((project as any)?.client_budget?.toString() || "");
   const [confirmApproveScenario, setConfirmApproveScenario] = useState<Scenario | null>(null);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<{ analysis_text: string; items: any[] } | null>(null);
 
   const handleCreateScenario = () => {
     if (!newScenarioName.trim()) return;
