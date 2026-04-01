@@ -1,46 +1,91 @@
 
 
-## Mover Memória de Cálculo para Configurações + Auto-cálculo ao salvar atividade
+## Propagação Automática de Datas no Cronograma
 
-### 1. CalculationRulesTab — Reorganizar ordem das seções
+### Contexto
 
-O arquivo já tem as 3 seções (Regras, Índices, Custos de MO). Reorganizar para:
-
-1. **Índices de Materiais** (mover para o topo, antes das Regras de Cálculo)
-   - Melhorar descrição: "Estes índices são usados automaticamente para calcular quantidades de materiais ao cadastrar atividades de obra. São valores globais do escritório — valem para todos os projetos."
-   - Trocar campo texto "Tipo de Atividade" por Select com disciplinas: alvenaria, elétrica, hidráulica, pintura, piso, forro, esquadria, marcenaria, limpeza, outros
-   - Adicionar coluna "Obs" na tabela
-   - Adicionar botão "Importar CSV" com input file que parseia CSV (disciplina, material, unidade, index_per_m2) e faz bulk insert
-2. **Custos de Mão de Obra** (mantém como está)
-3. **Regras de Cálculo** (desce para o final)
-
-### 2. ProjectMaterialsTab — Remover tab "Memória de Cálculo"
-
-- Remover a tab "calculo" e todo o TabsContent associado (linhas 439-500)
-- Remover imports/state de `useMaterialCalc`, `MaterialCalcForm`, `editingCalc`, `calcFormOpen`
-- Adicionar link no rodapé da seção de rastreamento: "Para editar os índices de cálculo, acesse Configurações → Regras de Cálculo" com ícone ExternalLink e `<a href="/admin/settings">` (ou `useNavigate`)
-
-### 3. Auto-cálculo ao salvar atividade
-
-No `useProjectActivities.ts`, nos callbacks `onSuccess` de `create` e `update`:
-- Chamar uma função async `autoCalculateMaterials(activityData)` que:
-  1. Verifica se `area_m2 > 0` e `discipline` está preenchido
-  2. Busca `material_indices` onde `activity_type` = discipline (case-insensitive)
-  3. Para cada índice: calcula `qty = area_m2 * index_per_m2`
-  4. Verifica existência em `material_tracking` (activity_id + material_name)
-  5. Se não existe: INSERT com `source='automatico'`, `calculated_quantity=qty`
-  6. Se existe e `source='automatico'`: UPDATE `calculated_quantity` e `quantity_needed`
-  7. Toast: "X materiais calculados para esta atividade"
-
-O hook `create` retorna `data` (a atividade criada) — usar o `id` dela. Para `update`, já temos o `id` no payload.
+O Gantt já tem CPM calculado, setas de dependência e `depends_on` nas atividades. Falta a cascata automática de datas quando uma atividade muda e o feedback visual de impacto.
 
 ### Arquivos alterados
 
 | Arquivo | Ação |
 |---|---|
-| `src/components/settings/CalculationRulesTab.tsx` | Reordenar seções (Índices → MO → Regras), select de disciplina, import CSV |
-| `src/components/projects/ProjectMaterialsTab.tsx` | Remover tab "calculo", adicionar link para Configurações |
-| `src/hooks/useProjectActivities.ts` | Auto-cálculo de materiais no onSuccess de create/update |
+| `src/hooks/useProjectActivities.ts` | Adicionar mutation `propagateDates` com lógica de cascata recursiva |
+| `src/components/projects/ProjectScheduleTab.tsx` | Botão "Recalcular Cronograma", dialog de confirmação de cascata ao marcar concluída |
+| `src/components/projects/GanttChart.tsx` | Highlight de dependentes on hover, botão recalcular no topo |
+| `src/components/projects/ActivityForm.tsx` | Ao salvar com data alterada, verificar impacto e exibir modal de preview |
+| `src/components/projects/CascadePreviewDialog.tsx` | **Novo** — modal de preview de impacto antes de confirmar |
+
+### 1. Hook: `propagateDates` mutation em `useProjectActivities.ts`
+
+Adicionar função utilitária e mutation:
+
+```typescript
+function computeCascade(changedId: string, newEndDate: string, activities: ProjectActivity[]) {
+  const changes: { id: string; oldStart: string; oldEnd: string; newStart: string; newEnd: string }[] = [];
+  
+  function propagate(actId: string, endDate: string) {
+    const dependents = activities.filter(a => a.depends_on?.includes(actId));
+    for (const dep of dependents) {
+      if (!dep.start_date || !dep.end_date) continue;
+      const duration = differenceInDays(new Date(dep.end_date), new Date(dep.start_date));
+      const newStart = addDays(new Date(endDate), 1).toISOString().split('T')[0];
+      const newEnd = addDays(new Date(newStart), duration).toISOString().split('T')[0];
+      changes.push({ id: dep.id, oldStart: dep.start_date, oldEnd: dep.end_date, newStart, newEnd });
+      propagate(dep.id, newEnd);
+    }
+  }
+  propagate(changedId, newEndDate);
+  return changes;
+}
+```
+
+Mutation `batchUpdateDates`: recebe array de `{ id, start_date, end_date }` e faz updates em loop (Supabase não suporta batch update nativo, mas serão poucas atividades por cascata).
+
+Mutation `recalculateAll`: dado o projeto, pega atividades sem dependências como raiz, percorre em ordem topológica recalculando `start_date = predecessor.end_date + 1`.
+
+### 2. `CascadePreviewDialog.tsx` (novo componente)
+
+Modal que recebe lista de mudanças `{ name, oldStart, oldEnd, newStart, newEnd }[]` e exibe:
+- Título: "Esta alteração afeta X atividades"
+- Lista: nome — de DD/MM para DD/MM (para cada atividade)
+- Botões: "Confirmar recálculo" e "Cancelar"
+
+### 3. `ActivityForm.tsx` — Detectar mudança de data
+
+Ao salvar, se `start_date` ou `end_date` mudou e a atividade tem dependentes:
+- Calcular cascata via `computeCascade`
+- Se há impacto > 0, abrir `CascadePreviewDialog` em vez de salvar diretamente
+- Ao confirmar, salvar atividade + batch update dos dependentes
+
+### 4. `ProjectScheduleTab.tsx`
+
+- Botão "Recalcular Cronograma" ao lado de "Nova Etapa" — chama `recalculateAll`
+- Ao marcar atividade como concluída com data diferente: dialog perguntando se deseja recalcular (usando `CascadePreviewDialog`)
+
+### 5. `GanttChart.tsx` — Highlight de dependentes on hover
+
+- State `hoveredTaskId`
+- No `onMouseEnter` de cada barra, setar hoveredTaskId
+- Função `getDependencyChain(taskId)` que retorna todos os IDs dependentes recursivamente
+- Barras na cadeia recebem `outline: 2px solid hsl(var(--primary))` e `opacity: 1` quando hover ativo
+- Barras fora da cadeia ficam com `opacity: 0.3`
+- No `onMouseLeave`, limpar hover
+
+### Fluxo completo
+
+```text
+Usuário edita data da atividade A
+  → computeCascade(A.id, A.newEndDate, activities)
+  → Se impacto > 0: abre CascadePreviewDialog
+    → Lista: B (15/04 → 20/04), C (20/04 → 25/04)
+    → "Confirmar recálculo" → batch update B e C
+  → Se impacto = 0: salva direto
+
+Usuário clica "Recalcular Cronograma"
+  → recalculateAll() reprocessa toda a cadeia
+  → Toast: "Cronograma recalculado para X atividades"
+```
 
 Nenhuma migration, rota ou estrutura de tabela alterada.
 
