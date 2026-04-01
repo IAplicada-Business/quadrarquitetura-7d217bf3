@@ -17,6 +17,8 @@ export interface PriceResearch {
   user_id: string;
 }
 
+export type PriceStatus = "green" | "yellow" | "red";
+
 export function usePriceResearch(projectId: string | undefined, activityId?: string) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -66,10 +68,41 @@ export function usePriceResearch(projectId: string | undefined, activityId?: str
     );
   };
 
+  // Get price status for an activity based on most recent search
+  const getPriceStatus = (actId: string): PriceStatus => {
+    if (!query.data) return "red";
+    const actResearch = query.data.filter((r) => r.activity_id === actId);
+    if (actResearch.length === 0) return "red";
+
+    const mostRecent = new Date(actResearch[0].searched_at); // already sorted desc
+    const now = new Date();
+    const diffDays = (now.getTime() - mostRecent.getTime()) / (1000 * 60 * 60 * 24);
+
+    if (diffDays < 7) return "green";
+    if (diffDays < 30) return "yellow";
+    return "red";
+  };
+
+  // Filter activities that need a new search (> 7 days or no data)
+  const getActivitiesNeedingSearch = (activities: { id: string }[]): string[] => {
+    return activities
+      .filter((a) => getPriceStatus(a.id) !== "green")
+      .map((a) => a.id);
+  };
+
+  // Get the most recent searched_at date across all project research
+  const getLastUpdateDate = (): Date | null => {
+    if (!query.data || query.data.length === 0) return null;
+    return new Date(query.data[0].searched_at); // sorted desc
+  };
+
   return {
     research: query.data ?? [],
     isLoading: query.isLoading,
     saveResults,
     getRecentForActivity,
+    getPriceStatus,
+    getActivitiesNeedingSearch,
+    getLastUpdateDate,
   };
 }

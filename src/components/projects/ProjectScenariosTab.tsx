@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, Check, DollarSign, BarChart3, Loader2, FileDown, FileX, Info, CheckCircle2, ArrowRight, RotateCcw } from "lucide-react";
+import { Plus, Trash2, Check, DollarSign, BarChart3, Loader2, FileDown, FileX, Info, CheckCircle2, ArrowRight, RotateCcw, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
