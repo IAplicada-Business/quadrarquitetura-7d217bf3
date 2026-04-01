@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, Pencil, Trash2, Calendar, MapPin, Users, Phone, Truck, FileText } from "lucide-react";
+import { SupplierDetailSheet } from "@/components/construction/SupplierDetailSheet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ export default function Suppliers() {
   const [editing, setEditing] = useState<any>(null);
   const [searchTerm, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
 
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ["suppliers"],
@@ -126,14 +128,14 @@ export default function Suppliers() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map(s => (
-          <Card key={s.id} className="hover:shadow-md transition-shadow">
+          <Card key={s.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedSupplier(s)}>
             <CardHeader className="pb-2">
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
                   <CardTitle className="text-lg">{s.name}</CardTitle>
                   <Badge variant="secondary">{s.category}</Badge>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(s); setFormOpen(true); }}>
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -232,6 +234,12 @@ export default function Suppliers() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <SupplierDetailSheet
+        supplier={selectedSupplier}
+        open={!!selectedSupplier}
+        onOpenChange={(v) => { if (!v) setSelectedSupplier(null); }}
+      />
     </div>
   );
 }

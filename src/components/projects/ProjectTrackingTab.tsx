@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Plus, Trash2, Cloud, Sun, CloudRain, Snowflake, CalendarDays, Users, FileText, BarChart3, Sparkles, Loader2, MessageSquareText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,8 @@ import { useSiteDiary } from "@/hooks/useSiteDiary";
 import { useScopeItems } from "@/hooks/useScopeItems";
 import { useScheduleTasks } from "@/hooks/useScheduleTasks";
 import { useWeeklyReports } from "@/hooks/useWeeklyReports";
+import { useSupplierAllocations } from "@/hooks/useSupplierAllocations";
+import { SupplierRatingDialog } from "@/components/construction/SupplierRatingDialog";
 import { WeeklyReportModal } from "./WeeklyReportModal";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -31,8 +33,11 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
   const { items: scopeItems } = useScopeItems(projectId);
   const { items: scheduleTasks } = useScheduleTasks(projectId);
   const { reports, create: createReport } = useWeeklyReports(projectId);
+  const { allocations } = useSupplierAllocations(projectId);
   const [formOpen, setFormOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [ratingAllocation, setRatingAllocation] = useState<any>(null);
+  const completedActivitiesRef = useRef<Set<string>>(new Set());
 
   // Fetch client responses
   const { data: clientResponses = [] } = useQuery({
@@ -51,6 +56,26 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
   const [filterPeriod, setFilterPeriod] = useState("all");
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [prefillData, setPrefillData] = useState<{ summary: string; next_steps: string; client_pending?: string } | null>(null);
+
+  // Detect newly completed activities linked to suppliers
+  useEffect(() => {
+    const completedTasks = scheduleTasks.filter((t: any) => t.status === "concluida" || t.progress_percentage === 100);
+    completedTasks.forEach((task: any) => {
+      if (completedActivitiesRef.current.has(task.id)) return;
+      completedActivitiesRef.current.add(task.id);
+      // Check if there's a supplier allocation for this discipline
+      const match = allocations.find(a => a.discipline === task.discipline && a.status === "ativo" && !a.rating);
+      if (match) {
+        toast(`Avaliar ${(match as any).suppliers?.name || "fornecedor"} para esta etapa?`, {
+          action: {
+            label: "Avaliar",
+            onClick: () => setRatingAllocation(match),
+          },
+          duration: 8000,
+        });
+      }
+    });
+  }, [scheduleTasks, allocations]);
 
   const avgProgress = useMemo(() => {
     const tasks = scheduleTasks.filter((t: any) => t.progress_percentage != null);
@@ -395,6 +420,12 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
         onSubmit={(data) => {
           createReport.mutate(data, { onSuccess: () => { setReportOpen(false); setPrefillData(null); } });
         }}
+      />
+
+      <SupplierRatingDialog
+        open={!!ratingAllocation}
+        onOpenChange={(v) => { if (!v) setRatingAllocation(null); }}
+        allocation={ratingAllocation}
       />
     </div>
   );

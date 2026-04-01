@@ -2720,12 +2720,15 @@ export type Database = {
       }
       supplier_allocations: {
         Row: {
+          contracted_value: number | null
           created_at: string
           discipline: string
           end_date: string | null
+          final_value: number | null
           id: string
           notes: string | null
           project_id: string
+          rating: number | null
           start_date: string | null
           status: string | null
           supplier_id: string
@@ -2733,12 +2736,15 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          contracted_value?: number | null
           created_at?: string
           discipline: string
           end_date?: string | null
+          final_value?: number | null
           id?: string
           notes?: string | null
           project_id: string
+          rating?: number | null
           start_date?: string | null
           status?: string | null
           supplier_id: string
@@ -2746,12 +2752,15 @@ export type Database = {
           user_id: string
         }
         Update: {
+          contracted_value?: number | null
           created_at?: string
           discipline?: string
           end_date?: string | null
+          final_value?: number | null
           id?: string
           notes?: string | null
           project_id?: string
+          rating?: number | null
           start_date?: string | null
           status?: string | null
           supplier_id?: string

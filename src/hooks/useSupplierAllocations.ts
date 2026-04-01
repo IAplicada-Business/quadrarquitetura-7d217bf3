@@ -12,6 +12,9 @@ export interface SupplierAllocation {
   end_date: string | null;
   status: string;
   notes: string | null;
+  contracted_value: number | null;
+  final_value: number | null;
+  rating: number | null;
   suppliers?: { name: string; category: string | null };
   projects?: { name: string };
 }
@@ -51,6 +54,19 @@ export function useSupplierAllocations(projectId?: string) {
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
+  const update = useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; rating?: number | null; notes?: string | null; final_value?: number | null; contracted_value?: number | null }) => {
+      const { error } = await supabase.from("supplier_allocations").update(data as any).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["supplier_allocations"] });
+      queryClient.invalidateQueries({ queryKey: ["supplier_allocations_detail"] });
+      toast({ title: "Alocação atualizada" });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
   const remove = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("supplier_allocations").delete().eq("id", id);
@@ -62,5 +78,5 @@ export function useSupplierAllocations(projectId?: string) {
     },
   });
 
-  return { allocations: query.data ?? [], isLoading: query.isLoading, create, remove };
+  return { allocations: query.data ?? [], isLoading: query.isLoading, create, update, remove };
 }
