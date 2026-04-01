@@ -1,0 +1,1 @@
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS parent_payment_id uuid REFERENCES payments(id) ON DELETE CASCADE;

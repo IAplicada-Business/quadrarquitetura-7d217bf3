@@ -1392,6 +1392,7 @@ export type Database = {
           id: string
           installment_number: number | null
           paid_date: string | null
+          parent_payment_id: string | null
           payment_method: string | null
           pix_key: string | null
           project_id: string | null
@@ -1414,6 +1415,7 @@ export type Database = {
           id?: string
           installment_number?: number | null
           paid_date?: string | null
+          parent_payment_id?: string | null
           payment_method?: string | null
           pix_key?: string | null
           project_id?: string | null
@@ -1436,6 +1438,7 @@ export type Database = {
           id?: string
           installment_number?: number | null
           paid_date?: string | null
+          parent_payment_id?: string | null
           payment_method?: string | null
           pix_key?: string | null
           project_id?: string | null
@@ -1469,6 +1472,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_parent_payment_id_fkey"
+            columns: ["parent_payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
             referencedColumns: ["id"]
           },
           {
