@@ -57,6 +57,26 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [prefillData, setPrefillData] = useState<{ summary: string; next_steps: string; client_pending?: string } | null>(null);
 
+  // Detect newly completed activities linked to suppliers
+  useEffect(() => {
+    const completedTasks = scheduleTasks.filter((t: any) => t.status === "concluida" || t.progress_percentage === 100);
+    completedTasks.forEach((task: any) => {
+      if (completedActivitiesRef.current.has(task.id)) return;
+      completedActivitiesRef.current.add(task.id);
+      // Check if there's a supplier allocation for this discipline
+      const match = allocations.find(a => a.discipline === task.discipline && a.status === "ativo" && !a.rating);
+      if (match) {
+        toast(`Avaliar ${(match as any).suppliers?.name || "fornecedor"} para esta etapa?`, {
+          action: {
+            label: "Avaliar",
+            onClick: () => setRatingAllocation(match),
+          },
+          duration: 8000,
+        });
+      }
+    });
+  }, [scheduleTasks, allocations]);
+
   const avgProgress = useMemo(() => {
     const tasks = scheduleTasks.filter((t: any) => t.progress_percentage != null);
     if (tasks.length === 0) return 0;
