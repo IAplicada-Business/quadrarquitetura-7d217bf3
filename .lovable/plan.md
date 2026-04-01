@@ -1,60 +1,57 @@
 
 
-## Contexto Persistente no Chat IA por Projeto
+## Parcelamento Automático de Pagamentos
 
 ### Migration SQL
 
 ```sql
-ALTER TABLE chat_messages
-  ADD COLUMN IF NOT EXISTS project_id uuid;
+ALTER TABLE payments
+  ADD COLUMN IF NOT EXISTS parent_payment_id uuid REFERENCES payments(id) ON DELETE CASCADE;
 ```
 
-Sem foreign key para evitar problemas com a tabela projects (consistente com o padrão do projeto que não usa FKs).
+### `src/components/projects/PaymentForm.tsx`
 
-### 1. Edge Function `chat-assistant` — Buscar histórico anterior
+Replace manual installment fields with toggle-based auto-parcelamento:
 
-Após verificar o usuário e parsear o body, se `context.project_id` existir:
-- Buscar as últimas 10 mensagens de `chat_messages` onde `user_id = userId` e `project_id = context.project_id`, ordenadas por `created_at DESC`
-- Reverter a ordem (ASC) e incluir como histórico antes das mensagens da sessão atual
-- O `history` enviado pelo frontend continua sendo usado, mas as mensagens do banco são prepended como contexto adicional (deduplicadas por conteúdo se necessário)
+- **Toggle "Parcelar pagamento"** (Switch component) — hidden when editing
+- When enabled, show:
+  - Número de parcelas (1-24, Input number)
+  - Data da primeira parcela (Input date)
+  - Intervalo (Select: Semanal 7d / Quinzenal 15d / Mensal 30d / Personalizado + Input dias)
+- **Preview automático**: `useMemo` calculates N installment rows with dates and values (`total / N`, last absorbs cents rounding)
+- When toggle OFF, form works as today (single payment)
+- **onSubmit change**: When parcelamento active, return array-like data structure with `installments` array instead of single payment. New prop `onSubmitInstallments` or modify `onSubmit` signature to accept installments mode.
 
-```typescript
-let dbHistory: any[] = [];
-if (context?.project_id) {
-  const { data } = await admin.from("chat_messages")
-    .select("role, content")
-    .eq("user_id", userId)
-    .eq("project_id", context.project_id)
-    .order("created_at", { ascending: false })
-    .limit(10);
-  dbHistory = (data || []).reverse();
-}
-// Merge: dbHistory + session history (dedup), cap at 20
-```
+### `src/hooks/useProjectPayments.ts`
 
-### 2. `useAIChat.ts` — Salvar `project_id` nas mensagens
+Add `createInstallments` mutation:
+- Receives: `{ base data, numParcelas, firstDate, intervalDays }`
+- Calculates dates and values
+- Inserts first payment, gets its ID back
+- Inserts remaining N-1 payments with `parent_payment_id = first.id`
+- Each has `installment_number`, `total_installments`, `description = "[desc] — Parcela X/N"`
 
-- Aceitar `projectId` como parâmetro opcional no `saveMessage`
-- Ao inserir em `chat_messages`, incluir `project_id` quando disponível (extraído do `contextPayload`)
+Add `payRemaining` mutation:
+- Takes `parent_payment_id` (or first installment ID)
+- Updates all unpaid payments in the group to `status = 'pago'`, `paid_date = today`
 
-### 3. `useAIChat.ts` — Auto-carregar contexto ao abrir
+### `src/components/projects/ProjectFinancialTab.tsx`
 
-- Adicionar função `loadProjectContext(projectId: string)` que busca as últimas 5 mensagens com aquele `project_id` e popula `messages`
-- Exportar essa função
+**Payments table changes**:
+- Group installments visually: show parent row with badge "X/N" clickable
+- When badge clicked, toggle showing child installments inline (indented)
+- Add "Quitar restantes" button on parent row when group has unpaid items
+- Wire `createInstallments` from hook when form submits with parcelamento
+- Non-installment payments (no `installment_number`) unchanged
 
-### 4. `AIChatBox.tsx` — Label de contexto + auto-load
-
-- Quando o chat abre em `/projects/:id` e não há conversa ativa (`currentConversationId === null` e `messages.length === 0`):
-  - Chamar `loadProjectContext(projectId)`
-  - Exibir label discreto: "Retomando conversa sobre este projeto — últimas 5 mensagens carregadas"
-- Label aparece acima das mensagens, desaparece após a primeira mensagem enviada
+### Dashboard Obras — not changing per user request scope (only mentions it but says "não altere nenhuma outra aba")
 
 ### Arquivos alterados
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | `project_id` em `chat_messages` |
-| `supabase/functions/chat-assistant/index.ts` | Buscar últimas 10 msgs do projeto do banco como histórico |
-| `src/hooks/useAIChat.ts` | Salvar `project_id`, função `loadProjectContext` |
-| `src/components/chat/AIChatBox.tsx` | Auto-load ao abrir em projeto, label de contexto |
+| Migration SQL | Add `parent_payment_id` to payments |
+| `src/components/projects/PaymentForm.tsx` | Toggle parcelamento, preview de parcelas, intervalo |
+| `src/hooks/useProjectPayments.ts` | `createInstallments` + `payRemaining` mutations |
+| `src/components/projects/ProjectFinancialTab.tsx` | Badge X/N expandível, botão "Quitar restantes" |
 
