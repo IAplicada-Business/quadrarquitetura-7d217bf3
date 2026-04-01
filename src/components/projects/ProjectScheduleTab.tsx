@@ -301,10 +301,23 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
               )}
             </div>
             <div className="flex gap-2">
+              {useActivitiesSource && (
+                <Button size="sm" variant="outline" onClick={handleRecalculateAll} disabled={batchUpdateDates.isPending}>
+                  <RefreshCw className="h-4 w-4 mr-1" /> Recalcular Cronograma
+                </Button>
+              )}
               <Button size="sm" variant="outline" onClick={handleImportFromScope} disabled={importing}>
                 <Download className="h-4 w-4 mr-1" /> Importar do Escopo
               </Button>
-              <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}>
+              <Button size="sm" onClick={() => {
+                if (useActivitiesSource) {
+                  setEditingActivity(null);
+                  setActivityFormOpen(true);
+                } else {
+                  setEditing(null);
+                  setFormOpen(true);
+                }
+              }}>
                 <Plus className="h-4 w-4 mr-1" /> Nova Etapa
               </Button>
             </div>
