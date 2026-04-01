@@ -216,7 +216,7 @@ export default function DashboardEscritorio() {
       </div>
 
       {/* ═══ BLOCO 1 — PULSO COMERCIAL ═══ */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {/* Leads no mês */}
         <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(210, 70%, 50%)" }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -265,6 +265,30 @@ export default function DashboardEscritorio() {
                 </span>
               )}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">aprovado este mês</p>
+          </CardContent>
+        </Card>
+
+        {/* Aprovadas no Mês */}
+        <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(270, 60%, 55%)" }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Aprovadas no Mês</CardTitle>
+            <CheckCircle2 className="h-5 w-5" style={{ color: "hsl(270, 60%, 55%)" }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: "hsl(270, 45%, 35%)" }}>{computed.approvedCount}</p>
+            <p className="text-xs text-muted-foreground mt-1">propostas aprovadas</p>
+          </CardContent>
+        </Card>
+
+        {/* Faturamento Fechado */}
+        <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(152, 70%, 35%)" }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Faturamento Fechado</CardTitle>
+            <FileText className="h-5 w-5" style={{ color: "hsl(152, 70%, 35%)" }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: "hsl(152, 50%, 25%)" }}>{fmt(computed.faturamentoMes)}</p>
             <p className="text-xs text-muted-foreground mt-1">aprovado este mês</p>
           </CardContent>
         </Card>
