@@ -221,6 +221,55 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Import from Proposal Banner */}
+      {showImportBanner && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex items-center gap-4 py-4">
+            <Info className="h-8 w-8 text-primary shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium text-sm">Este projeto tem uma proposta aprovada</p>
+              <p className="text-xs text-muted-foreground">Deseja importar ambientes, etapas e valores da proposta para pré-preencher a cotação?</p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="outline" onClick={handleStartFromZero}>
+                <FileX className="h-4 w-4 mr-1" /> Começar do Zero
+              </Button>
+              <Button size="sm" onClick={handleImportFromProposal} disabled={importLoading}>
+                {importLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileDown className="h-4 w-4 mr-1" />}
+                Importar da Proposta
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Proposal Reference */}
+      {sourceProposal && cotacaoImportada && (
+        <Card className="bg-muted/30">
+          <CardContent className="flex items-center gap-6 py-3 text-sm flex-wrap">
+            <div>
+              <span className="text-muted-foreground">Valor contratado: </span>
+              <strong className="text-primary">{formatCurrency((sourceProposal as any).price_full)}</strong>
+            </div>
+            {(sourceProposal as any).installments_count && (
+              <div>
+                <span className="text-muted-foreground">Parcelas: </span>
+                <strong>{(sourceProposal as any).installments_count}x {formatCurrency((sourceProposal as any).installment_value)}</strong>
+                {(sourceProposal as any).installment_entry > 0 && (
+                  <span className="text-muted-foreground ml-1">(entrada: {formatCurrency((sourceProposal as any).installment_entry)})</span>
+                )}
+              </div>
+            )}
+            {(sourceProposal as any).scope_description && (
+              <div className="basis-full">
+                <span className="text-muted-foreground">Escopo: </span>
+                <span className="text-xs">{(sourceProposal as any).scope_description}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Project Context */}
       <Card>
         <CardHeader className="pb-2">
