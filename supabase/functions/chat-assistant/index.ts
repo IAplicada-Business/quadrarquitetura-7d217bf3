@@ -206,9 +206,27 @@ ${projectContextBlock}
 ${leadContextBlock}
 ${contextBlock}`;
 
+    // Fetch persistent project history from DB
+    let dbHistory: any[] = [];
+    if (context?.project_id) {
+      const { data: dbMsgs } = await admin.from("chat_messages")
+        .select("role, content")
+        .eq("user_id", userId)
+        .eq("project_id", context.project_id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      dbHistory = (dbMsgs || []).reverse();
+    }
+
+    // Merge: dbHistory + session history, dedup by content, cap at 20
+    const sessionHistory = (history || []).slice(-18);
+    const sessionContents = new Set(sessionHistory.map((m: any) => m.content));
+    const uniqueDbHistory = dbHistory.filter((m: any) => !sessionContents.has(m.content));
+    const mergedHistory = [...uniqueDbHistory, ...sessionHistory].slice(-20);
+
     const messagesForAI = [
       { role: "system", content: systemPrompt },
-      ...(history || []).slice(-20),
+      ...mergedHistory,
       { role: "user", content: message },
     ];
 

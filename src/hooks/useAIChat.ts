@@ -193,7 +193,7 @@ export function useAIChat() {
 
       // Save assistant message
       if (assistantSoFar) {
-        await saveMessage(convId, "assistant", assistantSoFar);
+        await saveMessage(convId, "assistant", assistantSoFar, contextPayload?.project_id);
       }
     } catch (err: any) {
       if (err.name === "AbortError") return;
