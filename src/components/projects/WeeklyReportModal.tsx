@@ -21,6 +21,7 @@ interface Props {
     photos?: File[];
   }) => void;
   isPending: boolean;
+  prefill?: { summary: string; next_steps: string; client_pending?: string };
 }
 
 export function WeeklyReportModal({ open, onOpenChange, avgProgress, onSubmit, isPending }: Props) {
