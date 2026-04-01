@@ -51,7 +51,11 @@ function fmt(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 }
 
-const formatCurrency = (v: number) => (v >= 1000 ? `R$${(v / 1000).toFixed(0)}k` : `R$${v}`);
+const yAxisFormatter = (v: number) => {
+  if (v >= 1000000) return `R$${(v / 1000000).toFixed(1)}M`;
+  if (v >= 1000) return `R$${(v / 1000).toFixed(0)}k`;
+  return `R$${v.toFixed(0)}`;
+};
 
 const receitaChartConfig: ChartConfig = {
   receita: { label: "Receita", color: ROSA.fill1 },
