@@ -58,14 +58,16 @@ export function useAIChat() {
     setCurrentConversationId(null);
   }, []);
 
-  const saveMessage = useCallback(async (convId: string, role: string, content: string) => {
+  const saveMessage = useCallback(async (convId: string, role: string, content: string, projectId?: string) => {
     if (!user) return;
-    await supabase.from("chat_messages").insert({
+    const row: any = {
       conversation_id: convId,
       user_id: user.id,
       role,
       content,
-    });
+    };
+    if (projectId) row.project_id = projectId;
+    await supabase.from("chat_messages").insert(row);
   }, [user]);
 
   const sendMessage = useCallback(async (input: string, contextPayload?: { route?: string; project_id?: string; lead_id?: string }) => {
@@ -94,7 +96,8 @@ export function useAIChat() {
       }
 
       // Save user message
-      await saveMessage(convId, "user", input.trim());
+      const ctxProjectId = contextPayload?.project_id;
+      await saveMessage(convId, "user", input.trim(), ctxProjectId);
 
       // Build history for context
       const history = messages.slice(-18).map(m => ({ role: m.role, content: m.content }));
@@ -190,7 +193,7 @@ export function useAIChat() {
 
       // Save assistant message
       if (assistantSoFar) {
-        await saveMessage(convId, "assistant", assistantSoFar);
+        await saveMessage(convId, "assistant", assistantSoFar, contextPayload?.project_id);
       }
     } catch (err: any) {
       if (err.name === "AbortError") return;
@@ -217,6 +220,20 @@ export function useAIChat() {
     queryClient.invalidateQueries({ queryKey: ["chat-conversations"] });
   }, [currentConversationId, startNewConversation, queryClient]);
 
+  const loadProjectContext = useCallback(async (projectId: string) => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("chat_messages")
+      .select("role, content, created_at")
+      .eq("user_id", user.id)
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    if (error || !data || data.length === 0) return;
+    const msgs = data.reverse().map((m: any) => ({ role: m.role as "user" | "assistant", content: m.content }));
+    setMessages(msgs);
+  }, [user]);
+
   return {
     messages,
     isStreaming,
@@ -227,5 +244,6 @@ export function useAIChat() {
     loadConversation,
     startNewConversation,
     deleteConversation,
+    loadProjectContext,
   };
 }

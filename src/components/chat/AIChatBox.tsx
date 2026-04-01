@@ -58,8 +58,10 @@ export function AIChatBox() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const [contextLabel, setContextLabel] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const contextLoadedRef = useRef<string | null>(null);
   const location = useLocation();
 
   const { questions, contextPayload } = useMemo(
@@ -77,7 +79,38 @@ export function AIChatBox() {
     loadConversation,
     startNewConversation,
     deleteConversation,
+    loadProjectContext,
   } = useAIChat();
+
+  // Auto-load project context when opening chat on a project page
+  useEffect(() => {
+    if (
+      isOpen &&
+      contextPayload.project_id &&
+      !currentConversationId &&
+      messages.length === 0 &&
+      contextLoadedRef.current !== contextPayload.project_id
+    ) {
+      contextLoadedRef.current = contextPayload.project_id;
+      loadProjectContext(contextPayload.project_id).then(() => {
+        setContextLabel("Retomando conversa sobre este projeto — últimas 5 mensagens carregadas");
+      });
+    }
+  }, [isOpen, contextPayload.project_id, currentConversationId, messages.length, loadProjectContext]);
+
+  // Clear context label after first message sent
+  useEffect(() => {
+    if (contextLabel && messages.length > 0 && messages[messages.length - 1]?.role === "user") {
+      setContextLabel(null);
+    }
+  }, [messages, contextLabel]);
+
+  // Reset context loaded ref when navigating away
+  useEffect(() => {
+    if (!contextPayload.project_id) {
+      contextLoadedRef.current = null;
+    }
+  }, [contextPayload.project_id]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -215,7 +248,14 @@ export function AIChatBox() {
 
             {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[300px]">
-              {messages.length === 0 && (
+              {contextLabel && messages.length > 0 && (
+                <div className="text-center">
+                  <span className="inline-block text-[10px] text-muted-foreground bg-muted/60 rounded-full px-3 py-1">
+                    {contextLabel}
+                  </span>
+                </div>
+              )}
+              {messages.length === 0 && !contextLabel && (
                 <div className="space-y-4">
                   <div className="text-center py-4">
                     <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-3">
