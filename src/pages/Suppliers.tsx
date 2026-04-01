@@ -234,6 +234,12 @@ export default function Suppliers() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <SupplierDetailSheet
+        supplier={selectedSupplier}
+        open={!!selectedSupplier}
+        onOpenChange={(v) => { if (!v) setSelectedSupplier(null); }}
+      />
     </div>
   );
 }
