@@ -69,6 +69,17 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
   const [reviseDialogOpen, setReviseDialogOpen] = useState(false);
   const [reviseLoading, setReviseLoading] = useState(false);
 
+  // Batch price search state
+  const [batchSearchOpen, setBatchSearchOpen] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(0);
+  const [batchTotal, setBatchTotal] = useState(0);
+  const [batchCached, setBatchCached] = useState(0);
+  const [batchSearching, setBatchSearching] = useState(false);
+  const [priceDialogOpen, setPriceDialogOpen] = useState(false);
+  const [priceDialogActivity, setPriceDialogActivity] = useState<{ id: string; name: string } | null>(null);
+
+  const { research, getPriceStatus, getActivitiesNeedingSearch, getLastUpdateDate } = usePriceResearch(projectId);
+
   const projectData = project as any;
   const sourceProposalId = projectData?.source_proposal_id as string | null;
   const cotacaoImportada = projectData?.cotacao_importada as boolean;
