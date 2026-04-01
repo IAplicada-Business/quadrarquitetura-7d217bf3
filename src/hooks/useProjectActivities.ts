@@ -21,6 +21,59 @@ export interface ProjectActivity {
   created_at: string;
 }
 
+async function autoCalculateMaterials(activity: { id: string; area_m2?: number | null; discipline?: string | null; project_id: string; user_id: string }) {
+  if (!activity.area_m2 || activity.area_m2 <= 0 || !activity.discipline) return;
+
+  // Fetch matching material indices
+  const { data: indices } = await supabase
+    .from("material_indices" as any)
+    .select("*");
+  if (!indices || indices.length === 0) return;
+
+  const matchingIndices = (indices as any[]).filter(
+    (idx: any) => idx.activity_type?.toLowerCase() === activity.discipline!.toLowerCase()
+  );
+  if (matchingIndices.length === 0) return;
+
+  let count = 0;
+  for (const idx of matchingIndices) {
+    const qty = activity.area_m2 * Number(idx.index_per_m2);
+
+    // Check if already exists
+    const { data: existing } = await supabase
+      .from("material_tracking")
+      .select("id, source")
+      .eq("activity_id", activity.id)
+      .eq("material_name", idx.material_name)
+      .maybeSingle();
+
+    if (!existing) {
+      await supabase.from("material_tracking").insert({
+        project_id: activity.project_id,
+        user_id: activity.user_id,
+        activity_id: activity.id,
+        material_name: idx.material_name,
+        unit: idx.unit,
+        discipline: activity.discipline,
+        calculated_quantity: qty,
+        quantity_needed: qty,
+        source: "automatico",
+      });
+      count++;
+    } else if (existing.source === "automatico") {
+      await supabase
+        .from("material_tracking")
+        .update({ calculated_quantity: qty, quantity_needed: qty })
+        .eq("id", existing.id);
+      count++;
+    }
+  }
+
+  if (count > 0) {
+    toast({ title: `${count} materiais calculados para esta atividade` });
+  }
+}
+
 export function useProjectActivities(projectId: string | undefined) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -54,9 +107,19 @@ export function useProjectActivities(projectId: string | undefined) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["project_activities", projectId] });
       toast({ title: "Atividade criada" });
+      // Auto-calculate materials
+      autoCalculateMaterials({
+        id: data.id,
+        area_m2: data.area_m2,
+        discipline: data.discipline,
+        project_id: projectId!,
+        user_id: user!.id,
+      }).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["material_tracking", projectId] });
+      });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
@@ -68,10 +131,23 @@ export function useProjectActivities(projectId: string | undefined) {
         .update(updates as any)
         .eq("id", id);
       if (error) throw error;
+      return { id, ...updates };
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["project_activities", projectId] });
       toast({ title: "Atividade atualizada" });
+      // Auto-calculate materials if area or discipline changed
+      if (data.area_m2 !== undefined || data.discipline !== undefined) {
+        autoCalculateMaterials({
+          id: data.id,
+          area_m2: data.area_m2,
+          discipline: data.discipline,
+          project_id: projectId!,
+          user_id: user!.id,
+        }).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["material_tracking", projectId] });
+        });
+      }
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
