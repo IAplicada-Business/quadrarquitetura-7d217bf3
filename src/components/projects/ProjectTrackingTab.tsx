@@ -421,6 +421,12 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
           createReport.mutate(data, { onSuccess: () => { setReportOpen(false); setPrefillData(null); } });
         }}
       />
+
+      <SupplierRatingDialog
+        open={!!ratingAllocation}
+        onOpenChange={(v) => { if (!v) setRatingAllocation(null); }}
+        allocation={ratingAllocation}
+      />
     </div>
   );
 }
