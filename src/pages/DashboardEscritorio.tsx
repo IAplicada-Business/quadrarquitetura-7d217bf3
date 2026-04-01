@@ -144,7 +144,7 @@ export default function DashboardEscritorio() {
   const { data: allProposals = [] } = useQuery({
     queryKey: ["dash-esc-proposals-metrics"],
     queryFn: async () => {
-      const { data } = await supabase.from("proposals").select("id, status, price_full, created_at");
+      const { data } = await supabase.from("proposals").select("id, status, price_full, final_value, approved_at, created_at");
       return data ?? [];
     },
     enabled: !!user,
@@ -268,7 +268,14 @@ export default function DashboardEscritorio() {
     const ticketMedio = proposalsMesAtual.length > 0 ? proposalsMesAtual.reduce((s, p) => s + (p.price_full ?? 0), 0) / proposalsMesAtual.length : 0;
 
     const propostasAguardando = allProposals.filter((p) => p.status === "enviada").length;
-    const propostasAprovadasMes = allProposals.filter((p) => p.status === "aprovada" && p.created_at?.slice(0, 7) === format(today, "yyyy-MM")).length;
+    const propostasAprovadasMes = allProposals.filter((p) => p.status === "aprovada" && p.approved_at && p.approved_at.slice(0, 7) === format(today, "yyyy-MM")).length;
+
+    const faturamentoMes = allProposals
+      .filter((p) => p.status === "aprovada" && p.approved_at && p.approved_at.slice(0, 7) === format(today, "yyyy-MM"))
+      .reduce((s, p) => s + (p.price_full ?? p.final_value ?? 0), 0);
+    const faturamentoTotal = allProposals
+      .filter((p) => p.status === "aprovada")
+      .reduce((s, p) => s + (p.price_full ?? p.final_value ?? 0), 0);
 
     // Gráfico leads 6 meses empilhado
     const leadsChartData = monthLabels.map((label, i) => {
@@ -302,6 +309,8 @@ export default function DashboardEscritorio() {
       ticketMedio,
       propostasAguardando,
       propostasAprovadasMes,
+      faturamentoMes,
+      faturamentoTotal,
       leadsChartData,
     };
   }, [projects, payments, budgetQuotes, leads, allProposals, monthStart, monthEnd, weekStart, weekEnd, todayStr, today]);
@@ -619,6 +628,21 @@ export default function DashboardEscritorio() {
           <CardContent>
             <p className="text-2xl font-bold font-display" style={{ color: "hsl(152, 40%, 30%)" }}>{computed.propostasAprovadasMes}</p>
             <p className="text-xs text-muted-foreground mt-1">propostas aprovadas</p>
+            {computed.faturamentoMes > 0 && (
+              <p className="text-sm font-semibold mt-2" style={{ color: "hsl(152, 60%, 40%)" }}>{fmt(computed.faturamentoMes)}</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(152, 50%, 50%)" }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Faturamento Fechado</CardTitle>
+            <TrendingUp className="h-5 w-5" style={{ color: "hsl(152, 50%, 50%)" }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: "hsl(152, 40%, 30%)" }}>{fmt(computed.faturamentoMes)}</p>
+            <p className="text-xs text-muted-foreground mt-1">aprovado este mês</p>
+            <p className="text-xs text-muted-foreground mt-1">Total: {fmt(computed.faturamentoTotal)}</p>
           </CardContent>
         </Card>
       </div>
@@ -659,7 +683,7 @@ export default function DashboardEscritorio() {
       </Card>
 
       {/* Resumo Financeiro */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card style={{ backgroundColor: ROSA.fundoSuave, borderColor: ROSA.fill3 }}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -668,6 +692,17 @@ export default function DashboardEscritorio() {
                 <p className="text-2xl font-bold font-display" style={{ color: ROSA.textoDestaque }}>{fmt(computed.totalOrcado)}</p>
               </div>
               <TrendingUp className="h-8 w-8" style={{ color: ROSA.fill2 }} />
+            </div>
+          </CardContent>
+        </Card>
+        <Card style={{ backgroundColor: "hsl(152, 30%, 96%)", borderColor: "hsl(152, 40%, 80%)" }}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Faturamento Aprovado</p>
+                <p className="text-2xl font-bold font-display" style={{ color: "hsl(152, 40%, 30%)" }}>{fmt(computed.faturamentoTotal)}</p>
+              </div>
+              <CheckCircle2 className="h-8 w-8" style={{ color: "hsl(152, 50%, 50%)" }} />
             </div>
           </CardContent>
         </Card>
