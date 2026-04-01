@@ -1665,6 +1665,7 @@ export type Database = {
           construction_type_estimate: string | null
           contingency_percentage: number | null
           contract_id: string | null
+          cotacao_importada: boolean | null
           created_at: string
           estimated_budget: number | null
           expected_end_date: string | null
@@ -1679,6 +1680,7 @@ export type Database = {
           real_budget: number | null
           real_end_date: string | null
           real_start_date: string | null
+          source_proposal_id: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"] | null
           sub_status: string | null
@@ -1695,6 +1697,7 @@ export type Database = {
           construction_type_estimate?: string | null
           contingency_percentage?: number | null
           contract_id?: string | null
+          cotacao_importada?: boolean | null
           created_at?: string
           estimated_budget?: number | null
           expected_end_date?: string | null
@@ -1709,6 +1712,7 @@ export type Database = {
           real_budget?: number | null
           real_end_date?: string | null
           real_start_date?: string | null
+          source_proposal_id?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"] | null
           sub_status?: string | null
@@ -1725,6 +1729,7 @@ export type Database = {
           construction_type_estimate?: string | null
           contingency_percentage?: number | null
           contract_id?: string | null
+          cotacao_importada?: boolean | null
           created_at?: string
           estimated_budget?: number | null
           expected_end_date?: string | null
@@ -1739,6 +1744,7 @@ export type Database = {
           real_budget?: number | null
           real_end_date?: string | null
           real_start_date?: string | null
+          source_proposal_id?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"] | null
           sub_status?: string | null
@@ -1765,6 +1771,13 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_source_proposal_id_fkey"
+            columns: ["source_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
         ]

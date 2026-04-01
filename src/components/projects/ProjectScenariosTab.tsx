@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, Check, DollarSign, BarChart3, Loader2 } from "lucide-react";
+import { Plus, Trash2, Check, DollarSign, BarChart3, Loader2, FileDown, FileX, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useScenarios, Scenario } from "@/hooks/useScenarios";
 import { useProjectDetail } from "@/hooks/useProjectDetail";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -40,6 +42,8 @@ interface ProjectScenariosTabProps {
 }
 
 export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { project, updateProject } = useProjectDetail(projectId);
   const { scenarios, isLoading, createScenario, removeScenario, addItem, updateItem, removeItem, approveScenario } = useScenarios(projectId);
 
@@ -51,6 +55,90 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<{ analysis_text: string; items: any[] } | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+
+  const projectData = project as any;
+  const sourceProposalId = projectData?.source_proposal_id as string | null;
+  const cotacaoImportada = projectData?.cotacao_importada as boolean;
+
+  // Fetch source proposal data when available
+  const { data: sourceProposal } = useQuery({
+    queryKey: ["source_proposal", sourceProposalId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("proposals")
+        .select("*")
+        .eq("id", sourceProposalId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!sourceProposalId,
+  });
+
+  const showImportBanner = !!sourceProposalId && !cotacaoImportada && scenarios.length === 0;
+
+  const handleImportFromProposal = async () => {
+    if (!sourceProposal || !user) return;
+    setImportLoading(true);
+    try {
+      // 1. Create scenario named "Proposta Aprovada"
+      const { data: scenario, error: scenErr } = await supabase
+        .from("scenarios")
+        .insert({ user_id: user.id, project_id: projectId, name: "Proposta Aprovada" })
+        .select()
+        .single();
+      if (scenErr) throw scenErr;
+
+      // 2. Create scenario items from ambientes
+      const ambientes = (sourceProposal as any).ambientes as any[] || [];
+      if (ambientes.length > 0) {
+        const items = ambientes.map((amb: any, idx: number) => ({
+          scenario_id: scenario.id,
+          user_id: user.id,
+          discipline: typeof amb === "string" ? amb : (amb.name || amb.ambiente || `Ambiente ${idx + 1}`),
+          description: typeof amb === "object" ? (amb.description || amb.area || null) : null,
+          estimated_value: 0,
+          is_included: true,
+          display_order: idx,
+        }));
+        await supabase.from("scenario_items").insert(items);
+      }
+
+      // 3. Also add etapas_ativas as disciplines
+      const etapas = (sourceProposal as any).etapas_ativas as string[] || [];
+      if (etapas.length > 0) {
+        const etapaItems = etapas.map((etapa: string, idx: number) => ({
+          scenario_id: scenario.id,
+          user_id: user.id,
+          discipline: etapa,
+          estimated_value: 0,
+          is_included: true,
+          display_order: ambientes.length + idx,
+        }));
+        await supabase.from("scenario_items").insert(etapaItems);
+      }
+
+      // 4. Update project with proposal data
+      const updates: Record<string, unknown> = { cotacao_importada: true };
+      if ((sourceProposal as any).price_full) updates.estimated_budget = (sourceProposal as any).price_full;
+      if ((sourceProposal as any).total_area) updates.area_sqm = (sourceProposal as any).total_area;
+      await supabase.from("projects").update(updates).eq("id", projectId);
+
+      queryClient.invalidateQueries({ queryKey: ["scenarios", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      toast.success("Dados importados da proposta com sucesso!");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao importar dados");
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleStartFromZero = async () => {
+    await supabase.from("projects").update({ cotacao_importada: true } as any).eq("id", projectId);
+    queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+  };
 
   const handleCreateScenario = () => {
     if (!newScenarioName.trim()) return;
@@ -92,7 +180,6 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
   };
 
   const clientBudget = (project as any)?.client_budget as number | null;
-  const projectData = project as any;
 
   const handleAnalyzeBudget = async () => {
     const approvedScenario = scenarios.find(s => s.is_approved);
@@ -134,6 +221,55 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Import from Proposal Banner */}
+      {showImportBanner && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex items-center gap-4 py-4">
+            <Info className="h-8 w-8 text-primary shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium text-sm">Este projeto tem uma proposta aprovada</p>
+              <p className="text-xs text-muted-foreground">Deseja importar ambientes, etapas e valores da proposta para pré-preencher a cotação?</p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="outline" onClick={handleStartFromZero}>
+                <FileX className="h-4 w-4 mr-1" /> Começar do Zero
+              </Button>
+              <Button size="sm" onClick={handleImportFromProposal} disabled={importLoading}>
+                {importLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileDown className="h-4 w-4 mr-1" />}
+                Importar da Proposta
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Proposal Reference */}
+      {sourceProposal && cotacaoImportada && (
+        <Card className="bg-muted/30">
+          <CardContent className="flex items-center gap-6 py-3 text-sm flex-wrap">
+            <div>
+              <span className="text-muted-foreground">Valor contratado: </span>
+              <strong className="text-primary">{formatCurrency((sourceProposal as any).price_full)}</strong>
+            </div>
+            {(sourceProposal as any).installments_count && (
+              <div>
+                <span className="text-muted-foreground">Parcelas: </span>
+                <strong>{(sourceProposal as any).installments_count}x {formatCurrency((sourceProposal as any).installment_value)}</strong>
+                {(sourceProposal as any).installment_entry > 0 && (
+                  <span className="text-muted-foreground ml-1">(entrada: {formatCurrency((sourceProposal as any).installment_entry)})</span>
+                )}
+              </div>
+            )}
+            {(sourceProposal as any).scope_description && (
+              <div className="basis-full">
+                <span className="text-muted-foreground">Escopo: </span>
+                <span className="text-xs">{(sourceProposal as any).scope_description}</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Project Context */}
       <Card>
         <CardHeader className="pb-2">
