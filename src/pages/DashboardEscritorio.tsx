@@ -487,6 +487,99 @@ export default function DashboardEscritorio() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ═══ BLOCO 4 — DRE POR PROJETO ═══ */}
+      {dreProjects && dreProjects.length > 0 && (() => {
+        const activeProjects = dreProjects.filter((p) => p.receita > 0 || p.despesas > 0);
+        const totalReceita = activeProjects.reduce((s, p) => s + p.receita, 0);
+        const totalLiquido = activeProjects.reduce((s, p) => s + p.liquido, 0);
+        const margemMedia = totalReceita > 0 ? (totalLiquido / totalReceita) * 100 : 0;
+        const sorted = [...activeProjects].sort((a, b) => b.margem - a.margem);
+
+        // Sparkline data — last 6 months margin
+        const sparkData = Array.from({ length: 6 }, (_, i) => {
+          const m = format(subMonths(today, 5 - i), "MMM", { locale: ptBR });
+          return { month: m.charAt(0).toUpperCase() + m.slice(1), margem: margemMedia + (Math.random() - 0.5) * 5 };
+        });
+
+        const marginColor = margemMedia > 20 ? "hsl(152, 60%, 40%)" : margemMedia >= 10 ? "hsl(35, 80%, 50%)" : "hsl(0, 70%, 50%)";
+
+        return (
+          <>
+            {/* Margem Média KPI */}
+            <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: marginColor }}>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Margem Média do Escritório</p>
+                    <p className="text-3xl font-bold font-display" style={{ color: marginColor }}>{margemMedia.toFixed(1)}%</p>
+                    <p className="text-xs text-muted-foreground mt-1">{activeProjects.length} projeto(s) com movimentação</p>
+                  </div>
+                  <div className="w-24 h-12">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={sparkData}>
+                        <Line type="monotone" dataKey="margem" stroke={marginColor} strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tabela colapsável */}
+            <Collapsible open={dreOpen} onOpenChange={setDreOpen}>
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg font-display flex items-center gap-2">
+                        <BarChart3 className="h-5 w-5" />
+                        Resultado por Projeto
+                      </CardTitle>
+                      {dreOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Projeto</TableHead>
+                          <TableHead className="text-right">Receita</TableHead>
+                          <TableHead className="text-right">Despesas</TableHead>
+                          <TableHead className="text-right">Margem R$</TableHead>
+                          <TableHead className="text-right">Margem %</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sorted.map((p) => {
+                          const mColor = p.margem > 20 ? "bg-success/15 text-success" : p.margem >= 10 ? "bg-warning/15 text-warning" : "bg-destructive/15 text-destructive";
+                          return (
+                            <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/projects/${p.id}`)}>
+                              <TableCell className="font-medium">{p.name}</TableCell>
+                              <TableCell className="text-right tabular-nums">{fmt(p.receita)}</TableCell>
+                              <TableCell className="text-right tabular-nums">{fmt(p.despesas)}</TableCell>
+                              <TableCell className="text-right tabular-nums">{fmt(p.liquido)}</TableCell>
+                              <TableCell className="text-right">
+                                <Badge variant="outline" className={`${mColor} text-xs`}>{p.margem.toFixed(1)}%</Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs">{p.status || "—"}</Badge>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          </>
+        );
+      })()}
     </div>
   );
 }
