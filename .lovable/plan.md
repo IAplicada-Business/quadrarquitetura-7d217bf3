@@ -1,82 +1,73 @@
 
 
-## 3 Correções Críticas
+## Reformulação dos Dashboards + Sidebar Auto-Expand
 
-### Correção 1: Numeração Q-prefixed de projetos
+### Dashboard Escritorio — Reescrita completa
 
-**Migration SQL:**
-- Alterar `project_number` de `integer` para `text` para suportar formato "Q148"
-- Retroativamente atribuir Q1, Q2... em ordem de `created_at` para projetos sem numeração Q
+**Consolidar queries**: Substituir as 7 queries atuais por 2 hooks:
+- `useEscritorioMetrics()`: busca `leads`, `proposals`, `payments` (source=escritorio) em paralelo com `Promise.all` dentro de uma única `queryFn`
+- `useEscritorioAlertas()`: busca `schedule_tasks` atrasadas, `invoices_nf` pendentes, leads sem follow-up (created_at < 7 dias, status=novo) em paralelo
 
-```sql
-ALTER TABLE projects ALTER COLUMN project_number TYPE text USING 
-  CASE WHEN project_number IS NOT NULL THEN 'Q' || project_number::text ELSE NULL END;
+**Layout em 3 blocos horizontais**:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ BLOCO 1 — PULSO COMERCIAL (4 KPIs em linha)                │
+│ [Leads mês ▲12%] [Conversão 25% ~] [Ticket R$X ▼5%] [Aguardando 3 ⚠] │
+└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────┬──────────────────────────────────┐
+│ BLOCO 2a — Gráfico       │ BLOCO 2b — Próximos Recebimentos│
+│ Barras Receita 6 meses   │ Top 5 pagamentos pendentes      │
+│ Eixo Y: formatCurrency   │ com badge dias restantes         │
+└──────────────────────────┴──────────────────────────────────┘
+┌──────────────┬──────────────┬───────────────────────────────┐
+│ Tarefas      │ NFs pendentes│ Leads sem follow-up +7d       │
+│ atrasadas: 3 │ envio: 2     │ 4 leads                       │
+│ → link       │ → link       │ → link                        │
+└──────────────┴──────────────┴───────────────────────────────┘
 ```
 
-**Lógica de próximo número** (3 locais):
-- `src/pages/Projects.tsx` (createMutation, linha 66-72)
-- `src/hooks/useContracts.ts` (signAndCreateProject, linha 84-91)
-- Novo fluxo de conversão lead→projeto (Correção 3)
-
-Em cada local, substituir a query de max integer por:
-```typescript
-const { data: rows } = await supabase.from("projects").select("project_number");
-const maxNum = (rows ?? []).reduce((max, r) => {
-  const n = parseInt(String(r.project_number ?? "").replace("Q", ""), 10);
-  return isNaN(n) ? max : Math.max(max, n);
-}, 0);
-const nextNumber = `Q${maxNum + 1}`;
-```
-
-**Exibição** — substituir `#{padStart(3,"0")}` por exibir diretamente o valor (ex: "Q148"):
-- `src/pages/Projects.tsx` linha 233-235
-- `src/pages/ProjectDetail.tsx` linha 53-56
+- Variação % mês anterior para Leads e Ticket Médio (comparar mês atual vs `subMonths(1)`)
+- Badge de urgência em "Aguardando Resposta" se alguma proposta enviada há >7 dias
+- **Corrigir eixo Y**: `const formatCurrency = (v) => v >= 1000 ? \`R$${(v/1000).toFixed(0)}k\` : \`R$${v}\``
+- **Estados vazios informativos**: cada bloco sem dados mostra ícone outline + texto "Nenhum [item] ainda" + botão de ação (ex: "Adicionar lead" → navigate)
+- Remover: gráficos de pizza orçamentos, leads por status vertical, "Receitas vs Despesas", propostas recentes, cards duplicados de resumo financeiro inferior
 
 ---
 
-### Correção 2: Separar caixa escritório vs obra
+### Dashboard Obras — Reescrita do layout
 
-**Migration:**
-```sql
-ALTER TABLE payments ADD COLUMN IF NOT EXISTS source text 
-  DEFAULT 'obra' CHECK (source IN ('escritorio','obra'));
-```
+**Remover Tabs** (operacional/financeiro) → layout direto em 3 blocos. Manter toda a lógica Multi-Obras existente abaixo.
 
-**useContracts.ts** (linha 125-132) — no insert de payment de receita:
-- Adicionar `source: 'escritorio'`
-- Mudar description para `Honorários — ${lead?.name || "Projeto"}`
+**BLOCO 1 — Visão Geral**: Barra horizontal de projetos ativos (reutilizar `projectProgress` + Q-number). Cada projeto: nome Q(n), progress bar, status badge, próxima atividade. Clicável → `/projects/:id`.
 
-**DashboardEscritorio.tsx** — na query de payments, filtrar `source = 'escritorio'` (ou incluir todos e filtrar no computed):
-- `receitaDespesaData` e KPIs financeiros: filtrar por `source === 'escritorio'`
+**BLOCO 2 — Alertas Consolidados**: 3 colunas em grid:
+- Atividades atrasadas (já calculado em `multiObras.alerts.overdueTasks`)
+- Materiais não entregues (usar `delayedMaterials`)
+- Pagamentos de obra vencidos (usar `overduePayments`)
+Cada com contagem + badge de urgência + itens clicáveis.
 
-**DashboardObras.tsx** — filtrar payments por `source === 'obra'` (ou `source !== 'escritorio'`)
+**BLOCO 3 — Financeiro de Obras**: Gráfico de barras por projeto (orçado vs gasto). Eixo Y com mesmo `formatCurrency`. Reutilizar `fin.financeiroObras`. Manter Multi-Obras (fornecedores, timeline) abaixo.
 
 ---
 
-### Correção 3: Conversão automática lead→projeto
+### Sidebar — Auto-expand grupo ativo
 
-**useLeads.ts** — expandir `convertToClient` (linha 114-140):
-1. Antes de inserir cliente, verificar duplicata por email/telefone em `clients`
-2. Após criar/encontrar cliente, buscar proposta aprovada do lead
-3. Gerar próximo `project_number` (Q-prefixed)
-4. Criar projeto com `name: lead.name + ' — ' + project_type`, `status: 'planejamento'`, `project_number`
-5. Toast com botão "Ir para o projeto" usando `navigate`
-
-**Orphaned leads** — em `src/pages/Projects.tsx`:
-- Ao carregar, query leads com `status = 'fechado'` e `converted_client_id IS NOT NULL` mas sem projeto vinculado
-- Para cada um, criar projeto retroativamente (mesma lógica)
+**`AppSidebar.tsx`**:
+- Importar `useEffect`
+- Computar `activeGroup` a partir de `location.pathname`: mapear prefixos de rota para labels de grupo (`/dashboard` → "Dashboard", `/leads` → "Leads", `/clients` → "Clientes", `/projects` ou `/construction` → "Projetos", `/admin` → "Administrativo")
+- No `useEffect`, quando a rota muda: expandir o grupo ativo, colapsar os demais
+- Salvar/restaurar estado de sidebar colapsada em `localStorage` (chave `sidebar-collapsed`)
 
 ---
 
 ### Arquivos alterados
 
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---|---|
-| Migration SQL | `project_number` para text + coluna `source` em payments |
-| `src/pages/Projects.tsx` | Numeração Q-prefixed + display + orphan check |
-| `src/pages/ProjectDetail.tsx` | Display Q-prefixed |
-| `src/hooks/useContracts.ts` | Numeração Q + `source: 'escritorio'` no payment |
-| `src/hooks/useLeads.ts` | Conversão completa lead→cliente→projeto |
-| `src/pages/DashboardEscritorio.tsx` | Filtrar payments por source escritorio |
-| `src/pages/DashboardObras.tsx` | Filtrar payments por source obra |
+| `src/pages/DashboardEscritorio.tsx` | Reescrita completa: 2 hooks, 3 blocos, estados vazios, eixo Y corrigido |
+| `src/pages/DashboardObras.tsx` | Remover tabs, reestruturar em 3 blocos + manter Multi-Obras |
+| `src/components/layout/AppSidebar.tsx` | Auto-expand grupo ativo + localStorage |
+
+Nenhuma rota, migration ou funcionalidade existente alterada.
 
