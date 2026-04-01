@@ -155,7 +155,32 @@ function computeCpm(allTasks: GanttTask[]): CpmResult {
 export function GanttChart({ tasks, allTasks, onEdit, viewMode }: GanttChartProps) {
   const [offset, setOffset] = useState(0);
   const [showCriticalPath, setShowCriticalPath] = useState(true);
+  const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Get full dependency chain (all dependents recursively)
+  const getDependencyChain = useMemo(() => {
+    const allSource = allTasks || tasks;
+    return (taskId: string): Set<string> => {
+      const chain = new Set<string>();
+      function traverse(id: string) {
+        const dependents = allSource.filter(a => a.dependencies?.includes(id));
+        for (const dep of dependents) {
+          if (!chain.has(dep.id)) {
+            chain.add(dep.id);
+            traverse(dep.id);
+          }
+        }
+      }
+      traverse(taskId);
+      return chain;
+    };
+  }, [allTasks, tasks]);
+
+  const hoveredChain = useMemo(() => {
+    if (!hoveredTaskId) return null;
+    return getDependencyChain(hoveredTaskId);
+  }, [hoveredTaskId, getDependencyChain]);
 
   const { rangeStart, rangeEnd, days } = useMemo(() => {
     const today = new Date();
@@ -308,9 +333,23 @@ export function GanttChart({ tasks, allTasks, onEdit, viewMode }: GanttChartProp
               const daysUntilDeadline = hasEndDate ? differenceInDays(taskEndDate!, new Date(format(nowDate, "yyyy-MM-dd"))) : null;
               const barColor = isOverdue ? "#DC2626" : isExpiringSoon ? "#D97706" : baseBarColor;
               const barOpacity = isOverdue ? 0.85 : isCritical ? 1 : 0.8;
+              const isHovered = hoveredTaskId === task.id;
+              const isInChain = hoveredChain?.has(task.id) ?? false;
+              const dimmed = hoveredTaskId !== null && !isHovered && !isInChain;
+              const chainHighlight = isInChain && !isHovered;
 
               return (
-                <div key={task.id} className="grid border-b last:border-b-0 hover:bg-muted/20 group" style={{ gridTemplateColumns: `200px repeat(${totalDays}, ${colWidth})`, height: `${ROW_HEIGHT}px` }}>
+                <div
+                  key={task.id}
+                  className="grid border-b last:border-b-0 hover:bg-muted/20 group transition-opacity duration-150"
+                  style={{
+                    gridTemplateColumns: `200px repeat(${totalDays}, ${colWidth})`,
+                    height: `${ROW_HEIGHT}px`,
+                    opacity: dimmed ? 0.3 : 1,
+                  }}
+                  onMouseEnter={() => setHoveredTaskId(task.id)}
+                  onMouseLeave={() => setHoveredTaskId(null)}
+                >
                   {/* Task label */}
                   <div className="px-2 border-r flex items-center gap-1 min-w-0">
                     <TooltipProvider>
@@ -373,7 +412,7 @@ export function GanttChart({ tasks, allTasks, onEdit, viewMode }: GanttChartProp
                               backgroundColor: barColor,
                               borderRadius: `${isStart ? "4px" : "0"} ${isEnd ? "4px" : "0"} ${isEnd ? "4px" : "0"} ${isStart ? "4px" : "0"}`,
                               opacity: barOpacity,
-                              border: isCritical ? "2.5px solid hsl(var(--destructive))" : "none",
+                              border: chainHighlight ? "2px solid hsl(var(--primary))" : isCritical ? "2.5px solid hsl(var(--destructive))" : "none",
                               boxSizing: "border-box",
                             }}
                           >

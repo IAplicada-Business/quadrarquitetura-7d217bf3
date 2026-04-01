@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { differenceInDays, isBefore, addDays, format } from "date-fns";
-import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useScheduleTasks } from "@/hooks/useScheduleTasks";
 import { useScopeItems } from "@/hooks/useScopeItems";
-import { useProjectActivities } from "@/hooks/useProjectActivities";
+import { useProjectActivities, computeRecalculateAll } from "@/hooks/useProjectActivities";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -17,6 +17,8 @@ import { ScheduleTaskForm } from "./ScheduleTaskForm";
 import { ProjectPendingTab } from "./ProjectPendingTab";
 import { GanttChart } from "./GanttChart";
 import { ClientScheduleView } from "./ClientScheduleView";
+import { ActivityForm } from "./ActivityForm";
+import { CascadePreviewDialog, type CascadeChange } from "./CascadePreviewDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -35,17 +37,20 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const { items, isLoading, create, update, remove } = useScheduleTasks(projectId);
   const { items: scopeItems } = useScopeItems(projectId);
-  const { activities, isLoading: activitiesLoading } = useProjectActivities(projectId);
+  const { activities, isLoading: activitiesLoading, create: createActivity, update: updateActivity, remove: removeActivity, batchUpdateDates } = useProjectActivities(projectId);
   const useActivitiesSource = activities.length > 0;
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
+  const [activityFormOpen, setActivityFormOpen] = useState(false);
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
+  const [editingActivity, setEditingActivity] = useState<any>(null);
   const [ganttView, setGanttView] = useState<"day" | "week" | "month">("week");
   const [filterDiscipline, setFilterDiscipline] = useState("all");
   const [filterSupplier, setFilterSupplier] = useState("all");
   const [filterEnvironment, setFilterEnvironment] = useState("all");
   const [importing, setImporting] = useState(false);
+  const [recalcChanges, setRecalcChanges] = useState<CascadeChange[]>([]);
 
   const disciplines = useMemo(() => {
     const set = new Set<string>();
@@ -174,8 +179,28 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   }, [items]);
 
   const handleEdit = (task: any) => {
-    setEditing(task as Record<string, unknown>);
-    setFormOpen(true);
+    if (useActivitiesSource) {
+      const act = activities.find(a => a.id === task.id);
+      setEditingActivity(act || null);
+      setActivityFormOpen(true);
+    } else {
+      setEditing(task as Record<string, unknown>);
+      setFormOpen(true);
+    }
+  };
+
+  const handleRecalculateAll = () => {
+    const changes = computeRecalculateAll(activities);
+    if (changes.length === 0) {
+      toast({ title: "Nenhuma alteração necessária. Todas as datas estão consistentes." });
+      return;
+    }
+    setRecalcChanges(changes);
+  };
+
+  const handleRecalcConfirm = () => {
+    batchUpdateDates.mutate(recalcChanges.map(c => ({ id: c.id, start_date: c.newStart, end_date: c.newEnd })));
+    setRecalcChanges([]);
   };
 
   const handleImportFromScope = async () => {
@@ -276,10 +301,23 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
               )}
             </div>
             <div className="flex gap-2">
+              {useActivitiesSource && (
+                <Button size="sm" variant="outline" onClick={handleRecalculateAll} disabled={batchUpdateDates.isPending}>
+                  <RefreshCw className="h-4 w-4 mr-1" /> Recalcular Cronograma
+                </Button>
+              )}
               <Button size="sm" variant="outline" onClick={handleImportFromScope} disabled={importing}>
                 <Download className="h-4 w-4 mr-1" /> Importar do Escopo
               </Button>
-              <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}>
+              <Button size="sm" onClick={() => {
+                if (useActivitiesSource) {
+                  setEditingActivity(null);
+                  setActivityFormOpen(true);
+                } else {
+                  setEditing(null);
+                  setFormOpen(true);
+                }
+              }}>
                 <Plus className="h-4 w-4 mr-1" /> Nova Etapa
               </Button>
             </div>
@@ -424,6 +462,34 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
         initialData={editing}
         isLoading={create.isPending || update.isPending}
         scopeItems={scopeItems.filter((s) => !s.parent_id).map((s) => ({ id: s.id, discipline: s.discipline }))}
+      />
+
+      <ActivityForm
+        open={activityFormOpen}
+        onOpenChange={setActivityFormOpen}
+        onSubmit={(data) => {
+          if (editingActivity?.id) {
+            updateActivity.mutate({ id: editingActivity.id, ...data });
+          } else {
+            createActivity.mutate(data);
+          }
+          setEditingActivity(null);
+        }}
+        onCascade={(updates) => {
+          batchUpdateDates.mutate(updates);
+        }}
+        initialData={editingActivity}
+        allActivities={activities}
+        isLoading={createActivity.isPending || updateActivity.isPending}
+      />
+
+      <CascadePreviewDialog
+        open={recalcChanges.length > 0}
+        onOpenChange={(open) => { if (!open) setRecalcChanges([]); }}
+        changes={recalcChanges}
+        onConfirm={handleRecalcConfirm}
+        isLoading={batchUpdateDates.isPending}
+        title="Recalcular todo o cronograma"
       />
     </div>
   );
