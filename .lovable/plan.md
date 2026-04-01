@@ -1,71 +1,62 @@
 
 
-## Pesquisa de Preços em Lote na Aba Cotações
+## Visão DRE — Projeto + Dashboard Escritório
 
-### Contexto
+### 1. Settings: campo `tax_rate_percent`
 
-A aba Cotações (`ProjectScenariosTab`) já tem cenários com itens (disciplinas). O `PriceSearchDialog` já faz pesquisa individual via `search-prices-bh`. O hook `usePriceResearch` já tem `getRecentForActivity` com cache de 7 dias. Precisamos buscar as **atividades do projeto** (não os scenario_items) para pesquisar preços em lote.
+Nenhuma migration necessária — o `settings` já suporta campos arbitrários como JSON. Adicionar campo editável na aba "Geral" do `SettingsPage.tsx` com label "Alíquota de Impostos (%)" e default 6%.
+
+### 2. Sub-aba "DRE" em `ProjectFinancialTab.tsx`
+
+Adicionar uma quarta sub-aba `dre` no `TabsList` existente (Pagamentos | Notas Fiscais | Notas NF | **DRE**).
+
+**Dados usados (sem novas queries)**:
+- `payments.items` já carregados no componente — filtrar por `source` e inferir tipo (receita vs despesa pelo campo description/source)
+- `purchases` do projeto via `useProjectPurchases(projectId)`
+- `tax_rate` de `settings` via query simples
+
+**Cálculo do DRE**:
+```text
+(+) Receita Honorários: payments.filter(source='escritorio')
+(+) Receita Obra: payments.filter(source='obra', value > 0 onde descrição indica receita)
+(=) RECEITA TOTAL
+
+(-) Despesas Fornecedores: payments.filter(source='obra' ou 'cotacao', despesas)
+(-) Compras: sum(purchases.value)
+(=) RESULTADO BRUTO
+
+(-) Impostos: receita_total * tax_rate / 100
+(=) RESULTADO LÍQUIDO
+    MARGEM % = resultado_líquido / receita_total * 100
+```
+
+**Visual**: Tabela vertical estilizada com linhas separadoras, valores e % ao lado. Badge colorida na margem (verde >20%, amarelo 10-20%, vermelho <10%).
+
+**Exportar DRE**: Botão que gera PDF client-side via jsPDF com cabeçalho "Quadra Arquitetura", nome do projeto, período e tabela.
+
+### 3. Dashboard Escritório — Seção "Resultado por Projeto"
+
+Adicionar no `DashboardEscritorio.tsx`:
+
+**Nova query**: Buscar todos os projetos ativos com seus payments e purchases para calcular DRE consolidado.
+
+**KPI no topo** (novo card ao lado dos existentes ou como seção separada):
+- "Margem Média do Escritório" — média ponderada das margens dos projetos ativos
+- Sparkline dos últimos 6 meses usando Recharts `LineChart` compacto
+
+**Tabela colapsável** no final do dashboard:
+- Colunas: Projeto | Receita | Despesas | Margem R$ | Margem % | Status
+- Ordenada por margem % decrescente
+- Filtro de período: mês atual / trimestre / ano / personalizado (via Select)
+- Badge colorida na margem
 
 ### Arquivos alterados
 
 | Arquivo | Ação |
 |---|---|
-| `src/components/projects/ProjectScenariosTab.tsx` | Botão "Atualizar Preços de BH" + badge + modal de progresso + indicadores visuais por item |
-| `src/hooks/usePriceResearch.ts` | Adicionar `searchAllActivities` helper + helper para status de cache |
+| `src/pages/SettingsPage.tsx` | Campo "Alíquota de Impostos (%)" na aba Geral |
+| `src/components/projects/ProjectFinancialTab.tsx` | Sub-aba "DRE" com cálculo e exportação PDF |
+| `src/pages/DashboardEscritorio.tsx` | KPI "Margem Média" + seção "Resultado por Projeto" colapsável |
 
-### 1. `usePriceResearch.ts` — Novos helpers
-
-- **`getPriceStatus(activityId)`**: Retorna `'green'` (< 7d), `'yellow'` (7-30d), `'red'` (> 30d ou sem pesquisa) baseado no `searched_at` mais recente.
-- **`getActivitiesNeedingSearch(activities)`**: Filtra atividades sem pesquisa recente (> 7 dias).
-- **`getLastUpdateDate()`**: Retorna a data mais recente de `searched_at` de toda a pesquisa do projeto.
-
-### 2. `ProjectScenariosTab.tsx` — Botão + Modal + Indicadores
-
-**Botão no topo** (ao lado de "Analisar Orçamento"):
-- "Atualizar Preços de BH" com ícone `RefreshCw`
-- Badge: "X atividades sem pesquisa" ou "Atualizado em DD/MM"
-
-**Ao clicar**: busca `project_activities` do projeto. Separa em `precisam_pesquisar` vs `atualizados` (cache 7d). Abre modal de progresso.
-
-**Modal de progresso**:
-- Barra de progresso (`Progress` component)
-- "Pesquisando preços para X de Y atividades..."
-- "Usando cache para Z atividades"
-- Loop sequencial com `delay(1000)` entre chamadas à edge function `search-prices-bh`
-- Para cada atividade: busca `material_tracking` vinculado como input de materiais; se não houver, usa nome da atividade como material
-- Toast final: "Preços atualizados para X atividades. Y já estavam em cache."
-
-**Indicadores visuais nos items do cenário**:
-- Ao lado de cada item, ícone colorido (🟢🟡🔴) baseado no status do cache da pesquisa
-- Clicável: abre `PriceSearchDialog` para aquela disciplina
-- Botão inline "Pesquisar Preços" por item para forçar atualização individual ignorando cache
-
-**Estado adicional**:
-```typescript
-const [batchSearchOpen, setBatchSearchOpen] = useState(false);
-const [batchProgress, setBatchProgress] = useState(0);
-const [batchTotal, setBatchTotal] = useState(0);
-const [batchCached, setBatchCached] = useState(0);
-const [batchSearching, setBatchSearching] = useState(false);
-```
-
-### Fluxo do batch search
-
-```text
-1. Fetch project_activities para o projectId
-2. Fetch all price_research para o projectId (já no hook)
-3. Para cada atividade: verificar se tem pesquisa < 7 dias
-4. Separar em needsSearch vs cached
-5. Modal: "X para pesquisar, Y em cache"
-6. Loop sequencial:
-   - Buscar material_tracking da atividade para obter lista de materiais
-   - Se não houver materiais, usar [{name: activity.name, unit: 'un', quantity: 1}]
-   - Chamar search-prices-bh
-   - Salvar em price_research
-   - Incrementar progresso
-   - await delay(1000)
-7. Toast final + invalidar queries
-```
-
-Nenhuma migration, rota ou edge function alterada.
+Nenhuma migration, rota ou estrutura de tabela alterada.
 
