@@ -1,91 +1,114 @@
 
 
-## Propagação Automática de Datas no Cronograma
+## Respostas do Cliente no Portal + Notificações para Equipe
 
-### Contexto
+### 1. Migration SQL
 
-O Gantt já tem CPM calculado, setas de dependência e `depends_on` nas atividades. Falta a cascata automática de datas quando uma atividade muda e o feedback visual de impacto.
+```sql
+-- Adicionar campo de respostas no weekly_reports
+ALTER TABLE weekly_reports
+  ADD COLUMN IF NOT EXISTS client_responses jsonb DEFAULT '[]';
+
+-- Tabela de respostas individuais
+CREATE TABLE client_pending_responses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  weekly_report_id uuid REFERENCES weekly_reports(id) ON DELETE CASCADE NOT NULL,
+  project_id uuid NOT NULL,
+  pending_item text NOT NULL,
+  response_text text,
+  status text DEFAULT 'aguardando',
+  responded_at timestamptz,
+  client_name text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Usar validation trigger em vez de CHECK constraint
+CREATE OR REPLACE FUNCTION validate_pending_response_status()
+RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public' AS $$
+BEGIN
+  IF NEW.status NOT IN ('aguardando','respondido','aprovado','rejeitado') THEN
+    RAISE EXCEPTION 'Status inválido: %', NEW.status;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_validate_pending_response_status
+  BEFORE INSERT OR UPDATE ON client_pending_responses
+  FOR EACH ROW EXECUTE FUNCTION validate_pending_response_status();
+
+ALTER TABLE client_pending_responses ENABLE ROW LEVEL SECURITY;
+
+-- INSERT/UPDATE público (portal sem login, validação via edge function)
+CREATE POLICY "Public can insert responses" ON client_pending_responses
+  FOR INSERT TO anon, authenticated WITH CHECK (true);
+
+CREATE POLICY "Public can update responses" ON client_pending_responses
+  FOR UPDATE TO anon, authenticated USING (true);
+
+-- SELECT restrito à equipe
+CREATE POLICY "Team can view responses" ON client_pending_responses
+  FOR SELECT TO authenticated
+  USING (project_id IN (
+    SELECT p.id FROM projects p WHERE p.user_id IN (SELECT get_team_user_ids())
+  ));
+
+-- DELETE restrito à equipe
+CREATE POLICY "Team can delete responses" ON client_pending_responses
+  FOR DELETE TO authenticated
+  USING (project_id IN (
+    SELECT p.id FROM projects p WHERE p.user_id IN (SELECT get_team_user_ids())
+  ));
+```
+
+### 2. Edge Function: `get-client-portal-data/index.ts`
+
+Adicionar ao fetch paralelo:
+- Buscar `client_pending_responses` filtradas por `project_id` do token
+- Retornar no JSON como `pending_responses: [...]`
+
+### 3. Nova Edge Function: `submit-client-response/index.ts`
+
+Recebe: `{ token, weekly_report_id, pending_item, response_text, status, client_name }`
+
+Fluxo:
+1. Validar token em `client_portal_tokens` (ativo + não expirado)
+2. Extrair `project_id` do token
+3. Inserir em `client_pending_responses` usando service_role
+4. Buscar nome do projeto para a notificação
+5. Inserir notificação para admins: `{ type: 'client_response', title: 'Resposta do cliente', message: 'Cliente respondeu pendência no projeto [nome]', related_entity_type: 'project', related_entity_id: project_id }`
+6. Retornar sucesso
+
+Config em `supabase/config.toml`: `[functions.submit-client-response] verify_jwt = false`
+
+### 4. Portal do Cliente: `ClientPortal.tsx`
+
+Na seção de cada relatório semanal com `client_pending`:
+- Parsear `client_pending` (texto) como item de pendência
+- Verificar se já existe resposta em `pending_responses` para esse report
+- Se não respondido: exibir textarea + botões "Aprovar" e "Responder"
+- Ao clicar "Aprovar": prompt simples para nome → POST para `submit-client-response` com `status='aprovado'`
+- Ao clicar "Responder": modal com textarea obrigatória + campo nome → POST com `status='respondido'`
+- Se já respondido: exibir resposta, timestamp e badge de status (verde=aprovado, azul=respondido)
+
+### 5. Sistema Interno: `ProjectTrackingTab.tsx`
+
+Adicionar seção "Respostas do Cliente" no final:
+- Buscar `client_pending_responses` do projeto via hook
+- Agrupar por `weekly_report_id` (mostrar label da semana)
+- Cada resposta: pendência, resposta, nome do cliente, data, badge de status
+- Badge no título da seção quando houver respostas novas (status != 'aguardando' nas últimas 48h)
 
 ### Arquivos alterados
 
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---|---|
-| `src/hooks/useProjectActivities.ts` | Adicionar mutation `propagateDates` com lógica de cascata recursiva |
-| `src/components/projects/ProjectScheduleTab.tsx` | Botão "Recalcular Cronograma", dialog de confirmação de cascata ao marcar concluída |
-| `src/components/projects/GanttChart.tsx` | Highlight de dependentes on hover, botão recalcular no topo |
-| `src/components/projects/ActivityForm.tsx` | Ao salvar com data alterada, verificar impacto e exibir modal de preview |
-| `src/components/projects/CascadePreviewDialog.tsx` | **Novo** — modal de preview de impacto antes de confirmar |
+| Migration SQL | `client_responses` em weekly_reports + tabela `client_pending_responses` |
+| `supabase/functions/get-client-portal-data/index.ts` | Buscar e retornar `pending_responses` |
+| `supabase/functions/submit-client-response/index.ts` | **Novo** — salvar resposta + criar notificação |
+| `supabase/config.toml` | Adicionar `[functions.submit-client-response]` |
+| `src/pages/ClientPortal.tsx` | UI de resposta/aprovação de pendências |
+| `src/components/projects/ProjectTrackingTab.tsx` | Seção "Respostas do Cliente" |
 
-### 1. Hook: `propagateDates` mutation em `useProjectActivities.ts`
-
-Adicionar função utilitária e mutation:
-
-```typescript
-function computeCascade(changedId: string, newEndDate: string, activities: ProjectActivity[]) {
-  const changes: { id: string; oldStart: string; oldEnd: string; newStart: string; newEnd: string }[] = [];
-  
-  function propagate(actId: string, endDate: string) {
-    const dependents = activities.filter(a => a.depends_on?.includes(actId));
-    for (const dep of dependents) {
-      if (!dep.start_date || !dep.end_date) continue;
-      const duration = differenceInDays(new Date(dep.end_date), new Date(dep.start_date));
-      const newStart = addDays(new Date(endDate), 1).toISOString().split('T')[0];
-      const newEnd = addDays(new Date(newStart), duration).toISOString().split('T')[0];
-      changes.push({ id: dep.id, oldStart: dep.start_date, oldEnd: dep.end_date, newStart, newEnd });
-      propagate(dep.id, newEnd);
-    }
-  }
-  propagate(changedId, newEndDate);
-  return changes;
-}
-```
-
-Mutation `batchUpdateDates`: recebe array de `{ id, start_date, end_date }` e faz updates em loop (Supabase não suporta batch update nativo, mas serão poucas atividades por cascata).
-
-Mutation `recalculateAll`: dado o projeto, pega atividades sem dependências como raiz, percorre em ordem topológica recalculando `start_date = predecessor.end_date + 1`.
-
-### 2. `CascadePreviewDialog.tsx` (novo componente)
-
-Modal que recebe lista de mudanças `{ name, oldStart, oldEnd, newStart, newEnd }[]` e exibe:
-- Título: "Esta alteração afeta X atividades"
-- Lista: nome — de DD/MM para DD/MM (para cada atividade)
-- Botões: "Confirmar recálculo" e "Cancelar"
-
-### 3. `ActivityForm.tsx` — Detectar mudança de data
-
-Ao salvar, se `start_date` ou `end_date` mudou e a atividade tem dependentes:
-- Calcular cascata via `computeCascade`
-- Se há impacto > 0, abrir `CascadePreviewDialog` em vez de salvar diretamente
-- Ao confirmar, salvar atividade + batch update dos dependentes
-
-### 4. `ProjectScheduleTab.tsx`
-
-- Botão "Recalcular Cronograma" ao lado de "Nova Etapa" — chama `recalculateAll`
-- Ao marcar atividade como concluída com data diferente: dialog perguntando se deseja recalcular (usando `CascadePreviewDialog`)
-
-### 5. `GanttChart.tsx` — Highlight de dependentes on hover
-
-- State `hoveredTaskId`
-- No `onMouseEnter` de cada barra, setar hoveredTaskId
-- Função `getDependencyChain(taskId)` que retorna todos os IDs dependentes recursivamente
-- Barras na cadeia recebem `outline: 2px solid hsl(var(--primary))` e `opacity: 1` quando hover ativo
-- Barras fora da cadeia ficam com `opacity: 0.3`
-- No `onMouseLeave`, limpar hover
-
-### Fluxo completo
-
-```text
-Usuário edita data da atividade A
-  → computeCascade(A.id, A.newEndDate, activities)
-  → Se impacto > 0: abre CascadePreviewDialog
-    → Lista: B (15/04 → 20/04), C (20/04 → 25/04)
-    → "Confirmar recálculo" → batch update B e C
-  → Se impacto = 0: salva direto
-
-Usuário clica "Recalcular Cronograma"
-  → recalculateAll() reprocessa toda a cadeia
-  → Toast: "Cronograma recalculado para X atividades"
-```
-
-Nenhuma migration, rota ou estrutura de tabela alterada.
+Nenhuma outra rota, aba ou funcionalidade alterada.
 
