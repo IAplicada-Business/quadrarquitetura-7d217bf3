@@ -110,6 +110,7 @@ export function ProjectFinancialTab({ projectId, projectName }: { projectId: str
           <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
           <TabsTrigger value="notas">Notas Fiscais (Compras)</TabsTrigger>
           <TabsTrigger value="notas_nf">Notas Fiscais</TabsTrigger>
+          <TabsTrigger value="dre">DRE</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pagamentos" className="space-y-4 mt-4">
