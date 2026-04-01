@@ -176,6 +176,8 @@ export default function DashboardEscritorio() {
       conversionRate,
       ticketThis,
       ticketVariation,
+      approvedCount,
+      faturamentoMes,
       proposalsAwaiting: proposalsAwaiting.length,
       hasUrgentProposal: hasUrgent,
       receitaChartData,
