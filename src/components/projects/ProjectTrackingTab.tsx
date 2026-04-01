@@ -13,8 +13,10 @@ import { useScopeItems } from "@/hooks/useScopeItems";
 import { useScheduleTasks } from "@/hooks/useScheduleTasks";
 import { useWeeklyReports } from "@/hooks/useWeeklyReports";
 import { WeeklyReportModal } from "./WeeklyReportModal";
-import { format } from "date-fns";
+import { format, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const weatherOptions = [
   { value: "ensolarado", label: "Ensolarado", icon: Sun },
