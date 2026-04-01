@@ -33,6 +33,8 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
   const [formOpen, setFormOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState("all");
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [prefillData, setPrefillData] = useState<{ summary: string; next_steps: string; client_pending?: string } | null>(null);
 
   const avgProgress = useMemo(() => {
     const tasks = scheduleTasks.filter((t: any) => t.progress_percentage != null);
