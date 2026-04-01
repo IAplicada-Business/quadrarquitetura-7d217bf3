@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Trash2, Cloud, Sun, CloudRain, Snowflake, CalendarDays, Users, FileText, BarChart3, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Trash2, Cloud, Sun, CloudRain, Snowflake, CalendarDays, Users, FileText, BarChart3, Sparkles, Loader2, MessageSquareText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import { format, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 const weatherOptions = [
   { value: "ensolarado", label: "Ensolarado", icon: Sun },
