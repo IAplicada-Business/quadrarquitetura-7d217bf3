@@ -189,13 +189,16 @@ export default function DashboardEscritorio() {
     const activeProjects = projects.filter((p) => p.status !== "concluido");
     const totalOrcado = activeProjects.reduce((s, p) => s + (p.estimated_budget ?? 0), 0);
 
-    const pagoTotal = payments.filter((p) => p.status === "pago").reduce((s, p) => s + p.value, 0);
-    const pagoMesAtual = payments.filter((p) => p.status === "pago" && p.paid_date && p.paid_date >= monthStart && p.paid_date <= monthEnd).reduce((s, p) => s + p.value, 0);
+    // Filtrar apenas pagamentos do escritório
+    const escPayments = payments.filter((p: any) => p.source === "escritorio");
 
-    const pendentesSemana = payments.filter((p) => p.status === "pendente" && p.due_date && p.due_date >= weekStart && p.due_date <= weekEnd);
+    const pagoTotal = escPayments.filter((p) => p.status === "pago").reduce((s, p) => s + p.value, 0);
+    const pagoMesAtual = escPayments.filter((p) => p.status === "pago" && p.paid_date && p.paid_date >= monthStart && p.paid_date <= monthEnd).reduce((s, p) => s + p.value, 0);
+
+    const pendentesSemana = escPayments.filter((p) => p.status === "pendente" && p.due_date && p.due_date >= weekStart && p.due_date <= weekEnd);
     const pendentesTotal = pendentesSemana.reduce((s, p) => s + p.value, 0);
 
-    const aReceber = payments.filter((p) => p.status === "pendente").reduce((s, p) => s + p.value, 0);
+    const aReceber = escPayments.filter((p) => p.status === "pendente").reduce((s, p) => s + p.value, 0);
 
     const pctRecebido = totalOrcado > 0 ? Math.round((pagoTotal / totalOrcado) * 100) : 0;
 
