@@ -1,62 +1,60 @@
 
 
-## Visão DRE — Projeto + Dashboard Escritório
+## Contexto Persistente no Chat IA por Projeto
 
-### 1. Settings: campo `tax_rate_percent`
+### Migration SQL
 
-Nenhuma migration necessária — o `settings` já suporta campos arbitrários como JSON. Adicionar campo editável na aba "Geral" do `SettingsPage.tsx` com label "Alíquota de Impostos (%)" e default 6%.
-
-### 2. Sub-aba "DRE" em `ProjectFinancialTab.tsx`
-
-Adicionar uma quarta sub-aba `dre` no `TabsList` existente (Pagamentos | Notas Fiscais | Notas NF | **DRE**).
-
-**Dados usados (sem novas queries)**:
-- `payments.items` já carregados no componente — filtrar por `source` e inferir tipo (receita vs despesa pelo campo description/source)
-- `purchases` do projeto via `useProjectPurchases(projectId)`
-- `tax_rate` de `settings` via query simples
-
-**Cálculo do DRE**:
-```text
-(+) Receita Honorários: payments.filter(source='escritorio')
-(+) Receita Obra: payments.filter(source='obra', value > 0 onde descrição indica receita)
-(=) RECEITA TOTAL
-
-(-) Despesas Fornecedores: payments.filter(source='obra' ou 'cotacao', despesas)
-(-) Compras: sum(purchases.value)
-(=) RESULTADO BRUTO
-
-(-) Impostos: receita_total * tax_rate / 100
-(=) RESULTADO LÍQUIDO
-    MARGEM % = resultado_líquido / receita_total * 100
+```sql
+ALTER TABLE chat_messages
+  ADD COLUMN IF NOT EXISTS project_id uuid;
 ```
 
-**Visual**: Tabela vertical estilizada com linhas separadoras, valores e % ao lado. Badge colorida na margem (verde >20%, amarelo 10-20%, vermelho <10%).
+Sem foreign key para evitar problemas com a tabela projects (consistente com o padrão do projeto que não usa FKs).
 
-**Exportar DRE**: Botão que gera PDF client-side via jsPDF com cabeçalho "Quadra Arquitetura", nome do projeto, período e tabela.
+### 1. Edge Function `chat-assistant` — Buscar histórico anterior
 
-### 3. Dashboard Escritório — Seção "Resultado por Projeto"
+Após verificar o usuário e parsear o body, se `context.project_id` existir:
+- Buscar as últimas 10 mensagens de `chat_messages` onde `user_id = userId` e `project_id = context.project_id`, ordenadas por `created_at DESC`
+- Reverter a ordem (ASC) e incluir como histórico antes das mensagens da sessão atual
+- O `history` enviado pelo frontend continua sendo usado, mas as mensagens do banco são prepended como contexto adicional (deduplicadas por conteúdo se necessário)
 
-Adicionar no `DashboardEscritorio.tsx`:
+```typescript
+let dbHistory: any[] = [];
+if (context?.project_id) {
+  const { data } = await admin.from("chat_messages")
+    .select("role, content")
+    .eq("user_id", userId)
+    .eq("project_id", context.project_id)
+    .order("created_at", { ascending: false })
+    .limit(10);
+  dbHistory = (data || []).reverse();
+}
+// Merge: dbHistory + session history (dedup), cap at 20
+```
 
-**Nova query**: Buscar todos os projetos ativos com seus payments e purchases para calcular DRE consolidado.
+### 2. `useAIChat.ts` — Salvar `project_id` nas mensagens
 
-**KPI no topo** (novo card ao lado dos existentes ou como seção separada):
-- "Margem Média do Escritório" — média ponderada das margens dos projetos ativos
-- Sparkline dos últimos 6 meses usando Recharts `LineChart` compacto
+- Aceitar `projectId` como parâmetro opcional no `saveMessage`
+- Ao inserir em `chat_messages`, incluir `project_id` quando disponível (extraído do `contextPayload`)
 
-**Tabela colapsável** no final do dashboard:
-- Colunas: Projeto | Receita | Despesas | Margem R$ | Margem % | Status
-- Ordenada por margem % decrescente
-- Filtro de período: mês atual / trimestre / ano / personalizado (via Select)
-- Badge colorida na margem
+### 3. `useAIChat.ts` — Auto-carregar contexto ao abrir
+
+- Adicionar função `loadProjectContext(projectId: string)` que busca as últimas 5 mensagens com aquele `project_id` e popula `messages`
+- Exportar essa função
+
+### 4. `AIChatBox.tsx` — Label de contexto + auto-load
+
+- Quando o chat abre em `/projects/:id` e não há conversa ativa (`currentConversationId === null` e `messages.length === 0`):
+  - Chamar `loadProjectContext(projectId)`
+  - Exibir label discreto: "Retomando conversa sobre este projeto — últimas 5 mensagens carregadas"
+- Label aparece acima das mensagens, desaparece após a primeira mensagem enviada
 
 ### Arquivos alterados
 
 | Arquivo | Ação |
 |---|---|
-| `src/pages/SettingsPage.tsx` | Campo "Alíquota de Impostos (%)" na aba Geral |
-| `src/components/projects/ProjectFinancialTab.tsx` | Sub-aba "DRE" com cálculo e exportação PDF |
-| `src/pages/DashboardEscritorio.tsx` | KPI "Margem Média" + seção "Resultado por Projeto" colapsável |
-
-Nenhuma migration, rota ou estrutura de tabela alterada.
+| Migration SQL | `project_id` em `chat_messages` |
+| `supabase/functions/chat-assistant/index.ts` | Buscar últimas 10 msgs do projeto do banco como histórico |
+| `src/hooks/useAIChat.ts` | Salvar `project_id`, função `loadProjectContext` |
+| `src/components/chat/AIChatBox.tsx` | Auto-load ao abrir em projeto, label de contexto |
 
