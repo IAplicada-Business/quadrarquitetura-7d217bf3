@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { differenceInDays, isBefore, addDays, format } from "date-fns";
-import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useScheduleTasks } from "@/hooks/useScheduleTasks";
 import { useScopeItems } from "@/hooks/useScopeItems";
-import { useProjectActivities } from "@/hooks/useProjectActivities";
+import { useProjectActivities, computeRecalculateAll } from "@/hooks/useProjectActivities";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -17,6 +17,8 @@ import { ScheduleTaskForm } from "./ScheduleTaskForm";
 import { ProjectPendingTab } from "./ProjectPendingTab";
 import { GanttChart } from "./GanttChart";
 import { ClientScheduleView } from "./ClientScheduleView";
+import { ActivityForm } from "./ActivityForm";
+import { CascadePreviewDialog, type CascadeChange } from "./CascadePreviewDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
