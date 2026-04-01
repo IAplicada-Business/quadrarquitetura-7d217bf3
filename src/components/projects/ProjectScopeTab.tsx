@@ -129,6 +129,10 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
   const [disciplineFilter, setDisciplineFilter] = useState<string[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [sequenceDialogOpen, setSequenceDialogOpen] = useState(false);
+  const [sequenceLoading, setSequenceLoading] = useState(false);
+  const [sequenceSuggestions, setSequenceSuggestions] = useState<any[]>([]);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
 
   const allDisciplines = useMemo(() => {
     const set = new Set<string>();
