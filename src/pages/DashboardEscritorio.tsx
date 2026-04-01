@@ -247,8 +247,8 @@ export default function DashboardEscritorio() {
     const receitaDespesaData = monthLabels.map((label, i) => {
       const m = subMonths(today, 5 - i);
       const ms = format(startOfMonth(m), "yyyy-MM");
-      const receita = payments.filter((p) => p.status === "pago" && p.client_id && p.paid_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
-      const despesa = payments.filter((p) => p.status === "pago" && p.supplier_id && p.paid_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
+      const receita = escPayments.filter((p) => p.status === "pago" && p.client_id && p.paid_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
+      const despesa = escPayments.filter((p) => p.status === "pago" && p.supplier_id && p.paid_date?.startsWith(ms)).reduce((s, p) => s + p.value, 0);
       return { month: label.charAt(0).toUpperCase() + label.slice(1), receita, despesa };
     });
 

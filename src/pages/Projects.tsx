@@ -230,7 +230,7 @@ export default function Projects() {
                 >
                   <TableCell className="font-medium">
                     {(p as any).project_number ? (
-                      <span className="text-muted-foreground font-mono text-xs mr-2">#{String((p as any).project_number).padStart(3, "0")}</span>
+                      <Badge variant="outline" className="text-xs font-mono mr-2">{(p as any).project_number}</Badge>
                     ) : null}
                     {p.name}
                   </TableCell>
