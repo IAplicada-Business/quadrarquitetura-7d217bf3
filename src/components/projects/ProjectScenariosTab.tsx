@@ -622,27 +622,48 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
 
                   {items.length > 0 && (
                     <div className="border rounded-lg divide-y max-h-[400px] overflow-y-auto">
-                      {items.map((item) => (
-                        <div key={item.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-                          <Checkbox
-                            checked={item.is_included}
-                            onCheckedChange={(checked) => updateItem.mutate({ id: item.id, is_included: !!checked })}
-                          />
-                          <span className={`flex-1 ${!item.is_included ? "line-through text-muted-foreground" : ""}`}>
-                            {item.discipline}
-                            {item.description && <span className="text-muted-foreground ml-1 text-xs">— {item.description}</span>}
-                          </span>
-                          <Input
-                            type="number"
-                            className="w-28 h-7 text-xs"
-                            value={item.estimated_value || ""}
-                            onChange={(e) => updateItem.mutate({ id: item.id, estimated_value: Number(e.target.value) || 0 })}
-                          />
-                          <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeItem.mutate(item.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
+                      {items.map((item) => {
+                        // Find matching activity by discipline name
+                        const matchingActivity = projectActivities?.find(
+                          (a) => a.discipline?.toLowerCase() === item.discipline?.toLowerCase() || a.name?.toLowerCase() === item.discipline?.toLowerCase()
+                        );
+                        const status = matchingActivity ? getPriceStatus(matchingActivity.id) : "red";
+
+                        return (
+                          <div key={item.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                            <Checkbox
+                              checked={item.is_included}
+                              onCheckedChange={(checked) => updateItem.mutate({ id: item.id, is_included: !!checked })}
+                            />
+                            <button
+                              type="button"
+                              className="shrink-0"
+                              onClick={() => {
+                                if (matchingActivity) {
+                                  setPriceDialogActivity({ id: matchingActivity.id, name: matchingActivity.name });
+                                  setPriceDialogOpen(true);
+                                }
+                              }}
+                              title={matchingActivity ? "Ver pesquisa de preços" : "Sem atividade vinculada"}
+                            >
+                              {priceStatusIcon(status)}
+                            </button>
+                            <span className={`flex-1 ${!item.is_included ? "line-through text-muted-foreground" : ""}`}>
+                              {item.discipline}
+                              {item.description && <span className="text-muted-foreground ml-1 text-xs">— {item.description}</span>}
+                            </span>
+                            <Input
+                              type="number"
+                              className="w-28 h-7 text-xs"
+                              value={item.estimated_value || ""}
+                              onChange={(e) => updateItem.mutate({ id: item.id, estimated_value: Number(e.target.value) || 0 })}
+                            />
+                            <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeItem.mutate(item.id)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 
