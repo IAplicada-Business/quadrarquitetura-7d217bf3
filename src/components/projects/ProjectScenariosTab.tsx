@@ -180,7 +180,7 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
         </CardContent>
       </Card>
 
-      {/* Create Scenario */}
+      {/* Create Scenario + Analyze */}
       <div className="flex items-center gap-3">
         <Input
           placeholder="Nome da cotação (ex: Cotação A)"
@@ -191,6 +191,9 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
         />
         <Button onClick={handleCreateScenario} disabled={!newScenarioName.trim() || createScenario.isPending}>
           <Plus className="h-4 w-4 mr-1" /> Nova Cotação
+        </Button>
+        <Button variant="outline" onClick={handleAnalyzeBudget} disabled={analysisLoading}>
+          <BarChart3 className="h-4 w-4 mr-1" /> Analisar Orçamento
         </Button>
       </div>
 
