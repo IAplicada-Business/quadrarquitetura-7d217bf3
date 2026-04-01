@@ -295,7 +295,7 @@ export default function DashboardEscritorio() {
                 <BarChart data={computed.receitaChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="month" className="text-xs" />
-                  <YAxis tickFormatter={(v) => formatCurrency(v)} className="text-xs" />
+                  <YAxis tickFormatter={yAxisFormatter} className="text-xs" />
                   <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmt(Number(v))} />} />
                   <Bar dataKey="receita" fill={ROSA.fill1} radius={[4, 4, 0, 0]} />
                 </BarChart>
