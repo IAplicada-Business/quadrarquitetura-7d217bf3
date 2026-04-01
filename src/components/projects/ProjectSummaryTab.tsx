@@ -69,6 +69,14 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Onboarding Guide */}
+      {showOnboarding && (
+        <ProjectOnboardingGuide
+          project={project}
+          onTabChange={onTabChange}
+          onDismiss={() => updateProject.mutate({ onboarding_dismissed: true })}
+        />
+      )}
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-primary/5 border-primary/20">
