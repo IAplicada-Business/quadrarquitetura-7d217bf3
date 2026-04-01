@@ -104,6 +104,40 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
   const clientBudget = (project as any)?.client_budget as number | null;
   const projectData = project as any;
 
+  const handleAnalyzeBudget = async () => {
+    const approvedScenario = scenarios.find(s => s.is_approved);
+    if (!approvedScenario) { toast.error("Aprove um cenário antes de analisar"); return; }
+    setAnalysisLoading(true);
+    setAnalysisOpen(true);
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const { data: priceData } = await supabase.from("price_research").select("*").eq("project_id", projectId);
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/project-ai-assistant`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          action: "analyze_budget",
+          data: {
+            scenario_items: approvedScenario.scenario_items || [],
+            price_research: priceData || [],
+          },
+        }),
+      });
+      if (!resp.ok) throw new Error("Erro ao analisar orçamento");
+      const result = await resp.json();
+      setAnalysisResult(result);
+    } catch (err: any) {
+      toast.error(err.message || "Erro na análise");
+      setAnalysisOpen(false);
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="flex justify-center py-12"><div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" /></div>;
   }
