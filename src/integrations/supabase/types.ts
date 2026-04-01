@@ -1725,7 +1725,10 @@ export type Database = {
           construction_type_estimate: string | null
           contingency_percentage: number | null
           contract_id: string | null
+          cotacao_aprovada: boolean | null
+          cotacao_aprovada_at: string | null
           cotacao_importada: boolean | null
+          cotacao_valor_total: number | null
           created_at: string
           estimated_budget: number | null
           expected_end_date: string | null
@@ -1757,7 +1760,10 @@ export type Database = {
           construction_type_estimate?: string | null
           contingency_percentage?: number | null
           contract_id?: string | null
+          cotacao_aprovada?: boolean | null
+          cotacao_aprovada_at?: string | null
           cotacao_importada?: boolean | null
+          cotacao_valor_total?: number | null
           created_at?: string
           estimated_budget?: number | null
           expected_end_date?: string | null
@@ -1789,7 +1795,10 @@ export type Database = {
           construction_type_estimate?: string | null
           contingency_percentage?: number | null
           contract_id?: string | null
+          cotacao_aprovada?: boolean | null
+          cotacao_aprovada_at?: string | null
           cotacao_importada?: boolean | null
+          cotacao_valor_total?: number | null
           created_at?: string
           estimated_budget?: number | null
           expected_end_date?: string | null

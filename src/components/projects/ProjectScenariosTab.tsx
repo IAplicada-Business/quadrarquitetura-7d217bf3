@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, Check, DollarSign, BarChart3, Loader2, FileDown, FileX, Info } from "lucide-react";
+import { Plus, Trash2, Check, DollarSign, BarChart3, Loader2, FileDown, FileX, Info, CheckCircle2, ArrowRight, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { addDays, addWeeks, format } from "date-fns";
 
 function formatCurrency(v: number | null | undefined) {
   if (v == null) return "—";
@@ -39,9 +40,10 @@ const finishLevels = [
 
 interface ProjectScenariosTabProps {
   projectId: string;
+  onTabChange?: (tab: string) => void;
 }
 
-export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
+export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenariosTabProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { project, updateProject } = useProjectDetail(projectId);
@@ -56,10 +58,102 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<{ analysis_text: string; items: any[] } | null>(null);
   const [importLoading, setImportLoading] = useState(false);
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+  const [approvalInstallments, setApprovalInstallments] = useState("6");
+  const [approvalStartDate, setApprovalStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [approvalInterval, setApprovalInterval] = useState<"semanal" | "quinzenal" | "mensal">("mensal");
+  const [approvalLoading, setApprovalLoading] = useState(false);
+  const [reviseDialogOpen, setReviseDialogOpen] = useState(false);
+  const [reviseLoading, setReviseLoading] = useState(false);
 
   const projectData = project as any;
   const sourceProposalId = projectData?.source_proposal_id as string | null;
   const cotacaoImportada = projectData?.cotacao_importada as boolean;
+  const cotacaoAprovada = projectData?.cotacao_aprovada as boolean;
+  const cotacaoValorTotal = projectData?.cotacao_valor_total as number | null;
+  const cotacaoAprovadaAt = projectData?.cotacao_aprovada_at as string | null;
+
+  const approvedScenario = scenarios.find(s => s.is_approved);
+  const approvedTotal = approvedScenario
+    ? (approvedScenario.scenario_items || []).filter(i => i.is_included).reduce((s, i) => s + (i.estimated_value || 0), 0)
+    : 0;
+
+  const handleApproveCotacao = async () => {
+    if (!user || !approvedScenario) return;
+    setApprovalLoading(true);
+    try {
+      const numInstallments = Math.max(1, parseInt(approvalInstallments) || 1);
+      const valorParcela = approvedTotal / numInstallments;
+      const startDate = new Date(approvalStartDate);
+
+      // 1. Update project
+      await supabase.from("projects").update({
+        cotacao_aprovada: true,
+        cotacao_valor_total: approvedTotal,
+        cotacao_aprovada_at: new Date().toISOString(),
+      } as any).eq("id", projectId);
+
+      // 2. Generate payments
+      const payments = [];
+      for (let i = 0; i < numInstallments; i++) {
+        let dueDate: Date;
+        if (approvalInterval === "semanal") {
+          dueDate = addWeeks(startDate, i);
+        } else if (approvalInterval === "quinzenal") {
+          dueDate = addDays(startDate, i * 15);
+        } else {
+          dueDate = addDays(startDate, i * 30);
+        }
+        payments.push({
+          project_id: projectId,
+          user_id: user.id,
+          description: `Parcela ${i + 1}/${numInstallments} — Obra`,
+          value: Math.round(valorParcela * 100) / 100,
+          due_date: format(dueDate, "yyyy-MM-dd"),
+          status: "pendente" as const,
+          source: "cotacao",
+          installment_number: i + 1,
+          total_installments: numInstallments,
+        });
+      }
+      const { error: payErr } = await supabase.from("payments").insert(payments);
+      if (payErr) throw payErr;
+
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["payments", projectId] });
+      setApprovalModalOpen(false);
+      toast.success(`Cotação aprovada. ${numInstallments} pagamentos criados em Prestação de Contas.`, {
+        action: onTabChange ? { label: "Ver pagamentos", onClick: () => onTabChange("financeiro") } : undefined,
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao aprovar cotação");
+    } finally {
+      setApprovalLoading(false);
+    }
+  };
+
+  const handleReviseCotacao = async () => {
+    setReviseLoading(true);
+    try {
+      // Delete payments generated from cotacao
+      await supabase.from("payments").delete().eq("project_id", projectId).eq("source", "cotacao");
+      // Reset project flags
+      await supabase.from("projects").update({
+        cotacao_aprovada: false,
+        cotacao_valor_total: null,
+        cotacao_aprovada_at: null,
+      } as any).eq("id", projectId);
+
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["payments", projectId] });
+      setReviseDialogOpen(false);
+      toast.success("Cotação desbloqueada para revisão. Pagamentos gerados foram excluídos.");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao revisar cotação");
+    } finally {
+      setReviseLoading(false);
+    }
+  };
 
   // Fetch source proposal data when available
   const { data: sourceProposal } = useQuery({
@@ -243,7 +337,31 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
         </Card>
       )}
 
-      {/* Proposal Reference */}
+      {/* Cotação Aprovada Banner */}
+      {cotacaoAprovada && (
+        <Card className="border-success/30 bg-success/5">
+          <CardContent className="flex items-center gap-4 py-4">
+            <CheckCircle2 className="h-8 w-8 text-success shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium text-sm text-success">
+                Cotação aprovada em {cotacaoAprovadaAt ? new Date(cotacaoAprovadaAt).toLocaleDateString("pt-BR") : "—"}
+              </p>
+              <p className="text-xs text-muted-foreground">Total: {formatCurrency(cotacaoValorTotal)}</p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              {onTabChange && (
+                <Button size="sm" variant="outline" onClick={() => onTabChange("financeiro")}>
+                  Ver pagamentos <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={() => setReviseDialogOpen(true)}>
+                <RotateCcw className="h-4 w-4 mr-1" /> Revisar Cotação
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {sourceProposal && cotacaoImportada && (
         <Card className="bg-muted/30">
           <CardContent className="flex items-center gap-6 py-3 text-sm flex-wrap">
@@ -332,6 +450,11 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
         <Button variant="outline" onClick={handleAnalyzeBudget} disabled={analysisLoading}>
           <BarChart3 className="h-4 w-4 mr-1" /> Analisar Orçamento
         </Button>
+        {approvedScenario && !cotacaoAprovada && (
+          <Button variant="default" className="bg-success hover:bg-success/90" onClick={() => setApprovalModalOpen(true)}>
+            <DollarSign className="h-4 w-4 mr-1" /> Aprovar Cotação
+          </Button>
+        )}
       </div>
 
       {/* Scenarios */}
@@ -497,6 +620,74 @@ export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {/* Approval Modal */}
+      <Dialog open={approvalModalOpen} onOpenChange={setApprovalModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Aprovar Cotação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-xs text-muted-foreground">Total Geral</p>
+                <p className="text-lg font-bold">{formatCurrency(approvedTotal)}</p>
+              </div>
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-xs text-muted-foreground">Valor por parcela</p>
+                <p className="text-lg font-bold">
+                  {formatCurrency(approvedTotal / Math.max(1, parseInt(approvalInstallments) || 1))}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Número de parcelas</Label>
+              <Input type="number" min="1" value={approvalInstallments} onChange={(e) => setApprovalInstallments(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Data da primeira parcela</Label>
+              <Input type="date" value={approvalStartDate} onChange={(e) => setApprovalStartDate(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Intervalo entre parcelas</Label>
+              <Select value={approvalInterval} onValueChange={(v) => setApprovalInterval(v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="semanal">Semanal</SelectItem>
+                  <SelectItem value="quinzenal">Quinzenal</SelectItem>
+                  <SelectItem value="mensal">Mensal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApprovalModalOpen(false)}>Cancelar</Button>
+            <Button onClick={handleApproveCotacao} disabled={approvalLoading}>
+              {approvalLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+              Confirmar Aprovação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revise Cotação Dialog */}
+      <AlertDialog open={reviseDialogOpen} onOpenChange={setReviseDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revisar cotação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Revisar a cotação irá excluir os pagamentos gerados automaticamente. Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reviseLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReviseCotacao} disabled={reviseLoading}>
+              {reviseLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+              Sim, revisar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
