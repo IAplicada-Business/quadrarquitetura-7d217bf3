@@ -110,6 +110,44 @@ function useEscritorioAlertas() {
   });
 }
 
+/* ── DRE por projeto ─────────────────────────────── */
+function useDREProjects() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["dre-projects"],
+    queryFn: async () => {
+      const [projectsRes, paymentsRes, purchasesRes, settingsRes] = await Promise.all([
+        supabase.from("projects").select("id, name, status"),
+        supabase.from("payments").select("id, value, project_id, source, description, status"),
+        supabase.from("purchases").select("id, value, project_id"),
+        supabase.from("settings").select("*").limit(1).maybeSingle(),
+      ]);
+      const taxRate = (settingsRes.data as any)?.tax_rate_percent ?? 6;
+      const projects = projectsRes.data ?? [];
+      const allPayments = paymentsRes.data ?? [];
+      const allPurchases = purchasesRes.data ?? [];
+
+      return projects.map((proj) => {
+        const pPayments = allPayments.filter((p) => p.project_id === proj.id);
+        const pPurchases = allPurchases.filter((p) => p.project_id === proj.id);
+
+        const receita = pPayments
+          .filter((p) => p.status === "pago" && (p.source === "escritorio" || (p.source === "obra" && p.description?.toLowerCase().includes("receita"))))
+          .reduce((s, p) => s + p.value, 0);
+        const despesas = pPayments
+          .filter((p) => p.status === "pago" && (p.source === "obra" || p.source === "cotacao") && !p.description?.toLowerCase().includes("receita"))
+          .reduce((s, p) => s + p.value, 0) + pPurchases.reduce((s, p) => s + (p.value || 0), 0);
+        const impostos = receita * (taxRate / 100);
+        const liquido = receita - despesas - impostos;
+        const margem = receita > 0 ? (liquido / receita) * 100 : 0;
+
+        return { id: proj.id, name: proj.name, status: proj.status, receita, despesas, liquido, margem };
+      });
+    },
+    enabled: !!user,
+  });
+}
+
 /* ── componente ────────────────────────────────── */
 export default function DashboardEscritorio() {
   const navigate = useNavigate();
@@ -119,6 +157,8 @@ export default function DashboardEscritorio() {
 
   const { data: metrics, isLoading: metricsLoading } = useEscritorioMetrics();
   const { data: alertas, isLoading: alertasLoading } = useEscritorioAlertas();
+  const { data: dreProjects } = useDREProjects();
+  const [dreOpen, setDreOpen] = useState(false);
 
   const computed = useMemo(() => {
     if (!metrics) return null;
