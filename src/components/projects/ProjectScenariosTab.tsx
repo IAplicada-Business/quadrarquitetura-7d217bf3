@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { Plus, Trash2, Check, DollarSign, BarChart3, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
