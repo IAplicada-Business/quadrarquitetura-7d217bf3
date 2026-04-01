@@ -628,9 +628,23 @@ export default function DashboardEscritorio() {
           <CardContent>
             <p className="text-2xl font-bold font-display" style={{ color: "hsl(152, 40%, 30%)" }}>{computed.propostasAprovadasMes}</p>
             <p className="text-xs text-muted-foreground mt-1">propostas aprovadas</p>
+            {computed.faturamentoMes > 0 && (
+              <p className="text-sm font-semibold mt-2" style={{ color: "hsl(152, 60%, 40%)" }}>{fmt(computed.faturamentoMes)}</p>
+            )}
           </CardContent>
         </Card>
-      </div>
+
+        <Card className="hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: "hsl(152, 50%, 50%)" }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Faturamento Fechado</CardTitle>
+            <TrendingUp className="h-5 w-5" style={{ color: "hsl(152, 50%, 50%)" }} />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold font-display" style={{ color: "hsl(152, 40%, 30%)" }}>{fmt(computed.faturamentoMes)}</p>
+            <p className="text-xs text-muted-foreground mt-1">aprovado este mês</p>
+            <p className="text-xs text-muted-foreground mt-1">Total: {fmt(computed.faturamentoTotal)}</p>
+          </CardContent>
+        </Card>
 
       {/* Gráfico Leads por Status — Últimos 6 meses */}
       <Card>
