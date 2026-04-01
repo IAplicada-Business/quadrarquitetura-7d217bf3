@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, Check, DollarSign, BarChart3, Loader2, FileDown, FileX, Info } from "lucide-react";
+import { Plus, Trash2, Check, DollarSign, BarChart3, Loader2, FileDown, FileX, Info, CheckCircle2, ArrowRight, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { addDays, addWeeks, format } from "date-fns";
 
 function formatCurrency(v: number | null | undefined) {
   if (v == null) return "—";
@@ -39,6 +40,7 @@ const finishLevels = [
 
 interface ProjectScenariosTabProps {
   projectId: string;
+  onTabChange?: (tab: string) => void;
 }
 
 export function ProjectScenariosTab({ projectId }: ProjectScenariosTabProps) {
