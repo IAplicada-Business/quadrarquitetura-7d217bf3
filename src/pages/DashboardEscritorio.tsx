@@ -268,7 +268,14 @@ export default function DashboardEscritorio() {
     const ticketMedio = proposalsMesAtual.length > 0 ? proposalsMesAtual.reduce((s, p) => s + (p.price_full ?? 0), 0) / proposalsMesAtual.length : 0;
 
     const propostasAguardando = allProposals.filter((p) => p.status === "enviada").length;
-    const propostasAprovadasMes = allProposals.filter((p) => p.status === "aprovada" && p.created_at?.slice(0, 7) === format(today, "yyyy-MM")).length;
+    const propostasAprovadasMes = allProposals.filter((p) => p.status === "aprovada" && p.approved_at && p.approved_at.slice(0, 7) === format(today, "yyyy-MM")).length;
+
+    const faturamentoMes = allProposals
+      .filter((p) => p.status === "aprovada" && p.approved_at && p.approved_at.slice(0, 7) === format(today, "yyyy-MM"))
+      .reduce((s, p) => s + (p.price_full ?? p.final_value ?? 0), 0);
+    const faturamentoTotal = allProposals
+      .filter((p) => p.status === "aprovada")
+      .reduce((s, p) => s + (p.price_full ?? p.final_value ?? 0), 0);
 
     // Gráfico leads 6 meses empilhado
     const leadsChartData = monthLabels.map((label, i) => {
