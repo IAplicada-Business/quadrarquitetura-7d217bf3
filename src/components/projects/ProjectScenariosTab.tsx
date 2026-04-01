@@ -450,6 +450,11 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
         <Button variant="outline" onClick={handleAnalyzeBudget} disabled={analysisLoading}>
           <BarChart3 className="h-4 w-4 mr-1" /> Analisar Orçamento
         </Button>
+        {approvedScenario && !cotacaoAprovada && (
+          <Button variant="default" className="bg-success hover:bg-success/90" onClick={() => setApprovalModalOpen(true)}>
+            <DollarSign className="h-4 w-4 mr-1" /> Aprovar Cotação
+          </Button>
+        )}
       </div>
 
       {/* Scenarios */}
