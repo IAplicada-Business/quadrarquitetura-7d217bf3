@@ -323,8 +323,9 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
         onOpenChange={setReportOpen}
         avgProgress={avgProgress}
         isPending={createReport.isPending}
+        prefill={prefillData || undefined}
         onSubmit={(data) => {
-          createReport.mutate(data, { onSuccess: () => setReportOpen(false) });
+          createReport.mutate(data, { onSuccess: () => { setReportOpen(false); setPrefillData(null); } });
         }}
       />
     </div>
