@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
@@ -15,10 +15,16 @@ import {
   CreditCard,
   Calendar,
   Plus,
+  ChevronDown,
+  ChevronRight,
+  BarChart3,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   ChartContainer,
   ChartTooltip,
@@ -31,10 +37,13 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
+  LineChart,
+  Line,
+  ResponsiveContainer,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, differenceInDays, parseISO, startOfQuarter, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 /* ── paleta rosa escritório ────────────────────── */
