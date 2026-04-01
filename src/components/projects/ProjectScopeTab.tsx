@@ -202,6 +202,50 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
     allActivities: activities,
   };
 
+  const handleSuggestSequence = async () => {
+    if (activities.length < 2) { toast.error("Adicione pelo menos 2 atividades"); return; }
+    setSequenceLoading(true);
+    setSequenceDialogOpen(true);
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/project-ai-assistant`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          action: "sequence",
+          data: { activities: activities.map(a => ({ id: a.id, name: a.name, discipline: a.discipline, depends_on: a.depends_on })) },
+        }),
+      });
+      if (!resp.ok) throw new Error("Erro ao gerar sugestão");
+      const result = await resp.json();
+      setSequenceSuggestions(result.suggestions || []);
+      setSelectedSuggestions(new Set((result.suggestions || []).map((s: any) => s.activity_id)));
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao sugerir sequenciamento");
+      setSequenceDialogOpen(false);
+    } finally {
+      setSequenceLoading(false);
+    }
+  };
+
+  const handleApplySequence = async () => {
+    for (const s of sequenceSuggestions) {
+      if (!selectedSuggestions.has(s.activity_id)) continue;
+      const updateData: any = { id: s.activity_id, position: s.suggested_position };
+      if (s.depends_on_activity_id) {
+        updateData.depends_on = [s.depends_on_activity_id];
+      }
+      update.mutate(updateData);
+    }
+    toast.success("Sequenciamento aplicado com sucesso");
+    setSequenceDialogOpen(false);
+    setSequenceSuggestions([]);
+  };
+
   let globalIndex = 0;
 
   return (
