@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Check, DollarSign } from "lucide-react";
+import { Plus, Trash2, Check, DollarSign, BarChart3, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,19 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useScenarios, Scenario } from "@/hooks/useScenarios";
+import { useProjectDetail } from "@/hooks/useProjectDetail";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
