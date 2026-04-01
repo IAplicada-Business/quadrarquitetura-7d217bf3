@@ -101,7 +101,7 @@ export default function ProjectDetail() {
             <ProjectScheduleTab projectId={project.id} />
           </TabsContent>
           <TabsContent value="financeiro">
-            <ProjectFinancialTab projectId={project.id} />
+            <ProjectFinancialTab projectId={project.id} projectName={project.name} />
           </TabsContent>
           <TabsContent value="documentos">
             <ProjectDocumentsTab projectId={project.id} />
