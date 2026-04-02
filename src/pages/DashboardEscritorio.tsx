@@ -99,7 +99,7 @@ function useEscritorioAlertas() {
     queryFn: async () => {
       const [tasksRes, nfsRes] = await Promise.all([
         supabase.from("schedule_tasks").select("id, end_date, status, task_name, project_id").lt("end_date", todayStr).not("status", "in", "(concluido,executado)"),
-        supabase.from("invoices_nf" as any).select("id").eq("status", "pendente"),
+        supabase.from("invoices_nf").select("id").eq("status", "pendente"),
       ]);
       return {
         overdueTasks: tasksRes.data ?? [],
