@@ -3,7 +3,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import logoLight from "@/assets/logo-light.png";
