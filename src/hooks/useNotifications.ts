@@ -59,7 +59,7 @@ export function useNotifications() {
       const { error } = await supabase.from("notifications").insert({
         ...item,
         user_id: user!.id,
-      } as any);
+      });
       if (error) throw error;
     },
     onSuccess: () => {
