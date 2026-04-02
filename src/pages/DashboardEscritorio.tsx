@@ -443,7 +443,7 @@ export default function DashboardEscritorio() {
                 {overdueTasks > 0 ? <AlertTriangle className="h-6 w-6" style={{ color: "hsl(0, 70%, 50%)" }} /> : <CheckCircle2 className="h-6 w-6" style={{ color: "hsl(152, 60%, 40%)" }} />}
               </div>
             </div>
-            {overdueTasks === 0 && <p className="text-xs text-muted-foreground mt-2">Tudo em dia 🎉</p>}
+            {overdueTasks === 0 && <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">Tudo em dia <CheckCircle2 className="h-3 w-3 inline text-emerald-500" /></p>}
           </CardContent>
         </Card>
 
