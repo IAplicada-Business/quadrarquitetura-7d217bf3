@@ -384,7 +384,7 @@ export default function DashboardObras() {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground py-4">Nenhum pagamento vencido 🎉</p>
+              <p className="text-xs text-muted-foreground py-4">Nenhum pagamento vencido</p>
             )}
           </CardContent>
         </Card>

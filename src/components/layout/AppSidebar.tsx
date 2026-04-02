@@ -67,13 +67,21 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
-    Object.fromEntries(menuGroups.map((g) => [g.label, false]))
-  );
+  // Read persisted state from localStorage
+  const getInitialGroups = (): Record<string, boolean> => {
+    try {
+      const saved = localStorage.getItem("sidebar_groups");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return Object.fromEntries(menuGroups.map((g) => [g.label, false]));
+  };
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(getInitialGroups);
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({});
+  const manualOverrides = useRef<Set<string>>(new Set());
   const location = useLocation();
 
-  // Auto-expand active group based on route
+  // Auto-expand active group based on route — only if not manually overridden
   useEffect(() => {
     const routeGroupMap: Record<string, string> = {
       "/dashboard": "Dashboard",
@@ -86,13 +94,25 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     const prefix = Object.keys(routeGroupMap).find((p) => location.pathname.startsWith(p));
     if (prefix) {
       const activeLabel = routeGroupMap[prefix];
-      setOpenGroups(Object.fromEntries(menuGroups.map((g) => [g.label, g.label === activeLabel])));
+      setOpenGroups((prev) => {
+        const next = { ...prev };
+        // Only auto-expand if user hasn't manually overridden this group
+        if (!manualOverrides.current.has(activeLabel)) {
+          next[activeLabel] = true;
+        }
+        return next;
+      });
     }
   }, [location.pathname]);
 
-  const toggleGroup = (label: string) => {
-    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
-  };
+  const toggleGroup = useCallback((label: string) => {
+    manualOverrides.current.add(label);
+    setOpenGroups((prev) => {
+      const next = { ...prev, [label]: !prev[label] };
+      try { localStorage.setItem("sidebar_groups", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
 
   const toggleSubMenu = (title: string) => {
     setOpenSubMenus((prev) => ({ ...prev, [title]: !prev[title] }));

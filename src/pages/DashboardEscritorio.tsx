@@ -209,7 +209,7 @@ export default function DashboardEscritorio() {
       .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))
       .slice(0, 5)
       .map((p) => ({
-        project: (p as any).projects?.name ?? "Projeto",
+        project: (p as unknown as { projects: { name: string } | null }).projects?.name ?? "Projeto",
         value: p.value,
         dueDate: p.due_date!,
         daysLeft: differenceInDays(parseISO(p.due_date!), today),

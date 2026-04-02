@@ -87,7 +87,7 @@ export function ProjectOnboardingGuide({ project, onTabChange, onDismiss }: Proj
       <Card className="border-primary/30 bg-primary/5 animate-fade-in">
         <CardContent className="flex flex-col items-center justify-center py-10 gap-3">
           <PartyPopper className="h-12 w-12 text-primary animate-bounce" />
-          <p className="text-xl font-bold text-display">Projeto configurado com sucesso! 🎉</p>
+          <p className="text-xl font-bold text-display">Projeto configurado com sucesso!</p>
           <p className="text-sm text-muted-foreground">Todos os passos iniciais foram concluídos.</p>
         </CardContent>
       </Card>
