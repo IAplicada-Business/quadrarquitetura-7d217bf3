@@ -325,7 +325,7 @@ export default function DashboardObras() {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground py-4">Nenhuma tarefa atrasada 🎉</p>
+              <p className="text-xs text-muted-foreground py-4">Nenhuma tarefa atrasada</p>
             )}
           </CardContent>
         </Card>
