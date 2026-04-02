@@ -463,7 +463,7 @@ export default function DashboardEscritorio() {
                 <FileText className="h-6 w-6" style={{ color: pendingNFs > 0 ? ROSA.destaque : "hsl(152, 60%, 40%)" }} />
               </div>
             </div>
-            {pendingNFs === 0 && <p className="text-xs text-muted-foreground mt-2">Todas enviadas ✓</p>}
+            {pendingNFs === 0 && <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">Todas enviadas <CheckCircle2 className="h-3 w-3 inline text-emerald-500" /></p>}
           </CardContent>
         </Card>
 
