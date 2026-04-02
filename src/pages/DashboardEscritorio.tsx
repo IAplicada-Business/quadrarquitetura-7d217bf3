@@ -103,7 +103,7 @@ function useEscritorioAlertas() {
       ]);
       return {
         overdueTasks: tasksRes.data ?? [],
-        pendingNFs: (nfsRes.data ?? []) as any[],
+        pendingNFs: (nfsRes.data ?? []) as { id: string }[],
       };
     },
     enabled: !!user,
