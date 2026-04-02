@@ -59,7 +59,7 @@ export function useNotifications() {
       const { error } = await supabase.from("notifications").insert({
         ...item,
         user_id: user!.id,
-      } as any);
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -71,7 +71,7 @@ export function useNotifications() {
 
   const markAsRead = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("notifications").update({ is_read: true } as any).eq("id", id);
+      const { error } = await supabase.from("notifications").update({ is_read: true }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications", user?.id] }),
@@ -79,7 +79,7 @@ export function useNotifications() {
 
   const markAllAsRead = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("notifications").update({ is_read: true } as any).eq("user_id", user!.id).eq("is_read", false);
+      const { error } = await supabase.from("notifications").update({ is_read: true }).eq("user_id", user!.id).eq("is_read", false);
       if (error) throw error;
     },
     onSuccess: () => {

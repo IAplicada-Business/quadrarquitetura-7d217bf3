@@ -325,7 +325,7 @@ export default function DashboardObras() {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground py-4">Nenhuma tarefa atrasada 🎉</p>
+              <p className="text-xs text-muted-foreground py-4">Nenhuma tarefa atrasada</p>
             )}
           </CardContent>
         </Card>
@@ -353,7 +353,7 @@ export default function DashboardObras() {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground py-4">Nenhum material atrasado 🎉</p>
+              <p className="text-xs text-muted-foreground py-4">Nenhum material atrasado</p>
             )}
           </CardContent>
         </Card>
@@ -384,7 +384,7 @@ export default function DashboardObras() {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground py-4">Nenhum pagamento vencido 🎉</p>
+              <p className="text-xs text-muted-foreground py-4">Nenhum pagamento vencido</p>
             )}
           </CardContent>
         </Card>

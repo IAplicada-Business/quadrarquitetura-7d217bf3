@@ -29,7 +29,15 @@ import NotFound from "./pages/NotFound";
 import ClientPortal from "./pages/ClientPortal";
 import InvoicesPage from "./pages/InvoicesPage";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();

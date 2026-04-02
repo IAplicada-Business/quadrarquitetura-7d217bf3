@@ -99,11 +99,11 @@ function useEscritorioAlertas() {
     queryFn: async () => {
       const [tasksRes, nfsRes] = await Promise.all([
         supabase.from("schedule_tasks").select("id, end_date, status, task_name, project_id").lt("end_date", todayStr).not("status", "in", "(concluido,executado)"),
-        supabase.from("invoices_nf" as any).select("id").eq("status", "pendente"),
+        supabase.from("invoices_nf").select("id").eq("status", "pendente"),
       ]);
       return {
         overdueTasks: tasksRes.data ?? [],
-        pendingNFs: (nfsRes.data ?? []) as any[],
+        pendingNFs: (nfsRes.data ?? []) as { id: string }[],
       };
     },
     enabled: !!user,
@@ -209,7 +209,7 @@ export default function DashboardEscritorio() {
       .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))
       .slice(0, 5)
       .map((p) => ({
-        project: (p as any).projects?.name ?? "Projeto",
+        project: (p as unknown as { projects: { name: string } | null }).projects?.name ?? "Projeto",
         value: p.value,
         dueDate: p.due_date!,
         daysLeft: differenceInDays(parseISO(p.due_date!), today),
@@ -443,7 +443,7 @@ export default function DashboardEscritorio() {
                 {overdueTasks > 0 ? <AlertTriangle className="h-6 w-6" style={{ color: "hsl(0, 70%, 50%)" }} /> : <CheckCircle2 className="h-6 w-6" style={{ color: "hsl(152, 60%, 40%)" }} />}
               </div>
             </div>
-            {overdueTasks === 0 && <p className="text-xs text-muted-foreground mt-2">Tudo em dia 🎉</p>}
+            {overdueTasks === 0 && <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">Tudo em dia <CheckCircle2 className="h-3 w-3 inline text-emerald-500" /></p>}
           </CardContent>
         </Card>
 
@@ -463,7 +463,7 @@ export default function DashboardEscritorio() {
                 <FileText className="h-6 w-6" style={{ color: pendingNFs > 0 ? ROSA.destaque : "hsl(152, 60%, 40%)" }} />
               </div>
             </div>
-            {pendingNFs === 0 && <p className="text-xs text-muted-foreground mt-2">Todas enviadas ✓</p>}
+            {pendingNFs === 0 && <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">Todas enviadas <CheckCircle2 className="h-3 w-3 inline text-emerald-500" /></p>}
           </CardContent>
         </Card>
 
@@ -483,7 +483,7 @@ export default function DashboardEscritorio() {
                 <Clock className="h-6 w-6" style={{ color: staleLeads > 0 ? "hsl(35, 80%, 50%)" : "hsl(152, 60%, 40%)" }} />
               </div>
             </div>
-            {staleLeads === 0 && <p className="text-xs text-muted-foreground mt-2">Todos acompanhados ✓</p>}
+            {staleLeads === 0 && <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">Todos acompanhados <CheckCircle2 className="h-3 w-3 inline text-emerald-500" /></p>}
           </CardContent>
         </Card>
       </div>
