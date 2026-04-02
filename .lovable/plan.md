@@ -1,73 +1,80 @@
 
 
-## Correções Técnicas — Auditoria
+## Reformular DashboardEscritorio — Duas Sub-abas Comercial/Financeiro
 
-### 1. Persistir sidebar em localStorage
+### Estrutura
 
-**`src/components/layout/AppSidebar.tsx`**:
-- Inicializar `openGroups` lendo `localStorage.getItem('sidebar_groups')` como fallback
-- No `useEffect` de auto-expand por rota: só expandir se o grupo não foi manualmente colapsado. Adicionar `ref` `manualOverrides` para rastrear grupos que o usuário colapsou/expandiu manualmente
-- No `toggleGroup`: marcar o grupo como "manual override" e salvar estado em `localStorage`
-- Resultado: preferência manual do usuário persiste entre reloads; rota atual só expande automaticamente se não houver override manual
+Reescrever `src/pages/DashboardEscritorio.tsx` completamente. Criar dois hooks dedicados em arquivos separados.
 
-### 2. Remover App.css
+### Arquivos
 
-- Deletar `src/App.css` (não há import — já confirmado via busca)
-- O arquivo é dead code com estilos conflitantes (`#root max-width: 1280px`)
-
-### 3. Configurar QueryClient com staleTime
-
-**`src/App.tsx`** linha 32:
-```typescript
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      gcTime: 10 * 60 * 1000,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-```
-
-### 4. Remover emojis dos dashboards
-
-| Arquivo | Linha | De → Para |
-|---|---|---|
-| `DashboardEscritorio.tsx:446` | `Tudo em dia 🎉` | `Tudo em dia` + ícone `CheckCircle2` inline |
-| `DashboardEscritorio.tsx:466` | `Todas enviadas ✓` | `Todas enviadas` + `<CheckCircle2 className="h-3 w-3 inline" />` |
-| `DashboardEscritorio.tsx:486` | `Todos acompanhados ✓` | Idem |
-| `DashboardObras.tsx:328` | `Nenhuma tarefa atrasada 🎉` | Remover emoji |
-| `DashboardObras.tsx:356` | `Nenhum material atrasado 🎉` | Remover emoji |
-| `DashboardObras.tsx:387` | `Nenhum pagamento vencido 🎉` | Remover emoji |
-| `ProjectOnboardingGuide.tsx:90` | `Projeto configurado com sucesso! 🎉` | Remover emoji (já tem ícone `PartyPopper`) |
-
-Não alterar os `✓` em `BudgetPreviewDialog` (PDF), `ProposalFormNew` (UI de seleção), `ImportPlantDialog` (header de tabela), `ProjectTrackingTab` (badge de status), `ClientPortal` (badge), `ConstructionTasks` (header) — esses são contextuais e não são "dashboards".
-
-### 5. KPIs separados — Aprovadas vs Faturamento
-
-Já estão separados corretamente no código (linhas 185-186 e cards 321-343). `approvedCount` é COUNT, `faturamentoMes` é SUM. Nenhuma alteração necessária — a lógica já está correta.
-
-### 6. Tipagem TypeScript — resolver `as any` críticos
-
-**`useNotifications.ts`**: Remover `as any` nos `.insert()`, `.update()`, `.delete()` — usar tipagem correta do Supabase ou `as unknown as ...` com tipo explícito.
-
-**`useInvoicesNF.ts`**: Substituir `from("invoices_nf" as any)` por tipagem adequada, e `as any[]` no retorno por tipo `InvoiceNF[]`.
-
-**`DashboardEscritorio.tsx:212`**: `(p as any).projects?.name` → tipar o retorno do query com tipo inline `{ projects: { name: string } | null }`.
-
-### Arquivos alterados
-
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---|---|
-| `src/components/layout/AppSidebar.tsx` | localStorage para estado dos grupos |
-| `src/App.css` | **Deletar** |
-| `src/App.tsx` | QueryClient com staleTime/gcTime |
-| `src/pages/DashboardEscritorio.tsx` | Remover emojis, tipar `projects` join |
-| `src/pages/DashboardObras.tsx` | Remover emojis |
-| `src/components/projects/ProjectOnboardingGuide.tsx` | Remover emoji |
-| `src/hooks/useNotifications.ts` | Remover `as any` |
-| `src/hooks/useInvoicesNF.ts` | Remover `as any` |
+| `src/hooks/useComercialMetrics.ts` | **Novo** — query consolidada leads + proposals |
+| `src/hooks/useFinanceiroMetrics.ts` | **Novo** — query consolidada payments escritorio + settings |
+| `src/pages/DashboardEscritorio.tsx` | **Reescrever** — duas abas com todos os blocos descritos |
 
-Nenhuma lógica de negócio alterada. Nenhuma rota alterada.
+### Hook `useComercialMetrics`
+
+Uma unica chamada `Promise.all` buscando:
+- `leads`: todos os campos necessarios (id, status, name, created_at, updated_at)
+- `proposals`: com join leads(name, phone, email) — campos: id, status, price_full, final_value, sent_at, approved_at, created_at, updated_at, lead_id, notes
+
+Retorna objeto computado com:
+- **funil**: counts por estagio do mes atual (Leads/Contato/Reuniao/Proposta/Fechado) conforme regras de status cumulativo
+- **kpis**: leadsThisMonth + variacao, taxaConversao + variacao, tempoMedioFechamento (dias), proposalsAguardando + hasUrgent
+- **oportunidades**: leads com status proposta_enviada, top 4, com dias sem contato e valor proposta
+- **propostas**: proposals com status enviada, top 5, com dias desde envio
+- **pipeline6m**: ultimos 6 meses com counts fechados/propostas/em_andamento
+- **ticketMedio**: AVG price_full das aprovadas no mes
+
+staleTime: 5 minutos.
+
+### Hook `useFinanceiroMetrics`
+
+Uma unica chamada `Promise.all` buscando:
+- `payments`: WHERE source = 'escritorio', com join projects(name)
+- `settings`: para tax_rate_percent (default 6)
+- `invoices_nf`: COUNT pendentes (para badge no card despesas)
+
+Retorna:
+- **kpis**: receitaMes + variacao, aReceber30d + count, despesasMes + variacao, margemLiquida + meta
+- **proximosRecebimentos**: top 4 pendentes futuros
+- **dre**: receita bruta, despesas, impostos, liquido, margem
+- **grafico6m**: ultimos 6 meses receita/despesa/margem por mes
+- **pendingNFs**: count
+
+staleTime: 5 minutos.
+
+### DashboardEscritorio.tsx — Layout
+
+**Topo**: H1 "Escritorio" + subtitulo. Abaixo, duas abas customizadas (botoes com border-bottom) controladas por `useState<'comercial'|'financeiro'>('comercial')`.
+
+Estilo das abas: `bg-transparent border-none px-6 py-2.5`, ativa com `border-b-2 border-[#1B2A4A] text-[#1B2A4A]`, inativa `border-b-2 border-transparent text-muted-foreground`. Separador `border-b` abaixo.
+
+**Aba Comercial** (4 blocos):
+1. Funil comercial — card full-width com 5 estagios em flex row, setas e taxas entre eles, rodape com conversao total e ticket medio
+2. 4 KPI cards em grid-cols-4: Leads mes, Taxa conversao, Tempo medio fechamento, Propostas aguardando
+3. Dois cards lado a lado: Oportunidades quentes (border-left colorida por dias) + Propostas em aberto (com status semantico)
+4. Grafico pipeline 6 meses — barras empilhadas Recharts, cores #1B2A4A/#8B4557/#C4A882, altura 200px
+
+**Aba Financeiro** (3 blocos):
+1. 4 KPI cards com border-left colorida: Receita escritorio, A receber 30d, Despesas mes (com badge NFs pendentes), Margem liquida (com meta 60%)
+2. Dois cards: Proximos recebimentos + DRE resumido (tabela vertical)
+3. Grafico receita vs despesa — barras agrupadas + linha margem %, eixo Y esquerdo R$Xk, eixo Y direito %, altura 200px
+
+### Detalhes tecnicos
+
+- Usar `ComposedChart` do Recharts para o grafico financeiro (Bar + Line no mesmo chart)
+- Formatar valores com `Intl.NumberFormat('pt-BR', ...)`, percentuais com `Math.round() + '%'`
+- Eixo Y financeiro: `value >= 1000 ? R$${Math.round(value/1000)}k : R$${value}`
+- Variacoes: sinal + cor (verde positivo, vermelho negativo; invertido para despesas)
+- Estados vazios conforme especificado (zeros no funil, mensagens nas listas, eixos zerados nos graficos)
+- Lead statuses mapeados: novo→Leads, em_contato/contato_feito→Contato, reuniao_agendada→Reuniao, proposta_enviada→Proposta, fechado/aprovado→Fechado
+
+### O que e removido
+
+Todos os hooks internos atuais (`useEscritorioMetrics`, `useEscritorioAlertas`, `useDREProjects`) e todo o JSX atual sao substituidos. Os 3 cards de alerta (Tarefas/NFs/Leads) sao removidos do escritorio — NFs pendentes vira badge no card Despesas; os outros migram para o Dashboard Obras ou ficam implicitos nas Oportunidades quentes.
+
+Nenhuma outra rota, pagina ou componente alterado.
 
