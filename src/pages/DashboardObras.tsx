@@ -353,7 +353,7 @@ export default function DashboardObras() {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground py-4">Nenhum material atrasado 🎉</p>
+              <p className="text-xs text-muted-foreground py-4">Nenhum material atrasado</p>
             )}
           </CardContent>
         </Card>
