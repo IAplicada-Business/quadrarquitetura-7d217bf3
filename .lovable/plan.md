@@ -1,57 +1,73 @@
 
 
-## Guia de Primeiros Passos na Aba Resumo
+## Correções Técnicas — Auditoria
 
-### Migration SQL
+### 1. Persistir sidebar em localStorage
 
-```sql
-ALTER TABLE projects
-  ADD COLUMN IF NOT EXISTS onboarding_dismissed boolean DEFAULT false;
+**`src/components/layout/AppSidebar.tsx`**:
+- Inicializar `openGroups` lendo `localStorage.getItem('sidebar_groups')` como fallback
+- No `useEffect` de auto-expand por rota: só expandir se o grupo não foi manualmente colapsado. Adicionar `ref` `manualOverrides` para rastrear grupos que o usuário colapsou/expandiu manualmente
+- No `toggleGroup`: marcar o grupo como "manual override" e salvar estado em `localStorage`
+- Resultado: preferência manual do usuário persiste entre reloads; rota atual só expande automaticamente se não houver override manual
+
+### 2. Remover App.css
+
+- Deletar `src/App.css` (não há import — já confirmado via busca)
+- O arquivo é dead code com estilos conflitantes (`#root max-width: 1280px`)
+
+### 3. Configurar QueryClient com staleTime
+
+**`src/App.tsx`** linha 32:
+```typescript
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 ```
 
-### Novo componente: `src/components/projects/ProjectOnboardingGuide.tsx`
+### 4. Remover emojis dos dashboards
 
-Componente de checklist visual com 6 etapas em timeline vertical.
+| Arquivo | Linha | De → Para |
+|---|---|---|
+| `DashboardEscritorio.tsx:446` | `Tudo em dia 🎉` | `Tudo em dia` + ícone `CheckCircle2` inline |
+| `DashboardEscritorio.tsx:466` | `Todas enviadas ✓` | `Todas enviadas` + `<CheckCircle2 className="h-3 w-3 inline" />` |
+| `DashboardEscritorio.tsx:486` | `Todos acompanhados ✓` | Idem |
+| `DashboardObras.tsx:328` | `Nenhuma tarefa atrasada 🎉` | Remover emoji |
+| `DashboardObras.tsx:356` | `Nenhum material atrasado 🎉` | Remover emoji |
+| `DashboardObras.tsx:387` | `Nenhum pagamento vencido 🎉` | Remover emoji |
+| `ProjectOnboardingGuide.tsx:90` | `Projeto configurado com sucesso! 🎉` | Remover emoji (já tem ícone `PartyPopper`) |
 
-**Props**: `project`, `onTabChange`, `onDismiss`
+Não alterar os `✓` em `BudgetPreviewDialog` (PDF), `ProposalFormNew` (UI de seleção), `ImportPlantDialog` (header de tabela), `ProjectTrackingTab` (badge de status), `ClientPortal` (badge), `ConstructionTasks` (header) — esses são contextuais e não são "dashboards".
 
-**Dados necessários** (queries dentro do componente):
-- `useProjectActivities(projectId)` → count para etapas 2 e 6
-- `useMaterialTracking(projectId)` → count para etapa 3
-- `usePriceResearch(projectId)` → count para etapa 4
+### 5. KPIs separados — Aprovadas vs Faturamento
 
-**Lógica de cada etapa**:
-1. Importar proposta: `source_proposal_id && cotacao_importada === true`
-2. Gerar atividades: `activities.length > 0`
-3. Verificar materiais: `materials.length > 0`
-4. Pesquisar preços: `priceResearch.length > 0`
-5. Aprovar cotação: `cotacao_aprovada === true`
-6. Montar cronograma: `activities.some(a => a.start_date)`
+Já estão separados corretamente no código (linhas 185-186 e cards 321-343). `approvedCount` é COUNT, `faturamentoMes` é SUM. Nenhuma alteração necessária — a lógica já está correta.
 
-**Visual**:
-- Timeline vertical com linha conectando os 6 passos
-- Concluído: ícone `CheckCircle` verde, texto com opacity reduzida
-- Próximo pendente: borda azul, CTA Button ativo, seta animada (pulse)
-- Futuros: cinza, sem CTA
-- Quando todos concluídos: mensagem de celebração (confetti/emoji) por 3s, depois auto-dismiss via `updateProject({ onboarding_dismissed: true })`
+### 6. Tipagem TypeScript — resolver `as any` críticos
 
-**Botão "Ocultar guia"**: Checkbox "Não mostrar novamente" + botão. Salva `onboarding_dismissed: true`.
+**`useNotifications.ts`**: Remover `as any` nos `.insert()`, `.update()`, `.delete()` — usar tipagem correta do Supabase ou `as unknown as ...` com tipo explícito.
 
-### `src/components/projects/ProjectSummaryTab.tsx`
+**`useInvoicesNF.ts`**: Substituir `from("invoices_nf" as any)` por tipagem adequada, e `as any[]` no retorno por tipo `InvoiceNF[]`.
 
-**Critério de exibição**: Renderizar `ProjectOnboardingGuide` antes dos KPI cards quando:
-- `project.onboarding_dismissed !== true`
-- `activities.length === 0 && cotacao_aprovada !== true && created_at > 7 dias atrás`
-
-Usar `useProjectActivities` já disponível no contexto (ou importar). Passar `onTabChange` e `onDismiss` (que chama `updateProject`).
+**`DashboardEscritorio.tsx:212`**: `(p as any).projects?.name` → tipar o retorno do query com tipo inline `{ projects: { name: string } | null }`.
 
 ### Arquivos alterados
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | `onboarding_dismissed` em projects |
-| `src/components/projects/ProjectOnboardingGuide.tsx` | **Novo** — checklist timeline 6 etapas |
-| `src/components/projects/ProjectSummaryTab.tsx` | Renderizar guia condicionalmente no topo |
+| `src/components/layout/AppSidebar.tsx` | localStorage para estado dos grupos |
+| `src/App.css` | **Deletar** |
+| `src/App.tsx` | QueryClient com staleTime/gcTime |
+| `src/pages/DashboardEscritorio.tsx` | Remover emojis, tipar `projects` join |
+| `src/pages/DashboardObras.tsx` | Remover emojis |
+| `src/components/projects/ProjectOnboardingGuide.tsx` | Remover emoji |
+| `src/hooks/useNotifications.ts` | Remover `as any` |
+| `src/hooks/useInvoicesNF.ts` | Remover `as any` |
 
-Nenhuma outra aba, rota ou funcionalidade alterada.
+Nenhuma lógica de negócio alterada. Nenhuma rota alterada.
 
