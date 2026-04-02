@@ -483,7 +483,7 @@ export default function DashboardEscritorio() {
                 <Clock className="h-6 w-6" style={{ color: staleLeads > 0 ? "hsl(35, 80%, 50%)" : "hsl(152, 60%, 40%)" }} />
               </div>
             </div>
-            {staleLeads === 0 && <p className="text-xs text-muted-foreground mt-2">Todos acompanhados ✓</p>}
+            {staleLeads === 0 && <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">Todos acompanhados <CheckCircle2 className="h-3 w-3 inline text-emerald-500" /></p>}
           </CardContent>
         </Card>
       </div>
