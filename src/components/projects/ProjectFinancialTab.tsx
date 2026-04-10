@@ -15,6 +15,7 @@ import { PaymentForm } from "./PaymentForm";
 import { InvoiceForm } from "./InvoiceForm";
 import { InvoiceNFList } from "./InvoiceNFList";
 import jsPDF from "jspdf";
+import { toast } from "@/hooks/use-toast";
 import { SendMessageModal } from "@/components/messages/SendMessageModal";
 import { useProjectAI } from "@/hooks/useProjectAI";
 import { useProjectActivities } from "@/hooks/useProjectActivities";
