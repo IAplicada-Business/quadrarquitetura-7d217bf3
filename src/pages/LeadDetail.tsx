@@ -1,7 +1,7 @@
 import { useMemo, useRef, useCallback, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Eye, Copy, FileText, Check, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Eye, Copy, FileText, Check, Pencil, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +19,7 @@ import { ProposalPageProps } from "@/components/leads/proposal-pages/shared";
 import { generateProposalPdf, waitForFonts } from "@/lib/generateProposalPdf";
 import ReactDOM from "react-dom/client";
 import { flushSync } from "react-dom";
+import { SendMessageModal } from "@/components/messages/SendMessageModal";
 
 const originLabels: Record<string, string> = {
   indicacao: "Indicação", instagram: "Instagram", google: "Google", site: "Site", outro: "Outro",
@@ -56,6 +57,7 @@ export default function LeadDetail() {
   const { logos, founderPhotos, portfolio, feedbacks, texts, contacts } = useProposalAssets();
   const { contracts } = useContracts();
   const [convertProposal, setConvertProposal] = useState<any>(null);
+  const [msgOpen, setMsgOpen] = useState(false);
   const lead = useMemo(() => leads.find((l) => l.id === id), [leads, id]);
 
   const { data: proposals = [], isLoading: proposalsLoading } = useQuery({
@@ -240,8 +242,11 @@ export default function LeadDetail() {
               {originLabels[lead.origin] || lead.origin}
             </Badge>
           </div>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setMsgOpen(true)}>
+            <MessageSquare className="h-4 w-4 mr-1" /> Enviar Mensagem
+          </Button>
         </div>
-      </div>
 
       {/* Proposals Section */}
       <Card>
