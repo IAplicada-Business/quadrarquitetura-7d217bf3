@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, LogOut, Menu, Mic, Settings, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, Menu, Mic, Moon, Settings, Sun, User } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,6 +26,14 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [voiceOpen, setVoiceOpen] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    document.documentElement.classList.toggle('dark', next === 'dark');
+    localStorage.setItem('theme', next);
+  };
 
   const fullName = user?.user_metadata?.full_name as string | undefined;
   const email = user?.email ?? "";
@@ -99,6 +107,15 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
 
         {/* Notifications */}
         <NotificationsPanel />
+
+        {/* Dark mode toggle */}
+        <button
+          onClick={toggleTheme}
+          className="p-2.5 rounded-full bg-secondary text-accent shadow-sm hover:bg-secondary/80 transition-colors"
+          aria-label="Alternar tema"
+        >
+          {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </button>
 
         {/* User dropdown */}
         <DropdownMenu>
