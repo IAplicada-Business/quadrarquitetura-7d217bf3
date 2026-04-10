@@ -21,6 +21,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { SendMessageModal } from "@/components/messages/SendMessageModal";
+import { useProjectAI } from "@/hooks/useProjectAI";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const weatherOptions = [
   { value: "ensolarado", label: "Ensolarado", icon: Sun },
@@ -58,6 +60,9 @@ export function ProjectTrackingTab({ projectId, projectName, clientName, clientP
   const [filterPeriod, setFilterPeriod] = useState("all");
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [prefillData, setPrefillData] = useState<{ summary: string; next_steps: string; client_pending?: string } | null>(null);
+  const { callAction, loading: aiInsightsLoading } = useProjectAI();
+  const [aiInsights, setAiInsights] = useState<any>(null);
+  const [aiInsightsOpen, setAiInsightsOpen] = useState(false);
 
   // Detect newly completed activities linked to suppliers
   useEffect(() => {
@@ -237,6 +242,17 @@ export function ProjectTrackingTab({ projectId, projectName, clientName, clientP
           <Button size="sm" variant="outline" onClick={handleGenerateAISummary} disabled={aiSummaryLoading}>
             {aiSummaryLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
             Gerar Resumo com IA
+          </Button>
+          <Button size="sm" variant="outline" disabled={aiInsightsLoading || entries.length === 0} onClick={async () => {
+            const weekEntries = entries.slice(0, 10).map(e => ({
+              date: e.entry_date, weather: e.weather, workers: e.workers_count,
+              summary: e.summary, observations: e.observations, disciplines: e.disciplines_active,
+            }));
+            const result = await callAction(projectId, "weekly_insights", { diary_entries: weekEntries });
+            if (result) { setAiInsights(result); setAiInsightsOpen(true); }
+          }}>
+            {aiInsightsLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+            Insights da semana
           </Button>
           <Button size="sm" variant="outline" onClick={() => { setPrefillData(null); setReportOpen(true); }}>
             <BarChart3 className="h-4 w-4 mr-1" /> Gerar Relatório Semanal
