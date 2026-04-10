@@ -55,8 +55,7 @@ export function useFinanceiroMetrics() {
       const [paymentsRes, nfsRes, settingsRes] = await Promise.all([
         supabase
           .from("payments")
-          .select("id, value, due_date, paid_date, status, description, source, supplier_name, project_id, payment_type, created_at, projects(name)")
-          .eq("source", "escritorio"),
+          .select("id, value, due_date, paid_date, status, description, source, supplier_name, project_id, payment_type, created_at, projects(name)"),
         supabase.from("invoices_nf").select("id").eq("status", "pendente"),
         supabase.from("settings").select("tax_rate_percent").limit(1).maybeSingle(),
       ]);
