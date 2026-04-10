@@ -28,6 +28,7 @@ import NotificationsPage from "./pages/NotificationsPage";
 import NotFound from "./pages/NotFound";
 import ClientPortal from "./pages/ClientPortal";
 import InvoicesPage from "./pages/InvoicesPage";
+import ContentPlaceholder from "./pages/ContentPlaceholder";
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -13,28 +13,22 @@ type MenuGroup = { label: string; items: MenuItem[] };
 
 const menuGroups: MenuGroup[] = [
   {
-    label: "Dashboard",
+    label: "Comercial",
     items: [
-      { title: "Escritório", url: "/dashboard/escritorio" },
-      { title: "Obras", url: "/dashboard/obras" },
+      { title: "Leads", url: "/leads/pipeline" },
+      {
+        title: "Documentos",
+        url: "/leads/proposals",
+        subItems: [
+          { title: "Propostas", url: "/leads/proposals" },
+          { title: "Contratos", url: "/leads/contracts" },
+        ],
+      },
+      { title: "Clientes", url: "/clients" },
     ],
   },
   {
-    label: "Leads",
-    items: [
-      { title: "Pipeline", url: "/leads/pipeline" },
-      { title: "Propostas", url: "/leads/proposals" },
-      { title: "Contratos", url: "/leads/contracts" },
-    ],
-  },
-  {
-    label: "Clientes",
-    items: [
-      { title: "Lista", url: "/clients" },
-    ],
-  },
-  {
-    label: "Projetos",
+    label: "Gestão de Obras",
     items: [
       { title: "Obras", url: "/projects" },
       { title: "Acompanhamento", url: "/construction/tracking" },
@@ -48,12 +42,21 @@ const menuGroups: MenuGroup[] = [
         ],
       },
       { title: "Fornecedores", url: "/construction/suppliers" },
-      { title: "Documentos", url: "/construction/documents" },
+    ],
+  },
+  {
+    label: "Gestão de Conteúdo",
+    items: [
+      { title: "Calendário", url: "/content/calendar" },
+      { title: "Roteiros", url: "/content/scripts" },
+      { title: "Publicações", url: "/content/posts" },
     ],
   },
   {
     label: "Administrativo",
     items: [
+      { title: "Dashboard Escritório", url: "/dashboard/escritorio" },
+      { title: "Dashboard Obras", url: "/dashboard/obras" },
       { title: "Configurações", url: "/admin/settings" },
       { title: "Usuários", url: "/admin/users" },
       { title: "Notas Fiscais", url: "/admin/invoices" },
@@ -62,15 +65,24 @@ const menuGroups: MenuGroup[] = [
   },
 ];
 
+const routeGroupMap: Record<string, string> = {
+  "/leads": "Comercial",
+  "/clients": "Comercial",
+  "/projects": "Gestão de Obras",
+  "/construction": "Gestão de Obras",
+  "/content": "Gestão de Conteúdo",
+  "/dashboard": "Administrativo",
+  "/admin": "Administrativo",
+};
+
 interface AppSidebarProps {
   onNavigate?: () => void;
 }
 
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
-  // Read persisted state from localStorage
   const getInitialGroups = (): Record<string, boolean> => {
     try {
-      const saved = localStorage.getItem("sidebar_groups");
+      const saved = localStorage.getItem("sidebar_groups_state");
       if (saved) return JSON.parse(saved);
     } catch {}
     return Object.fromEntries(menuGroups.map((g) => [g.label, false]));
@@ -81,22 +93,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const manualOverrides = useRef<Set<string>>(new Set());
   const location = useLocation();
 
-  // Auto-expand active group based on route — only if not manually overridden
   useEffect(() => {
-    const routeGroupMap: Record<string, string> = {
-      "/dashboard": "Dashboard",
-      "/leads": "Leads",
-      "/clients": "Clientes",
-      "/projects": "Projetos",
-      "/construction": "Projetos",
-      "/admin": "Administrativo",
-    };
     const prefix = Object.keys(routeGroupMap).find((p) => location.pathname.startsWith(p));
     if (prefix) {
       const activeLabel = routeGroupMap[prefix];
       setOpenGroups((prev) => {
         const next = { ...prev };
-        // Only auto-expand if user hasn't manually overridden this group
         if (!manualOverrides.current.has(activeLabel)) {
           next[activeLabel] = true;
         }
@@ -109,7 +111,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     manualOverrides.current.add(label);
     setOpenGroups((prev) => {
       const next = { ...prev, [label]: !prev[label] };
-      try { localStorage.setItem("sidebar_groups", JSON.stringify(next)); } catch {}
+      try { localStorage.setItem("sidebar_groups_state", JSON.stringify(next)); } catch {}
       return next;
     });
   }, []);
@@ -123,14 +125,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
   return (
     <aside className="flex flex-col h-full w-64 border-r border-sidebar-border bg-sidebar">
-      {/* Logo */}
       <div className="flex items-center p-3 border-b border-sidebar-border">
         <div className="h-14 flex items-center flex-1">
           <img src={logoLight} alt="Quadra Arquitetura" className="h-14 object-contain object-left animate-fade-in" />
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 py-2 overflow-y-auto">
         {menuGroups.map((group) => (
           <div key={group.label} className="mb-0.5">
