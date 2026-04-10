@@ -375,6 +375,9 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
                   <RefreshCw className="h-4 w-4 mr-1" /> Recalcular Cronograma
                 </Button>
               )}
+              <Button size="sm" variant="outline" onClick={() => setGenerateDialogOpen(true)} disabled={schedulableActivities.length === 0}>
+                <FileDown className="h-4 w-4 mr-1" /> Gerar do Escopo
+              </Button>
               <Button size="sm" variant="outline" onClick={handleImportFromScope} disabled={importing}>
                 <Download className="h-4 w-4 mr-1" /> Importar do Escopo
               </Button>
@@ -560,6 +563,38 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
         isLoading={batchUpdateDates.isPending}
         title="Recalcular todo o cronograma"
       />
+
+      {/* Generate from Scope Dialog */}
+      <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gerar Cronograma do Escopo</DialogTitle>
+            <DialogDescription>
+              {schedulableActivities.length > 0
+                ? `${schedulableActivities.length} atividades com datas definidas encontradas no escopo. Gerar cronograma?`
+                : "Nenhuma atividade com datas definidas encontrada."}
+            </DialogDescription>
+          </DialogHeader>
+          {schedulableActivities.length > 0 && (
+            <div className="max-h-60 overflow-y-auto border rounded-lg divide-y">
+              {schedulableActivities.map(a => (
+                <div key={a.id} className="px-3 py-2 text-sm flex justify-between">
+                  <span className="font-medium">{a.name}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {a.start_date ? new Date(a.start_date).toLocaleDateString("pt-BR") : "—"} → {a.end_date ? new Date(a.end_date).toLocaleDateString("pt-BR") : "—"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleGenerateFromScope} disabled={generatingFromScope || schedulableActivities.length === 0}>
+              {generatingFromScope ? "Gerando..." : `Gerar ${schedulableActivities.length} etapas`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
