@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -28,8 +28,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+interface ClientProject {
+  id: string;
+  project_number: string | null;
+  name: string;
+}
 
 interface Client {
   id: string;
@@ -42,6 +50,9 @@ interface Client {
   origin: string;
   observations: string | null;
   created_at: string;
+  source_lead_id: string | null;
+  converted_at: string | null;
+  projects?: ClientProject[];
 }
 
 const clientTypes = [
@@ -72,6 +83,7 @@ const emptyForm = {
 
 export default function Clients() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
@@ -81,15 +93,39 @@ export default function Clients() {
   const [loading, setLoading] = useState(false);
 
   const fetchClients = async () => {
-    const { data, error } = await supabase
+    // Fetch clients
+    const { data: clientsData, error: clientsError } = await supabase
       .from("clients")
       .select("*")
       .order("created_at", { ascending: false });
-    if (error) {
+    if (clientsError) {
       toast.error("Erro ao carregar clientes");
-    } else {
-      setClients(data || []);
+      return;
     }
+
+    // Fetch projects linked to clients
+    const clientIds = (clientsData || []).map((c: any) => c.id);
+    let projectsByClient: Record<string, ClientProject[]> = {};
+    if (clientIds.length > 0) {
+      const { data: projectsData } = await supabase
+        .from("projects")
+        .select("id, project_number, name, client_id")
+        .in("client_id", clientIds);
+      if (projectsData) {
+        for (const p of projectsData) {
+          const cid = (p as any).client_id;
+          if (!projectsByClient[cid]) projectsByClient[cid] = [];
+          projectsByClient[cid].push({ id: p.id, project_number: p.project_number, name: p.name });
+        }
+      }
+    }
+
+    setClients(
+      (clientsData || []).map((c: any) => ({
+        ...c,
+        projects: projectsByClient[c.id] || [],
+      }))
+    );
   };
 
   useEffect(() => {
@@ -389,7 +425,23 @@ export default function Clients() {
               <TableBody>
                 {filtered.map((client) => (
                   <TableRow key={client.id}>
-                    <TableCell className="font-medium">{client.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {client.name}
+                        {client.projects && client.projects.length > 0 &&
+                          client.projects.map((p) =>
+                            p.project_number ? (
+                              <Badge
+                                key={p.id}
+                                className="cursor-pointer text-xs"
+                                onClick={() => navigate(`/projects/${p.id}`)}
+                              >
+                                {p.project_number}
+                              </Badge>
+                            ) : null
+                          )}
+                      </div>
+                    </TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">
                       {client.email || "—"}
                     </TableCell>
