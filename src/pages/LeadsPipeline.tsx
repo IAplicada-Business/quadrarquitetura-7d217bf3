@@ -790,20 +790,6 @@ function LeadAnalytics({ leads }: { leads: Lead[] }) {
           </CardContent>
         </Card>
       </div>
-      {/* Send Message Modal */}
-      {msgLead && (
-        <SendMessageModal
-          open={!!msgLead}
-          onOpenChange={(o) => { if (!o) setMsgLead(null); }}
-          category={["lead", "proposta"]}
-          phone={msgLead.phone}
-          context={{
-            nome_cliente: msgLead.name,
-            telefone: msgLead.phone,
-            tipo_projeto: typeLabels[msgLead.project_type] || msgLead.project_type,
-          }}
-        />
-      )}
     </div>
   );
 }
