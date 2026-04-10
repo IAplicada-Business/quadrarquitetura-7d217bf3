@@ -87,7 +87,7 @@ export function useContracts() {
         const n = parseInt(String(r.project_number ?? "").replace("Q", ""), 10);
         return isNaN(n) ? max : Math.max(max, n);
       }, 0);
-      const nextNumber = `Q${maxNum + 1}`;
+      const nextNumber = `Q${Math.max(maxNum, 144) + 1}`;
 
       // 1. Create project
       const { data: project, error: projError } = await supabase
