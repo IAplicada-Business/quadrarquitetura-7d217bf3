@@ -2435,6 +2435,7 @@ export type Database = {
           requires_presence: boolean | null
           scope_item_id: string | null
           source: string | null
+          source_activity_id: string | null
           start_date: string | null
           status: string | null
           supplier_name: string | null
@@ -2463,6 +2464,7 @@ export type Database = {
           requires_presence?: boolean | null
           scope_item_id?: string | null
           source?: string | null
+          source_activity_id?: string | null
           start_date?: string | null
           status?: string | null
           supplier_name?: string | null
@@ -2491,6 +2493,7 @@ export type Database = {
           requires_presence?: boolean | null
           scope_item_id?: string | null
           source?: string | null
+          source_activity_id?: string | null
           start_date?: string | null
           status?: string | null
           supplier_name?: string | null
@@ -2518,6 +2521,13 @@ export type Database = {
             columns: ["scope_item_id"]
             isOneToOne: false
             referencedRelation: "scope_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_tasks_source_activity_id_fkey"
+            columns: ["source_activity_id"]
+            isOneToOne: false
+            referencedRelation: "project_activities"
             referencedColumns: ["id"]
           },
         ]
