@@ -6,9 +6,13 @@ interface ContentPlaceholderProps {
 
 export default function ContentPlaceholder({ title }: ContentPlaceholderProps) {
   return (
-    <div>
-      <h1 className="text-2xl font-bold font-display mb-1">{title}</h1>
-      <p className="text-muted-foreground mb-8">Gestão de Conteúdo</p>
+    <div className="space-y-6 p-0">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-playfair">{title}</h1>
+          <p className="text-sm text-muted-foreground mt-1">Gestão de Conteúdo</p>
+        </div>
+      </div>
 
       <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-muted/30">
         <div className="p-4 rounded-full bg-secondary mb-4">

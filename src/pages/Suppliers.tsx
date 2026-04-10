@@ -97,18 +97,18 @@ export default function Suppliers() {
   });
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 p-0 animate-fade-in">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-display">Fornecedores</h1>
-          <p className="text-muted-foreground">Gestão de parceiros e prestadores de serviço</p>
+          <h1 className="text-2xl font-playfair">Fornecedores</h1>
+          <p className="text-sm text-muted-foreground mt-1">Gestão de parceiros e prestadores de serviço</p>
         </div>
         <Button onClick={() => { setEditing(null); setFormOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" /> Novo Fornecedor
         </Button>
       </div>
 
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-4">
         <Input 
           placeholder="Buscar fornecedor..." 
           className="max-w-sm" 
@@ -126,7 +126,7 @@ export default function Suppliers() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filtered.map(s => (
           <Card key={s.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedSupplier(s)}>
             <CardHeader className="pb-2">
