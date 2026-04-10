@@ -11,6 +11,10 @@ interface InvoiceNFFilters {
   status?: string;
 }
 
+interface InvoiceNFWithProject extends InvoiceNF {
+  projects: { name: string } | null;
+}
+
 export function useInvoicesNF(filters: InvoiceNFFilters = {}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -19,7 +23,7 @@ export function useInvoicesNF(filters: InvoiceNFFilters = {}) {
     queryKey: ["invoices_nf", filters],
     queryFn: async () => {
       let q = supabase
-        .from("invoices_nf" as any)
+        .from("invoices_nf")
         .select("*, projects(name)")
         .order("issue_date", { ascending: false });
 
@@ -30,17 +34,17 @@ export function useInvoicesNF(filters: InvoiceNFFilters = {}) {
 
       const { data, error } = await q;
       if (error) throw error;
-      return data as any[];
+      return (data ?? []) as InvoiceNFWithProject[];
     },
     enabled: !!user,
   });
 
   const create = useMutation({
-    mutationFn: async (item: Record<string, unknown>) => {
-      const { error } = await supabase.from("invoices_nf" as any).insert({
+    mutationFn: async (item: Omit<InvoiceNF, "id" | "created_at" | "user_id">) => {
+      const { error } = await supabase.from("invoices_nf").insert({
         ...item,
         user_id: user!.id,
-      } as any);
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -51,8 +55,8 @@ export function useInvoicesNF(filters: InvoiceNFFilters = {}) {
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string } & Record<string, unknown>) => {
-      const { error } = await supabase.from("invoices_nf" as any).update(updates as any).eq("id", id);
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<InvoiceNF>) => {
+      const { error } = await supabase.from("invoices_nf").update(updates).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -64,7 +68,7 @@ export function useInvoicesNF(filters: InvoiceNFFilters = {}) {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("invoices_nf" as any).delete().eq("id", id);
+      const { error } = await supabase.from("invoices_nf").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
