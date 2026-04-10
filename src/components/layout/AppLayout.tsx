@@ -10,16 +10,32 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
+function getInitialCollapsed(): boolean {
+  try {
+    return localStorage.getItem("sidebar_collapsed") === "true";
+  } catch {
+    return false;
+  }
+}
+
 export function AppLayout() {
   const isMobile = useIsMobile();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialCollapsed);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try { localStorage.setItem("sidebar_collapsed", String(next)); } catch {}
+      return next;
+    });
+  };
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
-      {/* Desktop sidebar - completely hidden when collapsed */}
-      {!isMobile && !sidebarCollapsed && (
-        <AppSidebar onNavigate={undefined} />
+      {/* Desktop sidebar - always rendered, collapsed or expanded */}
+      {!isMobile && (
+        <AppSidebar collapsed={sidebarCollapsed} />
       )}
 
       {/* Mobile sidebar via Sheet */}
@@ -37,7 +53,7 @@ export function AppLayout() {
           showMenuButton={isMobile}
           onMenuClick={() => setMobileOpen(true)}
           sidebarCollapsed={sidebarCollapsed}
-          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onToggleSidebar={toggleSidebar}
         />
         <main className="flex-1 overflow-y-auto">
           <div className="p-6 lg:p-8 animate-fade-in">
