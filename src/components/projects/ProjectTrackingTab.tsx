@@ -38,6 +38,7 @@ export function ProjectTrackingTab({ projectId, projectName, clientName, clientP
   const [formOpen, setFormOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [ratingAllocation, setRatingAllocation] = useState<any>(null);
+  const [msgOpen, setMsgOpen] = useState(false);
   const completedActivitiesRef = useRef<Set<string>>(new Set());
 
   // Fetch client responses
@@ -230,6 +231,9 @@ export function ProjectTrackingTab({ projectId, projectName, clientName, clientP
           </SelectContent>
         </Select>
         <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setMsgOpen(true)} disabled={!clientPhone}>
+            <MessageSquare className="h-4 w-4 mr-1" /> Enviar Mensagem
+          </Button>
           <Button size="sm" variant="outline" onClick={handleGenerateAISummary} disabled={aiSummaryLoading}>
             {aiSummaryLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
             Gerar Resumo com IA
