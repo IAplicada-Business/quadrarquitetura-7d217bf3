@@ -19,7 +19,7 @@ export function useContentCalendar(month: number, year: number) {
         .lte("scheduled_date", lastDay)
         .order("scheduled_date");
       if (error) throw error;
-      return (data || []) as ContentPost[];
+      return (data || []) as unknown as ContentPost[];
     },
     staleTime: 5 * 60 * 1000,
     enabled: !!user,

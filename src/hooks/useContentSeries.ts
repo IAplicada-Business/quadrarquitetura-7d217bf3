@@ -24,7 +24,7 @@ export function useContentSeries() {
         .select("*")
         .order("name");
       if (error) throw error;
-      return (data || []) as ContentSeries[];
+      return (data || []) as unknown as ContentSeries[];
     },
     staleTime: 10 * 60 * 1000,
     enabled: !!user,

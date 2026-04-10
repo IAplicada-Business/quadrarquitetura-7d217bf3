@@ -56,7 +56,7 @@ export function useContentPosts() {
         .select("*")
         .order("scheduled_date", { ascending: false, nullsFirst: false });
       if (error) throw error;
-      return (data || []) as ContentPost[];
+      return (data || []) as unknown as ContentPost[];
     },
     staleTime: 5 * 60 * 1000,
     enabled: !!user,
