@@ -22,7 +22,6 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { SendMessageModal } from "@/components/messages/SendMessageModal";
 import { useProjectAI } from "@/hooks/useProjectAI";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const weatherOptions = [
   { value: "ensolarado", label: "Ensolarado", icon: Sun },
