@@ -165,7 +165,7 @@ export function useLeads() {
         const n = parseInt(String(r.project_number ?? "").replace("Q", ""), 10);
         return isNaN(n) ? max : Math.max(max, n);
       }, 0);
-      const nextNumber = `Q${maxNum + 1}`;
+      const nextNumber = `Q${Math.max(maxNum, 144) + 1}`;
 
       // 6. Create project
       const projectName = `${lead.name} — ${lead.project_type || "projeto"}`;
