@@ -1,38 +1,52 @@
 
 
-## Plano: Abas mobile em dropdown + Toggle dark mode
+## Plano: Padronizar padding e espaçamento das páginas
 
-### 1. `src/pages/ProjectDetail.tsx`
+### Padrão a aplicar
 
-- Importar `useIsMobile` de `@/hooks/use-mobile` e `Select, SelectTrigger, SelectValue, SelectContent, SelectItem` de `@/components/ui/select`
-- Definir array de abas: `const tabs = [{value: "resumo", label: "Resumo"}, ...]`
-- No bloco das abas (linhas 89-100), renderizar condicionalmente:
-  - **Mobile** (`isMobile`): `<Select value={activeTab} onValueChange={setActiveTab}>` com `SelectTrigger` mostrando o nome da aba atual e `SelectItem` para cada aba
-  - **Desktop**: manter o `TabsList` horizontal atual
-- O `<Tabs>` wrapper e os `<TabsContent>` permanecem iguais
+Wrapper: `className="space-y-6 p-0"`
+Header: `<div className="flex items-center justify-between">` com `<h1 className="text-2xl font-playfair">` e `<p className="text-sm text-muted-foreground mt-1">`
+Cards: `p-6` consistente. Gaps: `gap-6`.
 
-### 2. `src/components/layout/AppHeader.tsx`
+### Alterações por arquivo
 
-- Importar `Sun, Moon` do Lucide
-- Adicionar state para tema: `const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')`
-- Função `toggleTheme`: alterna `document.documentElement.classList` entre `dark`/não, salva em `localStorage`
-- Adicionar botão entre Notifications e Avatar com a mesma classe dos outros botões do header (`p-2.5 rounded-full bg-secondary text-accent shadow-sm hover:bg-secondary/80`)
-- Ícone: `Sun` quando dark, `Moon` quando light
+**1. `src/pages/Clients.tsx`**
+- Wrapper `<div>` → `<div className="space-y-6 p-0">`
+- Header: trocar `flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6` → `flex items-center justify-between`
+- `h1`: trocar `font-bold font-display mb-1` → `font-playfair`
+- `p`: adicionar `text-sm` e `mt-1`, remover wrapping extra
 
-### 3. `src/main.tsx` (ou `index.html`)
+**2. `src/pages/Suppliers.tsx`**
+- Wrapper: `space-y-6 animate-fade-in` → `space-y-6 p-0 animate-fade-in`
+- Header: `flex justify-between items-center` → `flex items-center justify-between`
+- `h1`: `font-bold text-display` → `font-playfair`
+- `p`: adicionar `text-sm mt-1`
+- Remover `mb-6` do div de filtros (já coberto pelo `space-y-6`)
+- Grid de cards: `gap-4` → `gap-6`
 
-- Adicionar script inline no `<head>` do `index.html` para aplicar tema salvo antes do primeiro render, evitando flash:
-```js
-<script>
-  if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
-</script>
-```
+**3. `src/pages/InvoicesPage.tsx`**
+- Wrapper: já tem `space-y-6`, adicionar `p-0`
+- `h1`: `font-bold font-display` → `font-playfair`
+- `p`: adicionar `text-sm mt-1`
+
+**4. `src/pages/Reports.tsx`**
+- Wrapper: adicionar `p-0`
+- `h1`: `font-bold` → `font-playfair`
+- `p`: adicionar `text-sm mt-1`
+
+**5. `src/pages/ContentPlaceholder.tsx`**
+- Wrapper `<div>` → `<div className="space-y-6 p-0">`
+- Header: wrapping `<div className="flex items-center justify-between">`
+- `h1`: `font-bold font-display mb-1` → `font-playfair`
+- `p`: `mb-8` → `text-sm mt-1`, remover `mb-8`
 
 ### Arquivos alterados
-1. `src/pages/ProjectDetail.tsx`
-2. `src/components/layout/AppHeader.tsx`
-3. `index.html`
+1. `src/pages/Clients.tsx`
+2. `src/pages/Suppliers.tsx`
+3. `src/pages/InvoicesPage.tsx`
+4. `src/pages/Reports.tsx`
+5. `src/pages/ContentPlaceholder.tsx`
 
 ### O que NÃO muda
-- Rotas, sidebar, demais componentes e funcionalidades
+- Lógica, rotas, conteúdo, componentes internos
 
