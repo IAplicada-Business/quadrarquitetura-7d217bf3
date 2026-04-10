@@ -55,8 +55,7 @@ export function useFinanceiroMetrics() {
       const [paymentsRes, nfsRes, settingsRes] = await Promise.all([
         supabase
           .from("payments")
-          .select("id, value, due_date, paid_date, status, description, source, supplier_name, project_id, payment_type, created_at, projects(name)")
-          .eq("source", "escritorio"),
+          .select("id, value, due_date, paid_date, status, description, source, supplier_name, project_id, payment_type, created_at, projects(name)"),
         supabase.from("invoices_nf").select("id").eq("status", "pendente"),
         supabase.from("settings").select("tax_rate_percent").limit(1).maybeSingle(),
       ]);
@@ -77,12 +76,19 @@ export function useFinanceiroMetrics() {
     const currentMonthStr = format(todayDate, "yyyy-MM");
     const prevMonthStr = format(subMonths(todayDate, 1), "yyyy-MM");
 
-    const isReceita = (p: PaymentRow) => p.payment_type === "receita";
-    const isDespesa = (p: PaymentRow) => p.payment_type !== "receita";
+    const isEscritorio = (p: PaymentRow) =>
+      p.source === "escritorio" || (!p.source && !p.project_id);
+    const isCancelado = (p: PaymentRow) => p.status === "cancelado";
+    const isReceita = (p: PaymentRow) =>
+      p.payment_type === "receita" || (!p.payment_type && p.source !== "obra");
+    const isDespesa = (p: PaymentRow) => p.payment_type === "despesa";
+
+    // Filter to escritório-only, exclude cancelled
+    const escritorioPayments = payments.filter((p) => isEscritorio(p) && !isCancelado(p));
 
     // Paid this month
-    const paidThisMonth = payments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(currentMonthStr));
-    const paidPrevMonth = payments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(prevMonthStr));
+    const paidThisMonth = escritorioPayments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(currentMonthStr));
+    const paidPrevMonth = escritorioPayments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(prevMonthStr));
 
     const receitaThis = paidThisMonth.filter(isReceita).reduce((s, p) => s + p.value, 0);
     const receitaPrev = paidPrevMonth.filter(isReceita).reduce((s, p) => s + p.value, 0);
@@ -94,7 +100,7 @@ export function useFinanceiroMetrics() {
 
     // A receber 30 dias
     const thirtyDaysLater = format(new Date(todayDate.getTime() + 30 * 86400000), "yyyy-MM-dd");
-    const pendentes30d = payments.filter(
+    const pendentes30d = escritorioPayments.filter(
       (p) => p.status === "pendente" && p.due_date && p.due_date >= todayStr && p.due_date <= thirtyDaysLater
     );
     const aReceber30d = pendentes30d.reduce((s, p) => s + p.value, 0);
@@ -105,7 +111,7 @@ export function useFinanceiroMetrics() {
     const margemLiquida = receitaThis > 0 ? Math.round((liquido / receitaThis) * 100) : 0;
 
     // ── Próximos recebimentos ──
-    const proximosRecebimentos: ProximoRecebimento[] = payments
+    const proximosRecebimentos: ProximoRecebimento[] = escritorioPayments
       .filter((p) => p.status === "pendente" && p.due_date && p.due_date >= todayStr)
       .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))
       .slice(0, 4)
@@ -135,7 +141,7 @@ export function useFinanceiroMetrics() {
       const label = format(m, "MMM", { locale: ptBR });
       const capLabel = label.charAt(0).toUpperCase() + label.slice(1);
 
-      const monthPaid = payments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(mStr));
+      const monthPaid = escritorioPayments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(mStr));
       const rec = monthPaid.filter(isReceita).reduce((s, p) => s + p.value, 0);
       const desp = monthPaid.filter(isDespesa).reduce((s, p) => s + p.value, 0);
       const imp = rec * (taxRate / 100);

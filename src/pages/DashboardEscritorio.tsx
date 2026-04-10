@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -270,9 +271,13 @@ export default function DashboardEscritorio() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground py-8 text-center">
-                    Nenhuma proposta aguardando resposta.
-                  </p>
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Users className="h-10 w-10 text-muted-foreground/30 mb-2" />
+                    <p className="text-sm text-muted-foreground mb-2">Nenhuma oportunidade no momento</p>
+                    <Link to="/leads/pipeline" className="text-sm font-medium text-primary hover:underline">
+                      Adicionar lead →
+                    </Link>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -465,9 +470,13 @@ export default function DashboardEscritorio() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground py-8 text-center">
-                    Nenhum recebimento nos próximos 30 dias.
-                  </p>
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Calendar className="h-10 w-10 text-muted-foreground/30 mb-2" />
+                    <p className="text-sm text-muted-foreground mb-2">Nenhum recebimento nos próximos 30 dias</p>
+                    <Link to="/admin/invoices" className="text-sm font-medium text-primary hover:underline">
+                      Registrar pagamento →
+                    </Link>
+                  </div>
                 )}
               </CardContent>
             </Card>

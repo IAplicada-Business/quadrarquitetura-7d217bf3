@@ -13,6 +13,7 @@ import {
   Users,
   BarChart3,
   Bell,
+  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -100,7 +101,7 @@ export default function DashboardObras() {
 
   // ── BLOCO 1 — Visão Geral de Projetos ──
   const projectCards = useMemo(() => {
-    const active = projects.filter((p) => p.status === "execucao" || p.status === "mobilizacao" || p.status === "planejamento");
+    const active = projects.filter((p) => ["execucao", "mobilizacao", "planejamento"].includes(p.status ?? "") || !p.status);
     return active.map((proj) => {
       const tasks = scheduleTasks.filter((t) => t.project_id === proj.id);
       const total = tasks.length;
@@ -173,7 +174,7 @@ export default function DashboardObras() {
         orcado: proj.estimated_budget ?? 0,
         gasto: pago,
       };
-    }).filter((d) => d.orcado > 0 || d.gasto > 0);
+    });
   }, [projects, payments]);
 
   // ── Multi-Obras (mantido) ──
@@ -294,7 +295,10 @@ export default function DashboardObras() {
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <HardHat className="h-12 w-12 text-primary/30 mb-3" />
-              <p className="text-sm text-muted-foreground">Nenhuma obra ativa</p>
+              <p className="text-sm text-muted-foreground mb-3">Nenhuma obra ativa</p>
+              <Link to="/projects" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+                Criar obra <ChevronRight className="h-4 w-4" />
+              </Link>
             </div>
           )}
         </CardContent>
