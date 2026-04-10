@@ -419,6 +419,7 @@ export type Database = {
       clients: {
         Row: {
           client_type: Database["public"]["Enums"]["client_type"] | null
+          converted_at: string | null
           cpf_cnpj: string | null
           created_at: string
           email: string | null
@@ -428,11 +429,13 @@ export type Database = {
           origin: Database["public"]["Enums"]["client_origin"] | null
           phone: string | null
           phone_secondary: string | null
+          source_lead_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           client_type?: Database["public"]["Enums"]["client_type"] | null
+          converted_at?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
@@ -442,11 +445,13 @@ export type Database = {
           origin?: Database["public"]["Enums"]["client_origin"] | null
           phone?: string | null
           phone_secondary?: string | null
+          source_lead_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           client_type?: Database["public"]["Enums"]["client_type"] | null
+          converted_at?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
@@ -456,10 +461,19 @@ export type Database = {
           origin?: Database["public"]["Enums"]["client_origin"] | null
           phone?: string | null
           phone_secondary?: string | null
+          source_lead_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_source_lead_id_fkey"
+            columns: ["source_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contract_templates: {
         Row: {
