@@ -12,6 +12,7 @@ import { Settings, User, Palette, Calculator, Save } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import CalculationRulesTab from "@/components/settings/CalculationRulesTab";
 import ProposalBrandingTab from "@/components/settings/ProposalBrandingTab";
+import { useContentSeries } from "@/hooks/useContentSeries";
 import SupplierCategoriesManager from "@/components/settings/SupplierCategoriesManager";
 import MessageTemplatesSettings from "@/components/settings/MessageTemplatesSettings";
 import {
@@ -115,6 +116,7 @@ export default function SettingsPage() {
           <TabsTrigger value="geral">Geral</TabsTrigger>
           <TabsTrigger value="regras">Regras de Cálculo</TabsTrigger>
           <TabsTrigger value="proposta">Proposta</TabsTrigger>
+          <TabsTrigger value="conteudo">Conteúdo</TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral">
@@ -255,6 +257,10 @@ export default function SettingsPage() {
 
         <TabsContent value="proposta">
           <ProposalBrandingTab />
+        </TabsContent>
+
+        <TabsContent value="conteudo">
+          <ContentSeriesManager />
         </TabsContent>
       </Tabs>
     </div>
