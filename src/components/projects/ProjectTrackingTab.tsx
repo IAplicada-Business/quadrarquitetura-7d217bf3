@@ -432,6 +432,18 @@ export function ProjectTrackingTab({ projectId, projectName, clientName, clientP
         onOpenChange={(v) => { if (!v) setRatingAllocation(null); }}
         allocation={ratingAllocation}
       />
+      <SendMessageModal
+        open={msgOpen}
+        onOpenChange={setMsgOpen}
+        category="obra"
+        phone={clientPhone || ""}
+        context={{
+          nome_cliente: clientName || "",
+          projeto: projectName || "",
+          progresso: `${avgProgress}%`,
+          resumo: lastEntry?.summary || "",
+        }}
+      />
     </div>
   );
 }

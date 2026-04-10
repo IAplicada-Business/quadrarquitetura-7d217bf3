@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2, Download, ChevronDown, ChevronRight, CheckCheck } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, ChevronDown, ChevronRight, CheckCheck, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import { PaymentForm } from "./PaymentForm";
 import { InvoiceForm } from "./InvoiceForm";
 import { InvoiceNFList } from "./InvoiceNFList";
 import jsPDF from "jspdf";
+import { SendMessageModal } from "@/components/messages/SendMessageModal";
 
 function formatCurrency(v: number | null | undefined) {
   if (v == null) return "—";
@@ -94,7 +95,7 @@ function exportDREPdf(dre: DREData, projectName?: string) {
   doc.save(`DRE_${(projectName || "projeto").replace(/\s+/g, "_")}.pdf`);
 }
 
-export function ProjectFinancialTab({ projectId, projectName }: { projectId: string; projectName?: string }) {
+export function ProjectFinancialTab({ projectId, projectName, clientName, clientPhone }: { projectId: string; projectName?: string; clientName?: string; clientPhone?: string }) {
   const { user } = useAuth();
   const payments = useProjectPayments(projectId);
   const invoices = useInvoices(projectId);
