@@ -91,7 +91,7 @@ export function useComercialMetrics() {
     const thisMonthLeads = leadsThisMonth;
     const funnelLeads = thisMonthLeads.length;
     const funnelContato = thisMonthLeads.filter((l) =>
-      ["contato_feito", "reuniao_agendada", "proposta_enviada", "fechado"].includes(l.status)
+      ["em_contato", "contato_feito", "reuniao_agendada", "proposta_enviada", "fechado"].includes(l.status)
     ).length;
     const funnelReuniao = thisMonthLeads.filter((l) =>
       ["reuniao_agendada", "proposta_enviada", "fechado"].includes(l.status)

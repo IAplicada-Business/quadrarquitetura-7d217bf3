@@ -46,8 +46,8 @@ export function useCostReferenceTable() {
       if (!user) return DEFAULT_COST_TABLE;
       const { data, error } = await (supabase
         .from("settings")
-        .select("id, calculation_params, user_id") as any)
-        .eq("scope", "team")
+        .select("id, calculation_params, user_id") as unknown as ReturnType<typeof supabase.from<"settings">>)
+        .eq("scope" as never, "team")
         .maybeSingle();
       if (error) throw error;
       const params = data?.calculation_params as Record<string, unknown> | null;
@@ -66,8 +66,8 @@ export function useCostReferenceTable() {
       // Get existing team settings
       const { data: existing } = await (supabase
         .from("settings")
-        .select("id, calculation_params") as any)
-        .eq("scope", "team")
+        .select("id, calculation_params") as unknown as ReturnType<typeof supabase.from<"settings">>)
+        .eq("scope" as never, "team")
         .maybeSingle();
 
       const existingParams = (existing?.calculation_params as Record<string, unknown>) || {};
@@ -76,13 +76,13 @@ export function useCostReferenceTable() {
       if (existing) {
         const { error } = await supabase
           .from("settings")
-          .update({ calculation_params: newParams } as any)
+          .update({ calculation_params: newParams } as never)
           .eq("id", existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("settings")
-          .insert({ user_id: user.id, calculation_params: newParams, scope: "team" } as any);
+          .insert({ user_id: user.id, calculation_params: newParams, scope: "team" } as never);
         if (error) throw error;
       }
     },

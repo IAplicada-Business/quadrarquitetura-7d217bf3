@@ -89,12 +89,9 @@ export function VoiceAgentDialog({ open, onOpenChange }: VoiceAgentDialogProps) 
         // Read from ref to avoid stale closure
         const manualProjectId = selectedProjectIdRef.current;
 
-        console.log("[VoiceAgent] Sending transcript:", transcript, "manualProjectId:", manualProjectId);
         const { data, error } = await supabase.functions.invoke("process-voice-command", {
           body: { transcript, projects, selectedProjectId: manualProjectId },
         });
-
-        console.log("[VoiceAgent] Edge function response:", { data, error });
 
         if (error) throw error;
         if (data?.error) throw new Error(data.error);

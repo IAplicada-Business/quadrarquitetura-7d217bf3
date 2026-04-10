@@ -71,19 +71,13 @@ export function useVoiceTasks(projectId?: string) {
           source_transcript: transcript,
         };
 
-        console.log("[VoiceTasks] Inserting parent task:", parentRecord);
-
         const { data: parent, error: parentError } = await supabase
           .from("voice_tasks")
           .insert(parentRecord)
           .select()
           .single();
 
-        if (parentError) {
-          console.error("[VoiceTasks] Parent insert error:", parentError);
-          throw parentError;
-        }
-        console.log("[VoiceTasks] Parent created:", parent);
+        if (parentError) throw parentError;
         records.push(parent);
 
         if (task.subtasks?.length) {
@@ -101,18 +95,13 @@ export function useVoiceTasks(projectId?: string) {
               source_transcript: transcript,
             };
 
-            console.log("[VoiceTasks] Inserting subtask:", subRecord);
-
             const { data: child, error: childError } = await supabase
               .from("voice_tasks")
               .insert(subRecord)
               .select()
               .single();
 
-            if (childError) {
-              console.error("[VoiceTasks] Subtask insert error:", childError);
-              throw childError;
-            }
+            if (childError) throw childError;
             records.push(child);
           }
         }
@@ -128,7 +117,6 @@ export function useVoiceTasks(projectId?: string) {
       });
     },
     onError: (error: any) => {
-      console.error("[VoiceTasks] createBatch error:", error);
       toast({
         title: "Erro ao criar tarefas",
         description: error.message,

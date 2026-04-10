@@ -52,10 +52,10 @@ function useSettings() {
   const upsert = useMutation({
     mutationFn: async (updates: Record<string, unknown>) => {
       if (query.data?.id) {
-        const { error } = await supabase.from("settings").update(updates as any).eq("id", query.data.id);
+        const { error } = await supabase.from("settings").update(updates as never).eq("id", query.data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("settings").insert({ user_id: user!.id, ...updates } as any);
+        const { error } = await supabase.from("settings").insert({ user_id: user!.id, ...updates } as never);
         if (error) throw error;
       }
     },
