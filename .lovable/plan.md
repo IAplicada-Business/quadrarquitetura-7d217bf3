@@ -1,56 +1,50 @@
 
 
-## Plano: Corrigir conversão lead → cliente + badge de projeto
+## Plano: Corrigir dashboards para dados parciais + estados vazios
 
-### 1. Migration SQL
-Adicionar colunas `source_lead_id` e `converted_at` na tabela `clients`:
+### 1. Migration — preencher dados retroativos
 ```sql
-ALTER TABLE clients
-  ADD COLUMN IF NOT EXISTS source_lead_id uuid REFERENCES leads(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS converted_at timestamptz;
+UPDATE payments SET source = 'escritorio' WHERE source IS NULL AND project_id IS NULL;
+UPDATE payments SET payment_type = 'receita' WHERE payment_type IS NULL;
 ```
 
-### 2. `src/hooks/useLeads.ts` (linhas 128-143)
-Expandir o insert do cliente para incluir todos os campos disponíveis:
-```ts
-.insert({
-  user_id: user!.id,
-  name: lead.name,
-  email: lead.email,
-  phone: lead.phone,
-  phone_secondary: lead.phone_secondary ?? null,
-  client_type: lead.project_type as any,
-  origin: lead.origin as any,
-  observations: lead.notes ?? null,
-  source_lead_id: lead.id,
-  converted_at: new Date().toISOString(),
-})
-```
+### 2. `src/hooks/useFinanceiroMetrics.ts`
+- **Remover filtro `.eq("source", "escritorio")`** da query e buscar todos os payments
+- No `useMemo`, classificar receita/despesa de forma tolerante:
+  - `isReceita`: `payment_type === "receita" || (!payment_type && source !== "obra")`
+  - `isDespesa`: `payment_type === "despesa"`
+- Filtrar por `source`: incluir `source === "escritorio"` OU `source IS NULL` (com `project_id IS NULL`)
+- Excluir `status === "cancelado"` de todos os cálculos
 
-### 3. `src/pages/Clients.tsx`
-- Atualizar a interface `Client` com `source_lead_id`, `converted_at`, `project_id`, `project_number`, `project_name`
-- Alterar `fetchClients` para usar query RPC ou raw select que faz LEFT JOIN com projects:
+### 3. `src/hooks/useComercialMetrics.ts`
+- Já retorna zeros quando não há leads (divisões protegidas por `> 0`). Sem alteração necessária — a lógica já é segura.
+
+### 4. `src/pages/DashboardObras.tsx`
+- **Projetos ativos** (linha 103): adicionar `|| !p.status` para incluir projetos sem status:
   ```ts
-  const { data } = await supabase
-    .from("clients")
-    .select("*, projects!projects_client_id_fkey(id, project_number, name)")
-    .order("created_at", { ascending: false });
+  const active = projects.filter((p) => 
+    ["execucao","mobilizacao","planejamento"].includes(p.status ?? "") || !p.status
+  );
   ```
-  Nota: se não houver FK nomeada, usar query manual via `supabase.rpc` ou fazer duas queries (clients + projects por client_id)
-- Na coluna "Nome" da tabela, após o nome do cliente, renderizar badge clicável se houver projeto vinculado:
-  ```tsx
-  <TableCell className="font-medium">
-    {client.name}
-    {client.project_number && (
-      <Badge className="ml-2 cursor-pointer" onClick={() => navigate(`/projects/${client.project_id}`)}>
-        {client.project_number}
-      </Badge>
-    )}
-  </TableCell>
-  ```
-- Importar `Badge` de `@/components/ui/badge` e `useNavigate` de `react-router-dom`
+- **Gráfico orçado vs gasto** (linha 176): remover `.filter((d) => d.orcado > 0 || d.gasto > 0)` — manter todos os projetos ativos, com 0 se `estimated_budget` for null
+
+### 5. `src/pages/DashboardEscritorio.tsx` — Estados vazios informativos
+- **Aba Comercial**: quando `cm` é null ou `cm.funil[0].count === 0`, mostrar estado vazio com ícone `Users`, texto "Nenhum lead este mês", botão "Adicionar lead" → `/leads/pipeline`
+- **Aba Financeiro**: quando `fm.kpis.receitaMes === 0`, mostrar estado vazio no card de receita com link "Registrar pagamento" → `/admin/settings`
+- Manter cards de KPI visíveis com valor R$0 — estado vazio só nos blocos de lista (oportunidades, recebimentos)
+
+### 6. `src/pages/DashboardObras.tsx` — Estados vazios
+- **Projetos ativos = 0**: já tem estado vazio (ícone HardHat + "Nenhuma obra ativa"). Adicionar botão "Criar obra" → `/projects`
+- **Alertas = 0 em todos os 3 cards**: já tratado. Sem alteração.
+
+### Arquivos alterados
+1. Migration SQL (data update via insert tool)
+2. `src/hooks/useFinanceiroMetrics.ts` — tolerância nos filtros
+3. `src/pages/DashboardObras.tsx` — filtro de status + gráfico
+4. `src/pages/DashboardEscritorio.tsx` — estados vazios com ação
 
 ### O que NÃO muda
-- Nenhuma outra lógica de clientes (CRUD, filtros, formulário)
-- Nenhuma outra lógica de leads
+- Estrutura dos hooks (interfaces, exports)
+- Nenhuma rota ou componente de página externo
+- `useComercialMetrics` (já seguro)
 
