@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { differenceInDays, isBefore, addDays, format } from "date-fns";
-import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown, RefreshCw, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { useProjectActivities, computeRecalculateAll } from "@/hooks/useProjectA
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScheduleTaskForm } from "./ScheduleTaskForm";
 import { ProjectPendingTab } from "./ProjectPendingTab";
 import { GanttChart } from "./GanttChart";
@@ -51,6 +52,8 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const [filterEnvironment, setFilterEnvironment] = useState("all");
   const [importing, setImporting] = useState(false);
   const [recalcChanges, setRecalcChanges] = useState<CascadeChange[]>([]);
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [generatingFromScope, setGeneratingFromScope] = useState(false);
 
   const disciplines = useMemo(() => {
     const set = new Set<string>();
@@ -231,6 +234,72 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
       toast({ title: "Erro ao importar", description: e.message, variant: "destructive" });
     } finally {
       setImporting(false);
+    }
+  };
+
+  // Activities with dates for "Gerar do Escopo"
+  const schedulableActivities = useMemo(() =>
+    activities.filter(a => a.start_date || a.duration_days),
+  [activities]);
+
+  const handleGenerateFromScope = async () => {
+    if (!user) return;
+    setGeneratingFromScope(true);
+    try {
+      // Fetch existing schedule_tasks with source_activity_id
+      const { data: existingTasks } = await supabase
+        .from("schedule_tasks")
+        .select("id, source_activity_id")
+        .eq("project_id", projectId)
+        .not("source_activity_id", "is", null);
+
+      const existingMap = new Map((existingTasks || []).map((t: any) => [t.source_activity_id, t.id]));
+
+      let created = 0;
+      let updated = 0;
+
+      for (const activity of schedulableActivities) {
+        const statusMap: Record<string, string> = {
+          pendente: "planejado",
+          em_andamento: "em_execucao",
+          concluida: "executado",
+          bloqueada: "atrasado",
+        };
+        const taskData: Record<string, unknown> = {
+          task_name: activity.name,
+          start_date: activity.start_date,
+          end_date: activity.end_date,
+          status: statusMap[activity.status] || "planejado",
+          discipline: activity.discipline,
+        };
+
+        const existingId = existingMap.get(activity.id);
+        if (existingId) {
+          const { error } = await supabase.from("schedule_tasks").update(taskData).eq("id", existingId);
+          if (!error) updated++;
+        } else {
+          const { error } = await supabase.from("schedule_tasks").insert({
+            ...taskData,
+            project_id: projectId,
+            user_id: user.id,
+            source_activity_id: activity.id,
+            order_index: items.length + created + 1,
+            is_client_visible: true,
+          });
+          if (!error) created++;
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["schedule_tasks", projectId] });
+      const parts = [];
+      if (created > 0) parts.push(`${created} criadas`);
+      if (updated > 0) parts.push(`${updated} atualizadas`);
+      toast({ title: `Cronograma gerado do escopo`, description: parts.join(", ") });
+      setGenerateDialogOpen(false);
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    } finally {
+      setGeneratingFromScope(false);
     }
   };
 
