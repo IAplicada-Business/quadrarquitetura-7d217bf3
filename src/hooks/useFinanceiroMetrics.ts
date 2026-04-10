@@ -87,8 +87,8 @@ export function useFinanceiroMetrics() {
     const escritorioPayments = payments.filter((p) => isEscritorio(p) && !isCancelado(p));
 
     // Paid this month
-    const paidThisMonth = payments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(currentMonthStr));
-    const paidPrevMonth = payments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(prevMonthStr));
+    const paidThisMonth = escritorioPayments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(currentMonthStr));
+    const paidPrevMonth = escritorioPayments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(prevMonthStr));
 
     const receitaThis = paidThisMonth.filter(isReceita).reduce((s, p) => s + p.value, 0);
     const receitaPrev = paidPrevMonth.filter(isReceita).reduce((s, p) => s + p.value, 0);
@@ -100,7 +100,7 @@ export function useFinanceiroMetrics() {
 
     // A receber 30 dias
     const thirtyDaysLater = format(new Date(todayDate.getTime() + 30 * 86400000), "yyyy-MM-dd");
-    const pendentes30d = payments.filter(
+    const pendentes30d = escritorioPayments.filter(
       (p) => p.status === "pendente" && p.due_date && p.due_date >= todayStr && p.due_date <= thirtyDaysLater
     );
     const aReceber30d = pendentes30d.reduce((s, p) => s + p.value, 0);
@@ -111,7 +111,7 @@ export function useFinanceiroMetrics() {
     const margemLiquida = receitaThis > 0 ? Math.round((liquido / receitaThis) * 100) : 0;
 
     // ── Próximos recebimentos ──
-    const proximosRecebimentos: ProximoRecebimento[] = payments
+    const proximosRecebimentos: ProximoRecebimento[] = escritorioPayments
       .filter((p) => p.status === "pendente" && p.due_date && p.due_date >= todayStr)
       .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))
       .slice(0, 4)
@@ -141,7 +141,7 @@ export function useFinanceiroMetrics() {
       const label = format(m, "MMM", { locale: ptBR });
       const capLabel = label.charAt(0).toUpperCase() + label.slice(1);
 
-      const monthPaid = payments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(mStr));
+      const monthPaid = escritorioPayments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(mStr));
       const rec = monthPaid.filter(isReceita).reduce((s, p) => s + p.value, 0);
       const desp = monthPaid.filter(isDespesa).reduce((s, p) => s + p.value, 0);
       const imp = rec * (taxRate / 100);
