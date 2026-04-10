@@ -55,8 +55,8 @@ export function useInvoicesNF(filters: InvoiceNFFilters = {}) {
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string } & Partial<InvoiceNF>) => {
-      const { error } = await supabase.from("invoices_nf").update(updates).eq("id", id);
+    mutationFn: async ({ id, ...updates }: { id: string } & Record<string, unknown>) => {
+      const { error } = await supabase.from("invoices_nf").update(updates as never).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
