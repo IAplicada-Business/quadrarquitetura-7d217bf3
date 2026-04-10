@@ -52,7 +52,7 @@ export default function WeeklyReportView({ projectId, projectName, projectAddres
     const nwe = fmtDate(nextWeekEnd);
 
     const [tasksRes, diaryRes, matsRes, paysRes] = await Promise.all([
-      supabase.from("schedule_tasks").select("*").eq("project_id", projectId),
+      supabase.from("schedule_tasks").select("*").eq("project_id", projectId).limit(500),
       supabase.from("site_diary_entries").select("*").eq("project_id", projectId).gte("entry_date", ws).lte("entry_date", we).order("entry_date"),
       supabase.from("material_tracking").select("*").eq("project_id", projectId).eq("is_active", true).or(`purchase_date.gte.${ws},delivery_date.gte.${ws}`).or(`purchase_date.lte.${we},delivery_date.lte.${we}`),
       supabase.from("payments").select("*").eq("project_id", projectId).eq("status", "pago").gte("paid_date", ws).lte("paid_date", we),
