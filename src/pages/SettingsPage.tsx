@@ -12,6 +12,7 @@ import { Settings, User, Palette, Calculator, Save } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import CalculationRulesTab from "@/components/settings/CalculationRulesTab";
 import ProposalBrandingTab from "@/components/settings/ProposalBrandingTab";
+import { useContentSeries } from "@/hooks/useContentSeries";
 import SupplierCategoriesManager from "@/components/settings/SupplierCategoriesManager";
 import MessageTemplatesSettings from "@/components/settings/MessageTemplatesSettings";
 import {
@@ -69,6 +70,73 @@ function useSettings() {
   return { settings: query.data, isLoading: query.isLoading, upsert };
 }
 
+function ContentSeriesManager() {
+  const { series, create, update, remove } = useContentSeries();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [color, setColor] = useState("#1B2A4A");
+  const [editId, setEditId] = useState<string | null>(null);
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+    if (editId) {
+      update.mutate({ id: editId, name, description, color });
+      setEditId(null);
+    } else {
+      create.mutate({ name, description, color });
+    }
+    setName(""); setDescription(""); setColor("#1B2A4A");
+  };
+
+  const startEdit = (s: any) => {
+    setEditId(s.id); setName(s.name); setDescription(s.description || ""); setColor(s.color || "#1B2A4A");
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg font-display">Séries de Conteúdo</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+          <div>
+            <Label>Nome</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Bastidores de Obra" />
+          </div>
+          <div>
+            <Label>Descrição</Label>
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Opcional" />
+          </div>
+          <div>
+            <Label>Cor</Label>
+            <div className="flex gap-2 items-center">
+              <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-9 w-9 rounded border cursor-pointer" />
+              <Input value={color} onChange={(e) => setColor(e.target.value)} className="flex-1" />
+            </div>
+          </div>
+          <Button onClick={handleSave} disabled={!name.trim()}>
+            {editId ? "Atualizar" : "Adicionar"}
+          </Button>
+        </div>
+        <div className="space-y-2">
+          {series.map((s) => (
+            <div key={s.id} className="flex items-center gap-3 p-2 border rounded-lg">
+              <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: s.color }} />
+              <div className="flex-1">
+                <p className="text-sm font-medium">{s.name}</p>
+                {s.description && <p className="text-xs text-muted-foreground">{s.description}</p>}
+              </div>
+              <Button size="sm" variant="ghost" onClick={() => startEdit(s)}>Editar</Button>
+              <Button size="sm" variant="ghost" className="text-destructive" onClick={() => remove.mutate(s.id)}>Excluir</Button>
+            </div>
+          ))}
+          {series.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma série criada.</p>}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function SettingsPage() {
   const { user } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
@@ -115,6 +183,7 @@ export default function SettingsPage() {
           <TabsTrigger value="geral">Geral</TabsTrigger>
           <TabsTrigger value="regras">Regras de Cálculo</TabsTrigger>
           <TabsTrigger value="proposta">Proposta</TabsTrigger>
+          <TabsTrigger value="conteudo">Conteúdo</TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral">
@@ -255,6 +324,10 @@ export default function SettingsPage() {
 
         <TabsContent value="proposta">
           <ProposalBrandingTab />
+        </TabsContent>
+
+        <TabsContent value="conteudo">
+          <ContentSeriesManager />
         </TabsContent>
       </Tabs>
     </div>

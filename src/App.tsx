@@ -28,7 +28,9 @@ import NotificationsPage from "./pages/NotificationsPage";
 import NotFound from "./pages/NotFound";
 import ClientPortal from "./pages/ClientPortal";
 import InvoicesPage from "./pages/InvoicesPage";
-import ContentPlaceholder from "./pages/ContentPlaceholder";
+import ContentCalendar from "./pages/ContentCalendar";
+import ContentScripts from "./pages/ContentScripts";
+import ContentPosts from "./pages/ContentPosts";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -95,9 +97,9 @@ const App = () => (
               <Route path="/admin/invoices" element={<InvoicesPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               {/* Gestão de Conteúdo */}
-              <Route path="/content/calendar" element={<ContentPlaceholder title="Calendário" />} />
-              <Route path="/content/scripts" element={<ContentPlaceholder title="Roteiros" />} />
-              <Route path="/content/posts" element={<ContentPlaceholder title="Publicações" />} />
+              <Route path="/content/calendar" element={<ContentCalendar />} />
+              <Route path="/content/scripts" element={<ContentScripts />} />
+              <Route path="/content/posts" element={<ContentPosts />} />
               {/* Redirects de compatibilidade */}
               <Route path="/site-tracking" element={<Navigate to="/construction/tracking" replace />} />
               <Route path="/suppliers" element={<Navigate to="/construction/suppliers" replace />} />
