@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2, Download, ExternalLink, ShoppingCart, Package, Filter, Copy, RefreshCw, RotateCcw, Settings } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, ExternalLink, ShoppingCart, Package, Filter, Copy, RefreshCw, RotateCcw, Settings, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import { SupplierPurchaseList } from "./SupplierPurchaseList";
 import { ShoppingListDialog } from "./ShoppingListDialog";
 import { MaterialCalcByActivitiesDialog } from "./MaterialCalcByActivitiesDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { getDisciplineColor } from "@/lib/disciplineColors";
 import { Input } from "@/components/ui/input";
@@ -127,6 +128,43 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
     tracking.update.mutate({ id: itemId, quantity_needed: num });
   };
 
+  const [importingScopeList, setImportingScopeList] = useState(false);
+
+  const handleImportScopeList = async () => {
+    if (!tracking.items) return;
+    setImportingScopeList(true);
+    try {
+      const existingActivityIds = new Set(
+        tracking.items.filter((m: any) => m.activity_id).map((m: any) => m.activity_id)
+      );
+      const newActivities = activities.filter(a => !existingActivityIds.has(a.id));
+      if (newActivities.length === 0) {
+        toast({ title: "Todas as atividades já possuem materiais vinculados." });
+        setImportingScopeList(false);
+        return;
+      }
+      const inserts = newActivities.map(a => ({
+        project_id: projectId,
+        user_id: (tracking.items[0] as any)?.user_id || "",
+        material_name: `Material — ${a.name}`,
+        discipline: a.discipline || null,
+        activity_id: a.id,
+        source: "manual",
+      }));
+      // Get user_id from auth
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+      const finalInserts = inserts.map(i => ({ ...i, user_id: user.id }));
+      const { error } = await supabase.from("material_tracking").insert(finalInserts);
+      if (error) throw error;
+      toast({ title: `${finalInserts.length} materiais importados do escopo` });
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    } finally {
+      setImportingScopeList(false);
+    }
+  };
+
   return (
     <div className="space-y-4 animate-fade-in">
       <Tabs defaultValue="rastreamento">
@@ -138,6 +176,27 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
 
         {/* ===== RASTREAMENTO ===== */}
         <TabsContent value="rastreamento" className="space-y-4 mt-4">
+          {/* Action buttons - prominent at top */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              size="sm"
+              onClick={() => tracking.recalculateFromActivities.mutate()}
+              disabled={tracking.recalculateFromActivities.isPending}
+            >
+              <RefreshCw className={`h-4 w-4 mr-1 ${tracking.recalculateFromActivities.isPending ? "animate-spin" : ""}`} />
+              Calcular por Atividades
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleImportScopeList}
+              disabled={importingScopeList || activities.length === 0}
+            >
+              <FileDown className="h-4 w-4 mr-1" />
+              {importingScopeList ? "Importando..." : "Importar lista do escopo"}
+            </Button>
+          </div>
+
           {/* Metrics Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card><CardContent className="p-4 text-center">
@@ -165,15 +224,6 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
                 <h3 className="text-base font-semibold text-foreground">Por Atividade</h3>
                 <p className="text-xs text-muted-foreground">Materiais calculados automaticamente a partir das atividades do escopo</p>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => tracking.recalculateFromActivities.mutate()}
-                disabled={tracking.recalculateFromActivities.isPending}
-              >
-                <RefreshCw className={`h-4 w-4 mr-1 ${tracking.recalculateFromActivities.isPending ? "animate-spin" : ""}`} />
-                Recalcular a partir das Atividades
-              </Button>
             </div>
 
             {tracking.isLoading ? (

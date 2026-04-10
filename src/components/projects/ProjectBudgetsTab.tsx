@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
-import { Plus, RefreshCw, Search, Eye } from "lucide-react";
+import { Plus, RefreshCw, Search, Eye, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useScopeItems } from "@/hooks/useScopeItems";
 import { useBudgetQuotes } from "@/hooks/useBudgetQuotes";
 import { useAuth } from "@/contexts/AuthContext";
@@ -65,6 +66,8 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
     id: string; name: string; materials: { name: string; unit: string; quantity: number }[];
   } | null>(null);
   const [priceSearchExisting, setPriceSearchExisting] = useState<any[] | undefined>(undefined);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importingBudget, setImportingBudget] = useState(false);
 
   const revisions = useMemo(() => {
     const revNums = [...new Set(quotes.map((q) => q.revision_number))].sort((a, b) => (a ?? 0) - (b ?? 0));
@@ -174,6 +177,38 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
 
   const activeScopeName = scopeItems.find((s) => s.id === activeScopeId)?.discipline;
 
+  // Import from scope logic
+  const activitiesToImport = useMemo(() => {
+    const existingDescs = new Set(quotes.map(q => q.services_description?.toLowerCase().trim()));
+    return activities.filter(a => !existingDescs.has(a.name.toLowerCase().trim()));
+  }, [activities, quotes]);
+
+  const handleImportFromScope = async () => {
+    if (!user || activitiesToImport.length === 0) return;
+    setImportingBudget(true);
+    try {
+      const inserts = activitiesToImport.map(a => ({
+        project_id: projectId,
+        user_id: user.id,
+        services_description: a.name,
+        value: 0,
+        material_estimate: a.area_m2 ?? 0,
+        status: "pendente" as const,
+        revision_number: currentRev,
+        supplier_name: null,
+      }));
+      const { error } = await supabase.from("budget_quotes").insert(inserts);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] });
+      toast({ title: `${inserts.length} itens importados do escopo` });
+      setImportDialogOpen(false);
+    } catch (e: any) {
+      toast({ title: "Erro ao importar", description: e.message, variant: "destructive" });
+    } finally {
+      setImportingBudget(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <Tabs defaultValue="cotacoes">
@@ -197,6 +232,9 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
                   ))}
                 </SelectContent>
               </Select>
+              <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)} disabled={activities.length === 0}>
+                <FileDown className="h-4 w-4 mr-1" /> Importar do Escopo
+              </Button>
               <Button variant="outline" size="sm" onClick={() => createRevision.mutate(currentRev)} disabled={createRevision.isPending}>
                 <RefreshCw className="h-4 w-4 mr-1" /> Nova Revisão
               </Button>
@@ -387,6 +425,36 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
           <ProjectPurchasesTab projectId={projectId} />
         </TabsContent>
       </Tabs>
+
+      {/* Import from Scope Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Importar do Escopo</DialogTitle>
+            <DialogDescription>
+              {activitiesToImport.length > 0
+                ? `Encontradas ${activitiesToImport.length} atividades no escopo. Deseja importá-las como itens de orçamento?`
+                : "Todas as atividades do escopo já foram importadas."}
+            </DialogDescription>
+          </DialogHeader>
+          {activitiesToImport.length > 0 && (
+            <div className="max-h-60 overflow-y-auto border rounded-lg divide-y">
+              {activitiesToImport.map(a => (
+                <div key={a.id} className="px-3 py-2 text-sm flex justify-between">
+                  <span className="font-medium">{a.name}</span>
+                  <span className="text-muted-foreground text-xs">{a.area_m2 ? `${a.area_m2} m²` : "—"}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImportDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleImportFromScope} disabled={importingBudget || activitiesToImport.length === 0}>
+              {importingBudget ? "Importando..." : `Importar ${activitiesToImport.length} itens`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
