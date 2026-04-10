@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Plus, Phone, Mail, ArrowRight, Trash2, Pencil, UserCheck,
   LayoutGrid, List, Search, Filter, Users, CalendarCheck, TrendingUp, XCircle,
-  BarChart3, GripVertical,
+  BarChart3, GripVertical, MessageSquare,
 } from "lucide-react";
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,9 @@ export default function LeadsPipeline() {
     name: "", phone: "", email: "", phone_secondary: "",
     project_type: "residencial", origin: "outro", responsible: "", notes: "", meeting_date: "",
   });
+
+  // Message modal state
+  const [msgLead, setMsgLead] = useState<Lead | null>(null);
 
   // Drag-and-drop state
   const [draggingId, setDraggingId] = useState<string | null>(null);
