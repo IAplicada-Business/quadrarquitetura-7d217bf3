@@ -13,6 +13,14 @@ type MenuGroup = { label: string; items: MenuItem[] };
 
 const menuGroups: MenuGroup[] = [
   {
+    label: "Análises Quadra",
+    items: [
+      { title: "Dashboard Escritório", url: "/dashboard/escritorio" },
+      { title: "Dashboard Obras", url: "/dashboard/obras" },
+      { title: "Relatórios", url: "/construction/reports" },
+    ],
+  },
+  {
     label: "Comercial",
     items: [
       { title: "Leads", url: "/leads/pipeline" },
@@ -55,23 +63,20 @@ const menuGroups: MenuGroup[] = [
   {
     label: "Administrativo",
     items: [
-      { title: "Dashboard Escritório", url: "/dashboard/escritorio" },
-      { title: "Dashboard Obras", url: "/dashboard/obras" },
       { title: "Configurações", url: "/admin/settings" },
       { title: "Usuários", url: "/admin/users" },
       { title: "Notas Fiscais", url: "/admin/invoices" },
-      { title: "Relatórios", url: "/construction/reports" },
     ],
   },
 ];
 
 const routeGroupMap: Record<string, string> = {
+  "/dashboard": "Análises Quadra",
   "/leads": "Comercial",
   "/clients": "Comercial",
   "/projects": "Gestão de Obras",
   "/construction": "Gestão de Obras",
   "/content": "Gestão de Conteúdo",
-  "/dashboard": "Administrativo",
   "/admin": "Administrativo",
 };
 
