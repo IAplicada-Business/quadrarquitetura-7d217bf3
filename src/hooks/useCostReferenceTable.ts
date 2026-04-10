@@ -44,9 +44,9 @@ export function useCostReferenceTable() {
     queryKey: ["settings_cost_table", user?.id],
     queryFn: async () => {
       if (!user) return DEFAULT_COST_TABLE;
-      const { data, error } = await (supabase
+      const { data, error } = await supabase
         .from("settings")
-        .select("id, calculation_params, user_id") as unknown as ReturnType<typeof supabase.from<"settings">>)
+        .select("id, calculation_params, user_id")
         .eq("scope" as never, "team")
         .maybeSingle();
       if (error) throw error;
@@ -64,9 +64,9 @@ export function useCostReferenceTable() {
       if (!user) throw new Error("Not authenticated");
 
       // Get existing team settings
-      const { data: existing } = await (supabase
+      const { data: existing } = await supabase
         .from("settings")
-        .select("id, calculation_params") as unknown as ReturnType<typeof supabase.from<"settings">>)
+        .select("id, calculation_params")
         .eq("scope" as never, "team")
         .maybeSingle();
 
