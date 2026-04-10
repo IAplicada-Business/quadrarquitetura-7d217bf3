@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { differenceInDays, isBefore, addDays, format } from "date-fns";
-import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown, RefreshCw, FileDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown, RefreshCw, FileDown, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import { ActivityForm } from "./ActivityForm";
 import { CascadePreviewDialog, type CascadeChange } from "./CascadePreviewDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useProjectAI } from "@/hooks/useProjectAI";
 
 function formatDate(d: string | null) {
   if (!d) return "—";
@@ -54,6 +55,9 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const [recalcChanges, setRecalcChanges] = useState<CascadeChange[]>([]);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [generatingFromScope, setGeneratingFromScope] = useState(false);
+  const { callAction, loading: aiLoading } = useProjectAI();
+  const [aiSchedule, setAiSchedule] = useState<any[] | null>(null);
+  const [aiScheduleOpen, setAiScheduleOpen] = useState(false);
 
   const disciplines = useMemo(() => {
     const set = new Set<string>();
@@ -378,6 +382,13 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
               <Button size="sm" variant="outline" onClick={() => setGenerateDialogOpen(true)} disabled={schedulableActivities.length === 0}>
                 <FileDown className="h-4 w-4 mr-1" /> Gerar do Escopo
               </Button>
+              <Button size="sm" variant="outline" disabled={aiLoading || activities.length === 0} onClick={async () => {
+                const result = await callAction(projectId, "generate_schedule", { activities: activities.map(a => ({ name: a.name, discipline: a.discipline, area_m2: a.area_m2 })) });
+                if (result?.schedule) { setAiSchedule(result.schedule); setAiScheduleOpen(true); }
+              }}>
+                {aiLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+                Gerar cronograma com IA
+              </Button>
               <Button size="sm" variant="outline" onClick={handleImportFromScope} disabled={importing}>
                 <Download className="h-4 w-4 mr-1" /> Importar do Escopo
               </Button>
@@ -591,6 +602,58 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
             <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleGenerateFromScope} disabled={generatingFromScope || schedulableActivities.length === 0}>
               {generatingFromScope ? "Gerando..." : `Gerar ${schedulableActivities.length} etapas`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Schedule Modal */}
+      <Dialog open={aiScheduleOpen} onOpenChange={setAiScheduleOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Cronograma Sugerido pela IA</DialogTitle>
+            <DialogDescription>Sequência de execução com duração e dependências estimadas.</DialogDescription>
+          </DialogHeader>
+          {aiSchedule && (
+            <div className="max-h-80 overflow-y-auto border rounded-lg">
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>Atividade</TableHead><TableHead className="text-center">Duração (dias)</TableHead><TableHead>Depende de</TableHead><TableHead className="text-center">Semana</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {aiSchedule.map((s: any, i: number) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-medium">{s.activity_name}</TableCell>
+                      <TableCell className="text-center">{s.duration_days}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{s.depends_on_activity_name || "—"}</TableCell>
+                      <TableCell className="text-center">{s.week_number}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAiScheduleOpen(false)}>Fechar</Button>
+            <Button onClick={async () => {
+              if (!aiSchedule || !user) return;
+              // Calculate dates from project start or today
+              const { data: project } = await supabase.from("projects").select("start_date").eq("id", projectId).single();
+              const startDate = project?.start_date ? new Date(project.start_date) : new Date();
+              const updates = aiSchedule.map((s: any) => {
+                const act = activities.find(a => a.name === s.activity_name);
+                if (!act) return null;
+                const actStart = addDays(startDate, (s.week_number - 1) * 7);
+                const actEnd = addDays(actStart, s.duration_days);
+                return { id: act.id, start_date: format(actStart, "yyyy-MM-dd"), end_date: format(actEnd, "yyyy-MM-dd") };
+              }).filter(Boolean);
+              if (updates.length > 0) {
+                batchUpdateDates.mutate(updates as any);
+                toast({ title: `${updates.length} atividades atualizadas com cronograma da IA` });
+              }
+              setAiScheduleOpen(false);
+            }}>
+              Aplicar ao cronograma
             </Button>
           </DialogFooter>
         </DialogContent>

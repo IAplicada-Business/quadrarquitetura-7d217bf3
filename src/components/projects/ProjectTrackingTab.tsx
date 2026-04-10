@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { SendMessageModal } from "@/components/messages/SendMessageModal";
+import { useProjectAI } from "@/hooks/useProjectAI";
 
 const weatherOptions = [
   { value: "ensolarado", label: "Ensolarado", icon: Sun },
@@ -58,6 +59,9 @@ export function ProjectTrackingTab({ projectId, projectName, clientName, clientP
   const [filterPeriod, setFilterPeriod] = useState("all");
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [prefillData, setPrefillData] = useState<{ summary: string; next_steps: string; client_pending?: string } | null>(null);
+  const { callAction, loading: aiInsightsLoading } = useProjectAI();
+  const [aiInsights, setAiInsights] = useState<any>(null);
+  const [aiInsightsOpen, setAiInsightsOpen] = useState(false);
 
   // Detect newly completed activities linked to suppliers
   useEffect(() => {
@@ -237,6 +241,17 @@ export function ProjectTrackingTab({ projectId, projectName, clientName, clientP
           <Button size="sm" variant="outline" onClick={handleGenerateAISummary} disabled={aiSummaryLoading}>
             {aiSummaryLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
             Gerar Resumo com IA
+          </Button>
+          <Button size="sm" variant="outline" disabled={aiInsightsLoading || entries.length === 0} onClick={async () => {
+            const weekEntries = entries.slice(0, 10).map(e => ({
+              date: e.entry_date, weather: e.weather, workers: e.workers_count,
+              summary: e.summary, observations: e.observations, disciplines: e.disciplines_active,
+            }));
+            const result = await callAction(projectId, "weekly_insights", { diary_entries: weekEntries });
+            if (result) { setAiInsights(result); setAiInsightsOpen(true); }
+          }}>
+            {aiInsightsLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+            Insights da semana
           </Button>
           <Button size="sm" variant="outline" onClick={() => { setPrefillData(null); setReportOpen(true); }}>
             <BarChart3 className="h-4 w-4 mr-1" /> Gerar Relatório Semanal
@@ -444,6 +459,24 @@ export function ProjectTrackingTab({ projectId, projectName, clientName, clientP
           resumo: lastEntry?.summary || "",
         }}
       />
+
+      {/* AI Insights Modal */}
+      <Dialog open={aiInsightsOpen} onOpenChange={setAiInsightsOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Insights da Semana</DialogTitle></DialogHeader>
+          {aiInsights && (
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              <div><h4 className="font-semibold text-sm mb-1">✅ Principais Avanços</h4><p className="text-sm text-muted-foreground whitespace-pre-wrap">{aiInsights.advances}</p></div>
+              <div><h4 className="font-semibold text-sm mb-1">⚠️ Problemas / Riscos</h4><p className="text-sm text-muted-foreground whitespace-pre-wrap">{aiInsights.issues}</p></div>
+              <div><h4 className="font-semibold text-sm mb-1">💡 Sugestões</h4><p className="text-sm text-muted-foreground whitespace-pre-wrap">{aiInsights.suggestions}</p></div>
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { const t = [aiInsights?.advances, aiInsights?.issues, aiInsights?.suggestions].filter(Boolean).join("\n\n"); navigator.clipboard.writeText(t); toast("Texto copiado!"); }}>Copiar</Button>
+            <Button onClick={() => setAiInsightsOpen(false)}>Fechar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
