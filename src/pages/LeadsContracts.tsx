@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, Trash2, Pencil, FileSignature, Send, X, Settings2 } from "lucide-react";
+import { Plus, Trash2, Pencil, FileSignature, Send, X, Settings2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import { useProposals } from "@/hooks/useProposals";
 import { useContractTemplates } from "@/hooks/useContractTemplates";
 import { ContractPreview } from "@/components/leads/ContractPreview";
 import { TemplateManager } from "@/components/leads/TemplateManager";
+import { SendMessageModal } from "@/components/messages/SendMessageModal";
 
 const statusLabels: Record<string, string> = {
   rascunho: "Rascunho", enviado: "Enviado", assinado: "Assinado", cancelado: "Cancelado",
@@ -45,6 +46,7 @@ export default function LeadsContracts() {
   const [cancelOpen, setCancelOpen] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [activeTab, setActiveTab] = useState("lista");
+  const [msgContract, setMsgContract] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     proposal_id: "", template_id: "", title: "", clauses: "", custom_clauses: "",
@@ -237,6 +239,7 @@ export default function LeadsContracts() {
                       <div className="text-sm font-bold">{formatCurrency(c.value)}</div>
                       <div className="flex gap-1 pt-1 flex-wrap">
                         <Button size="sm" variant="ghost" className="h-7" onClick={() => openEdit(c)}><Pencil className="h-3 w-3" /></Button>
+                        <Button size="sm" variant="ghost" className="h-7" onClick={() => setMsgContract(c)} title="Enviar mensagem"><MessageSquare className="h-3 w-3" /></Button>
                         <Button size="sm" variant="ghost" className="h-7 text-destructive" onClick={() => remove.mutate(c.id)}><Trash2 className="h-3 w-3" /></Button>
                         {c.status === "rascunho" && (
                           <Button size="sm" variant="outline" className="h-7 text-xs ml-auto" onClick={() => update.mutate({ id: c.id, status: "enviado", sent_at: new Date().toISOString() })}>
@@ -429,6 +432,19 @@ export default function LeadsContracts() {
           </div>
         </DialogContent>
       </Dialog>
+      {msgContract && (
+        <SendMessageModal
+          open={!!msgContract}
+          onOpenChange={(o) => { if (!o) setMsgContract(null); }}
+          category="contrato"
+          phone={msgContract.client_phone || ""}
+          context={{
+            nome_cliente: msgContract.client_name || "",
+            projeto: msgContract.title || "",
+            valor: formatCurrency(msgContract.value),
+          }}
+        />
+      )}
     </div>
   );
 }

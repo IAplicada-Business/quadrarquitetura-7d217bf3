@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Plus, Trash2, Cloud, Sun, CloudRain, Snowflake, CalendarDays, Users, FileText, BarChart3, Sparkles, Loader2, MessageSquareText } from "lucide-react";
+import { Plus, Trash2, Cloud, Sun, CloudRain, Snowflake, CalendarDays, Users, FileText, BarChart3, Sparkles, Loader2, MessageSquareText, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,7 @@ import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { SendMessageModal } from "@/components/messages/SendMessageModal";
 
 const weatherOptions = [
   { value: "ensolarado", label: "Ensolarado", icon: Sun },
@@ -28,7 +29,7 @@ const weatherOptions = [
   { value: "frio", label: "Frio", icon: Snowflake },
 ];
 
-export function ProjectTrackingTab({ projectId }: { projectId: string }) {
+export function ProjectTrackingTab({ projectId, projectName, clientName, clientPhone }: { projectId: string; projectName?: string; clientName?: string; clientPhone?: string }) {
   const { entries, isLoading, create, remove } = useSiteDiary(projectId);
   const { items: scopeItems } = useScopeItems(projectId);
   const { items: scheduleTasks } = useScheduleTasks(projectId);
@@ -37,6 +38,7 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
   const [formOpen, setFormOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [ratingAllocation, setRatingAllocation] = useState<any>(null);
+  const [msgOpen, setMsgOpen] = useState(false);
   const completedActivitiesRef = useRef<Set<string>>(new Set());
 
   // Fetch client responses
@@ -229,6 +231,9 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
           </SelectContent>
         </Select>
         <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setMsgOpen(true)} disabled={!clientPhone}>
+            <MessageSquare className="h-4 w-4 mr-1" /> Enviar Mensagem
+          </Button>
           <Button size="sm" variant="outline" onClick={handleGenerateAISummary} disabled={aiSummaryLoading}>
             {aiSummaryLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
             Gerar Resumo com IA
@@ -426,6 +431,18 @@ export function ProjectTrackingTab({ projectId }: { projectId: string }) {
         open={!!ratingAllocation}
         onOpenChange={(v) => { if (!v) setRatingAllocation(null); }}
         allocation={ratingAllocation}
+      />
+      <SendMessageModal
+        open={msgOpen}
+        onOpenChange={setMsgOpen}
+        category="obra"
+        phone={clientPhone || ""}
+        context={{
+          nome_cliente: clientName || "",
+          projeto: projectName || "",
+          progresso: `${avgProgress}%`,
+          resumo: lastEntry?.summary || "",
+        }}
       />
     </div>
   );

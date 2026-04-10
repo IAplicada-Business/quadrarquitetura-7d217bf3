@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Plus, Phone, Mail, ArrowRight, Trash2, Pencil, UserCheck,
   LayoutGrid, List, Search, Filter, Users, CalendarCheck, TrendingUp, XCircle,
-  BarChart3, GripVertical,
+  BarChart3, GripVertical, MessageSquare,
 } from "lucide-react";
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { Progress } from "@/components/ui/progress";
 import { useLeads, LEAD_STATUSES, leadStatusLabels, Lead } from "@/hooks/useLeads";
 import { differenceInDays, subMonths, format, startOfMonth } from "date-fns";
 import { pt } from "date-fns/locale";
+import { SendMessageModal } from "@/components/messages/SendMessageModal";
 
 const originLabels: Record<string, string> = {
   indicacao: "Indicação", instagram: "Instagram", google: "Google", site: "Site", outro: "Outro",
@@ -60,6 +61,9 @@ export default function LeadsPipeline() {
     name: "", phone: "", email: "", phone_secondary: "",
     project_type: "residencial", origin: "outro", responsible: "", notes: "", meeting_date: "",
   });
+
+  // Message modal state
+  const [msgLead, setMsgLead] = useState<Lead | null>(null);
 
   // Drag-and-drop state
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -335,6 +339,9 @@ export default function LeadsPipeline() {
                           <Badge variant="outline" className="text-[10px]">{originLabels[lead.origin] || lead.origin}</Badge>
                         </div>
                         <div className="flex gap-1 pt-1">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" title="Enviar mensagem" onClick={() => setMsgLead(lead)}>
+                            <MessageSquare className="h-3.5 w-3.5" />
+                          </Button>
                           {getNextStatus(lead.status) && (
                             <Button size="sm" variant="outline" className="text-xs h-7 flex-1" onClick={() => moveStatus(lead, getNextStatus(lead.status)!)}>
                               <ArrowRight className="h-3 w-3 mr-1" /> Avançar
@@ -504,6 +511,20 @@ export default function LeadsPipeline() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Send Message Modal */}
+      {msgLead && (
+        <SendMessageModal
+          open={!!msgLead}
+          onOpenChange={(o) => { if (!o) setMsgLead(null); }}
+          category={["lead", "proposta"]}
+          phone={msgLead.phone}
+          context={{
+            nome_cliente: msgLead.name,
+            telefone: msgLead.phone,
+            tipo_projeto: typeLabels[msgLead.project_type] || msgLead.project_type,
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2, Download, ChevronDown, ChevronRight, CheckCheck } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, ChevronDown, ChevronRight, CheckCheck, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import { PaymentForm } from "./PaymentForm";
 import { InvoiceForm } from "./InvoiceForm";
 import { InvoiceNFList } from "./InvoiceNFList";
 import jsPDF from "jspdf";
+import { SendMessageModal } from "@/components/messages/SendMessageModal";
 
 function formatCurrency(v: number | null | undefined) {
   if (v == null) return "—";
@@ -94,7 +95,7 @@ function exportDREPdf(dre: DREData, projectName?: string) {
   doc.save(`DRE_${(projectName || "projeto").replace(/\s+/g, "_")}.pdf`);
 }
 
-export function ProjectFinancialTab({ projectId, projectName }: { projectId: string; projectName?: string }) {
+export function ProjectFinancialTab({ projectId, projectName, clientName, clientPhone }: { projectId: string; projectName?: string; clientName?: string; clientPhone?: string }) {
   const { user } = useAuth();
   const payments = useProjectPayments(projectId);
   const invoices = useInvoices(projectId);
@@ -104,6 +105,7 @@ export function ProjectFinancialTab({ projectId, projectName }: { projectId: str
   const [editingPayment, setEditingPayment] = useState<Record<string, unknown> | null>(null);
   const [editingInvoice, setEditingInvoice] = useState<Record<string, unknown> | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [msgOpen, setMsgOpen] = useState(false);
 
   // Tax rate from settings
   const { data: taxRate } = useQuery({
@@ -292,9 +294,14 @@ export function ProjectFinancialTab({ projectId, projectName }: { projectId: str
 
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-display">Fluxo de Pagamentos</h3>
-            <Button size="sm" onClick={() => { setEditingPayment(null); setPaymentFormOpen(true); }}>
-              <Plus className="h-4 w-4 mr-1" /> Novo Pagamento
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => setMsgOpen(true)} disabled={!clientPhone}>
+                <MessageSquare className="h-4 w-4 mr-1" /> Enviar Mensagem
+              </Button>
+              <Button size="sm" onClick={() => { setEditingPayment(null); setPaymentFormOpen(true); }}>
+                <Plus className="h-4 w-4 mr-1" /> Novo Pagamento
+              </Button>
+            </div>
           </div>
 
           {payments.isLoading ? (
@@ -469,6 +476,16 @@ export function ProjectFinancialTab({ projectId, projectName }: { projectId: str
         }}
         initialData={editingInvoice}
         isLoading={invoices.create.isPending || invoices.update.isPending}
+      />
+      <SendMessageModal
+        open={msgOpen}
+        onOpenChange={setMsgOpen}
+        category="financeiro"
+        phone={clientPhone || ""}
+        context={{
+          nome_cliente: clientName || "",
+          projeto: projectName || "",
+        }}
       />
     </div>
   );

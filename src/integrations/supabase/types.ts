@@ -1357,6 +1357,39 @@ export type Database = {
           },
         ]
       }
+      message_templates: {
+        Row: {
+          body: string
+          category: string | null
+          created_at: string | null
+          id: string
+          name: string
+          type: string | null
+          user_id: string
+          variables: string[] | null
+        }
+        Insert: {
+          body: string
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          type?: string | null
+          user_id: string
+          variables?: string[] | null
+        }
+        Update: {
+          body?: string
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          type?: string | null
+          user_id?: string
+          variables?: string[] | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string

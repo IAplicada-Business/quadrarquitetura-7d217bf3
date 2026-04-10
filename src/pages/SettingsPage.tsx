@@ -13,7 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import CalculationRulesTab from "@/components/settings/CalculationRulesTab";
 import ProposalBrandingTab from "@/components/settings/ProposalBrandingTab";
 import SupplierCategoriesManager from "@/components/settings/SupplierCategoriesManager";
-import MessageTemplatesManager from "@/components/settings/MessageTemplatesManager";
+import MessageTemplatesSettings from "@/components/settings/MessageTemplatesSettings";
 import {
   useCostReferenceTable,
   CONSTRUCTION_TYPE_LABELS,
@@ -245,11 +245,7 @@ export default function SettingsPage() {
             />
 
             {/* Message Templates */}
-            <MessageTemplatesManager
-              templates={((settings?.message_templates as any[]) ?? []) as any}
-              onSave={(tpls) => upsert.mutate({ message_templates: tpls as any })}
-              isPending={upsert.isPending}
-            />
+            <MessageTemplatesSettings />
           </div>
         </TabsContent>
 
