@@ -58,7 +58,7 @@ export interface PipelineMonth {
 
 export function useComercialMetrics() {
   const { user } = useAuth();
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
 
   const query = useQuery({
     queryKey: ["comercial-metrics"],

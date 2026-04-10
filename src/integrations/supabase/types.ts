@@ -1394,6 +1394,7 @@ export type Database = {
           paid_date: string | null
           parent_payment_id: string | null
           payment_method: string | null
+          payment_type: string
           pix_key: string | null
           project_id: string | null
           receipt_url: string | null
@@ -1417,6 +1418,7 @@ export type Database = {
           paid_date?: string | null
           parent_payment_id?: string | null
           payment_method?: string | null
+          payment_type?: string
           pix_key?: string | null
           project_id?: string | null
           receipt_url?: string | null
@@ -1440,6 +1442,7 @@ export type Database = {
           paid_date?: string | null
           parent_payment_id?: string | null
           payment_method?: string | null
+          payment_type?: string
           pix_key?: string | null
           project_id?: string | null
           receipt_url?: string | null
@@ -2553,6 +2556,7 @@ export type Database = {
           message_templates: Json | null
           scope: string
           supplier_categories: string[] | null
+          tax_rate_percent: number
           theme: string | null
           updated_at: string
           user_id: string
@@ -2565,6 +2569,7 @@ export type Database = {
           message_templates?: Json | null
           scope?: string
           supplier_categories?: string[] | null
+          tax_rate_percent?: number
           theme?: string | null
           updated_at?: string
           user_id: string
@@ -2577,6 +2582,7 @@ export type Database = {
           message_templates?: Json | null
           scope?: string
           supplier_categories?: string[] | null
+          tax_rate_percent?: number
           theme?: string | null
           updated_at?: string
           user_id?: string

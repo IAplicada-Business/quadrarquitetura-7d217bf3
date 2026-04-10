@@ -15,6 +15,7 @@ interface PaymentRow {
   source: string | null;
   supplier_name: string | null;
   project_id: string | null;
+  payment_type: string;
   created_at: string;
   projects: { name: string } | null;
 }
@@ -45,21 +46,24 @@ export interface GraficoMonth {
 
 export function useFinanceiroMetrics() {
   const { user } = useAuth();
-  const today = new Date();
+  const todayStr = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
+  const todayDate = useMemo(() => new Date(), []);
 
   const query = useQuery({
     queryKey: ["financeiro-metrics"],
     queryFn: async () => {
-      const [paymentsRes, nfsRes] = await Promise.all([
+      const [paymentsRes, nfsRes, settingsRes] = await Promise.all([
         supabase
           .from("payments")
-          .select("id, value, due_date, paid_date, status, description, source, supplier_name, project_id, created_at, projects(name)")
+          .select("id, value, due_date, paid_date, status, description, source, supplier_name, project_id, payment_type, created_at, projects(name)")
           .eq("source", "escritorio"),
         supabase.from("invoices_nf").select("id").eq("status", "pendente"),
+        supabase.from("settings").select("tax_rate_percent").limit(1).maybeSingle(),
       ]);
       return {
         payments: (paymentsRes.data ?? []) as unknown as PaymentRow[],
         pendingNFs: (nfsRes.data ?? []).length,
+        taxRate: ((settingsRes.data as Record<string, unknown>)?.tax_rate_percent as number) ?? 6,
       };
     },
     enabled: !!user,
@@ -68,20 +72,13 @@ export function useFinanceiroMetrics() {
 
   const computed = useMemo(() => {
     if (!query.data) return null;
-    const { payments, pendingNFs } = query.data;
-    const taxRate = 6; // default
+    const { payments, pendingNFs, taxRate } = query.data;
 
-    const currentMonthStr = format(today, "yyyy-MM");
-    const prevMonthStr = format(subMonths(today, 1), "yyyy-MM");
-    const todayStr = format(today, "yyyy-MM-dd");
+    const currentMonthStr = format(todayDate, "yyyy-MM");
+    const prevMonthStr = format(subMonths(todayDate, 1), "yyyy-MM");
 
-    // Helper: is payment a revenue? (description contains "honorário" or "receita", or no supplier_name)
-    const isReceita = (p: PaymentRow) => {
-      const desc = (p.description ?? "").toLowerCase();
-      return desc.includes("receita") || desc.includes("honorár") || (!p.supplier_name && p.value > 0);
-    };
-
-    const isDespesa = (p: PaymentRow) => !isReceita(p);
+    const isReceita = (p: PaymentRow) => p.payment_type === "receita";
+    const isDespesa = (p: PaymentRow) => p.payment_type !== "receita";
 
     // Paid this month
     const paidThisMonth = payments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(currentMonthStr));
@@ -96,7 +93,7 @@ export function useFinanceiroMetrics() {
     const despesaVariation = despesaPrev > 0 ? Math.round(((despesaThis - despesaPrev) / despesaPrev) * 100) : 0;
 
     // A receber 30 dias
-    const thirtyDaysLater = format(new Date(today.getTime() + 30 * 86400000), "yyyy-MM-dd");
+    const thirtyDaysLater = format(new Date(todayDate.getTime() + 30 * 86400000), "yyyy-MM-dd");
     const pendentes30d = payments.filter(
       (p) => p.status === "pendente" && p.due_date && p.due_date >= todayStr && p.due_date <= thirtyDaysLater
     );
@@ -117,7 +114,7 @@ export function useFinanceiroMetrics() {
         description: p.description ?? "",
         value: p.value,
         dueDate: p.due_date!,
-        daysLeft: differenceInDays(parseISO(p.due_date!), today),
+        daysLeft: differenceInDays(parseISO(p.due_date!), todayDate),
       }));
 
     // ── DRE ──
@@ -133,7 +130,7 @@ export function useFinanceiroMetrics() {
     // ── Gráfico 6 meses ──
     const grafico6m: GraficoMonth[] = [];
     for (let i = 5; i >= 0; i--) {
-      const m = subMonths(today, i);
+      const m = subMonths(todayDate, i);
       const mStr = format(m, "yyyy-MM");
       const label = format(m, "MMM", { locale: ptBR });
       const capLabel = label.charAt(0).toUpperCase() + label.slice(1);
@@ -163,7 +160,7 @@ export function useFinanceiroMetrics() {
       grafico6m,
       pendingNFs,
     };
-  }, [query.data, today]);
+  }, [query.data, todayDate, todayStr]);
 
   return { data: computed, isLoading: query.isLoading };
 }
