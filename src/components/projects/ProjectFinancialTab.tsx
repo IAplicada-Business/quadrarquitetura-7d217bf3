@@ -105,6 +105,7 @@ export function ProjectFinancialTab({ projectId, projectName, clientName, client
   const [editingPayment, setEditingPayment] = useState<Record<string, unknown> | null>(null);
   const [editingInvoice, setEditingInvoice] = useState<Record<string, unknown> | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [msgOpen, setMsgOpen] = useState(false);
 
   // Tax rate from settings
   const { data: taxRate } = useQuery({
