@@ -76,8 +76,15 @@ export function useFinanceiroMetrics() {
     const currentMonthStr = format(todayDate, "yyyy-MM");
     const prevMonthStr = format(subMonths(todayDate, 1), "yyyy-MM");
 
-    const isReceita = (p: PaymentRow) => p.payment_type === "receita";
-    const isDespesa = (p: PaymentRow) => p.payment_type !== "receita";
+    const isEscritorio = (p: PaymentRow) =>
+      p.source === "escritorio" || (!p.source && !p.project_id);
+    const isCancelado = (p: PaymentRow) => p.status === "cancelado";
+    const isReceita = (p: PaymentRow) =>
+      p.payment_type === "receita" || (!p.payment_type && p.source !== "obra");
+    const isDespesa = (p: PaymentRow) => p.payment_type === "despesa";
+
+    // Filter to escritório-only, exclude cancelled
+    const escritorioPayments = payments.filter((p) => isEscritorio(p) && !isCancelado(p));
 
     // Paid this month
     const paidThisMonth = payments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(currentMonthStr));
