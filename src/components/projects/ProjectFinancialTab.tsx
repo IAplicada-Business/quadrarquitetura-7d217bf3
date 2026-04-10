@@ -477,6 +477,16 @@ export function ProjectFinancialTab({ projectId, projectName, clientName, client
         initialData={editingInvoice}
         isLoading={invoices.create.isPending || invoices.update.isPending}
       />
+      <SendMessageModal
+        open={msgOpen}
+        onOpenChange={setMsgOpen}
+        category="financeiro"
+        phone={clientPhone || ""}
+        context={{
+          nome_cliente: clientName || "",
+          projeto: projectName || "",
+        }}
+      />
     </div>
   );
 }
