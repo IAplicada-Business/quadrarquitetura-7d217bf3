@@ -239,6 +239,7 @@ export default function LeadsContracts() {
                       <div className="text-sm font-bold">{formatCurrency(c.value)}</div>
                       <div className="flex gap-1 pt-1 flex-wrap">
                         <Button size="sm" variant="ghost" className="h-7" onClick={() => openEdit(c)}><Pencil className="h-3 w-3" /></Button>
+                        <Button size="sm" variant="ghost" className="h-7" onClick={() => setMsgContract(c)} title="Enviar mensagem"><MessageSquare className="h-3 w-3" /></Button>
                         <Button size="sm" variant="ghost" className="h-7 text-destructive" onClick={() => remove.mutate(c.id)}><Trash2 className="h-3 w-3" /></Button>
                         {c.status === "rascunho" && (
                           <Button size="sm" variant="outline" className="h-7 text-xs ml-auto" onClick={() => update.mutate({ id: c.id, status: "enviado", sent_at: new Date().toISOString() })}>
@@ -431,6 +432,19 @@ export default function LeadsContracts() {
           </div>
         </DialogContent>
       </Dialog>
+      {msgContract && (
+        <SendMessageModal
+          open={!!msgContract}
+          onOpenChange={(o) => { if (!o) setMsgContract(null); }}
+          category="contrato"
+          phone={msgContract.client_phone || ""}
+          context={{
+            nome_cliente: msgContract.client_name || "",
+            projeto: msgContract.title || "",
+            valor: formatCurrency(msgContract.value),
+          }}
+        />
+      )}
     </div>
   );
 }
