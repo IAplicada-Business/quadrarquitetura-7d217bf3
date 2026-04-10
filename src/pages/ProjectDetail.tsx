@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +24,19 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const { project, isLoading } = useProjectDetail(id);
   const [activeTab, setActiveTab] = useState("resumo");
+  const isMobile = useIsMobile();
+
+  const tabs = [
+    { value: "resumo", label: "Resumo" },
+    { value: "cenarios", label: "Cotações" },
+    { value: "escopo", label: "Escopo" },
+    { value: "orcamentos", label: "Orçamentos" },
+    { value: "materiais", label: "Materiais" },
+    { value: "cronograma", label: "Cronograma" },
+    { value: "financeiro", label: "Prestação de Contas" },
+    { value: "documentos", label: "Documentos" },
+    { value: "acompanhamento", label: "Acompanhamento" },
+  ];
 
   if (isLoading) {
     return (
@@ -87,17 +102,30 @@ export default function ProjectDetail() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1 bg-muted/50">
-          <TabsTrigger value="resumo">Resumo</TabsTrigger>
-          <TabsTrigger value="cenarios">Cotações</TabsTrigger>
-          <TabsTrigger value="escopo">Escopo</TabsTrigger>
-          <TabsTrigger value="orcamentos">Orçamentos</TabsTrigger>
-          <TabsTrigger value="materiais">Materiais</TabsTrigger>
-          <TabsTrigger value="cronograma">Cronograma</TabsTrigger>
-          <TabsTrigger value="financeiro">Prestação de Contas</TabsTrigger>
-          <TabsTrigger value="documentos">Documentos</TabsTrigger>
-          <TabsTrigger value="acompanhamento">Acompanhamento</TabsTrigger>
-        </TabsList>
+        {isMobile ? (
+          <Select value={activeTab} onValueChange={setActiveTab}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Ir para aba...">
+                {tabs.find(t => t.value === activeTab)?.label}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {tabs.map(tab => (
+                <SelectItem key={tab.value} value={tab.value}>
+                  {tab.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1 bg-muted/50">
+            {tabs.map(tab => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        )}
 
         <div className="mt-4">
           <TabsContent value="resumo">
