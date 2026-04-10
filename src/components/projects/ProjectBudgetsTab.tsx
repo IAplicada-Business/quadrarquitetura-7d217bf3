@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, RefreshCw, Search, Eye, FileDown } from "lucide-react";
+import { Plus, RefreshCw, Search, Eye, FileDown, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import { BudgetPreviewDialog } from "./BudgetPreviewDialog";
 import { useMaterialIndices } from "@/hooks/useMaterialIndices";
 import { usePriceResearch } from "@/hooks/usePriceResearch";
 import { PriceSearchDialog } from "./PriceSearchDialog";
+import { useProjectAI } from "@/hooks/useProjectAI";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -68,6 +69,9 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
   const [priceSearchExisting, setPriceSearchExisting] = useState<any[] | undefined>(undefined);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importingBudget, setImportingBudget] = useState(false);
+  const { callAction, loading: aiLoading } = useProjectAI();
+  const [aiEstimates, setAiEstimates] = useState<any[] | null>(null);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   const revisions = useMemo(() => {
     const revNums = [...new Set(quotes.map((q) => q.revision_number))].sort((a, b) => (a ?? 0) - (b ?? 0));
@@ -234,6 +238,13 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
               </Select>
               <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)} disabled={activities.length === 0}>
                 <FileDown className="h-4 w-4 mr-1" /> Importar do Escopo
+              </Button>
+              <Button variant="outline" size="sm" disabled={aiLoading || activities.length === 0} onClick={async () => {
+                const result = await callAction(projectId, "estimate_costs", { activities: activities.map(a => ({ name: a.name, area_m2: a.area_m2, discipline: a.discipline })) });
+                if (result?.estimates) { setAiEstimates(result.estimates); setAiModalOpen(true); }
+              }}>
+                {aiLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+                Estimar custos com IA
               </Button>
               <Button variant="outline" size="sm" onClick={() => createRevision.mutate(currentRev)} disabled={createRevision.isPending}>
                 <RefreshCw className="h-4 w-4 mr-1" /> Nova Revisão
@@ -425,6 +436,55 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
           <ProjectPurchasesTab projectId={projectId} />
         </TabsContent>
       </Tabs>
+
+      {/* AI Estimates Modal */}
+      <Dialog open={aiModalOpen} onOpenChange={setAiModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Estimativa de Custos com IA</DialogTitle>
+            <DialogDescription>Valores estimados para BH em 2025. Aplique como valor médio nas cotações.</DialogDescription>
+          </DialogHeader>
+          {aiEstimates && (
+            <div className="max-h-80 overflow-y-auto border rounded-lg">
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>Atividade</TableHead><TableHead className="text-right">Mín</TableHead><TableHead className="text-right">Máx</TableHead><TableHead className="text-right">Média</TableHead><TableHead>Notas</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {aiEstimates.map((e: any, i: number) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-medium">{e.activity_name}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(e.estimated_cost_min)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(e.estimated_cost_max)}</TableCell>
+                      <TableCell className="text-right font-semibold">{formatCurrency((e.estimated_cost_min + e.estimated_cost_max) / 2)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{e.notes || "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAiModalOpen(false)}>Fechar</Button>
+            <Button onClick={async () => {
+              if (!user || !aiEstimates) return;
+              const inserts = aiEstimates.map((e: any) => ({
+                project_id: projectId, user_id: user.id,
+                services_description: e.activity_name,
+                value: Math.round((e.estimated_cost_min + e.estimated_cost_max) / 2),
+                status: "pendente" as const, revision_number: currentRev,
+              }));
+              const { error } = await supabase.from("budget_quotes").insert(inserts);
+              if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+              queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] });
+              toast({ title: `${inserts.length} itens criados com valores estimados pela IA` });
+              setAiModalOpen(false);
+            }}>
+              Aplicar como cotações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Import from Scope Dialog */}
       <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>

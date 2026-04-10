@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2, Download, ChevronDown, ChevronRight, CheckCheck, MessageSquare } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, ChevronDown, ChevronRight, CheckCheck, MessageSquare, Sparkles, Loader2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,9 @@ import { InvoiceForm } from "./InvoiceForm";
 import { InvoiceNFList } from "./InvoiceNFList";
 import jsPDF from "jspdf";
 import { SendMessageModal } from "@/components/messages/SendMessageModal";
+import { useProjectAI } from "@/hooks/useProjectAI";
+import { useProjectActivities } from "@/hooks/useProjectActivities";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 function formatCurrency(v: number | null | undefined) {
   if (v == null) return "—";
@@ -106,6 +109,10 @@ export function ProjectFinancialTab({ projectId, projectName, clientName, client
   const [editingInvoice, setEditingInvoice] = useState<Record<string, unknown> | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [msgOpen, setMsgOpen] = useState(false);
+  const { callAction, loading: aiLoading } = useProjectAI();
+  const { activities } = useProjectActivities(projectId);
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [aiAnalysisOpen, setAiAnalysisOpen] = useState(false);
 
   // Tax rate from settings
   const { data: taxRate } = useQuery({
@@ -409,9 +416,23 @@ export function ProjectFinancialTab({ projectId, projectName, clientName, client
         <TabsContent value="dre" className="space-y-4 mt-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-display">Demonstrativo de Resultado (DRE)</h3>
-            <Button size="sm" variant="outline" onClick={() => exportDREPdf(dre, projectName)}>
-              <Download className="h-4 w-4 mr-1" /> Exportar DRE
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" disabled={aiLoading} onClick={async () => {
+                const progresso = activities.length > 0
+                  ? Math.round(activities.filter(a => a.status === "concluida").length / activities.length * 100) : 0;
+                const result = await callAction(projectId, "financial_analysis", {
+                  receita: dre.receitaTotal, despesas: dre.despesasTotal,
+                  pendentes: paymentTotals.pending, progresso,
+                });
+                if (result) { setAiAnalysis(result); setAiAnalysisOpen(true); }
+              }}>
+                {aiLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+                Análise financeira com IA
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => exportDREPdf(dre, projectName)}>
+                <Download className="h-4 w-4 mr-1" /> Exportar DRE
+              </Button>
+            </div>
           </div>
 
           <Card>
@@ -487,6 +508,42 @@ export function ProjectFinancialTab({ projectId, projectName, clientName, client
           projeto: projectName || "",
         }}
       />
+
+      {/* AI Financial Analysis Modal */}
+      <Dialog open={aiAnalysisOpen} onOpenChange={setAiAnalysisOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Análise Financeira com IA</DialogTitle>
+          </DialogHeader>
+          {aiAnalysis && (
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              <div className="text-sm whitespace-pre-wrap">{aiAnalysis.analysis_text}</div>
+              {aiAnalysis.risks && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-1">Riscos Identificados</h4>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{aiAnalysis.risks}</p>
+                </div>
+              )}
+              {aiAnalysis.recommendations && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-1">Recomendações</h4>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{aiAnalysis.recommendations}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              const text = [aiAnalysis?.analysis_text, aiAnalysis?.risks, aiAnalysis?.recommendations].filter(Boolean).join("\n\n");
+              navigator.clipboard.writeText(text);
+              toast({ title: "Texto copiado!" });
+            }}>
+              <Copy className="h-4 w-4 mr-1" /> Copiar texto
+            </Button>
+            <Button onClick={() => setAiAnalysisOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

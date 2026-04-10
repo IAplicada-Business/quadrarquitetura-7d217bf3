@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { differenceInDays, isBefore, addDays, format } from "date-fns";
-import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown, RefreshCw, FileDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown, RefreshCw, FileDown, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import { ActivityForm } from "./ActivityForm";
 import { CascadePreviewDialog, type CascadeChange } from "./CascadePreviewDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useProjectAI } from "@/hooks/useProjectAI";
 
 function formatDate(d: string | null) {
   if (!d) return "—";
@@ -54,6 +55,9 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const [recalcChanges, setRecalcChanges] = useState<CascadeChange[]>([]);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [generatingFromScope, setGeneratingFromScope] = useState(false);
+  const { callAction, loading: aiLoading } = useProjectAI();
+  const [aiSchedule, setAiSchedule] = useState<any[] | null>(null);
+  const [aiScheduleOpen, setAiScheduleOpen] = useState(false);
 
   const disciplines = useMemo(() => {
     const set = new Set<string>();
@@ -377,6 +381,13 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
               )}
               <Button size="sm" variant="outline" onClick={() => setGenerateDialogOpen(true)} disabled={schedulableActivities.length === 0}>
                 <FileDown className="h-4 w-4 mr-1" /> Gerar do Escopo
+              </Button>
+              <Button size="sm" variant="outline" disabled={aiLoading || activities.length === 0} onClick={async () => {
+                const result = await callAction(projectId, "generate_schedule", { activities: activities.map(a => ({ name: a.name, discipline: a.discipline, area_m2: a.area_m2 })) });
+                if (result?.schedule) { setAiSchedule(result.schedule); setAiScheduleOpen(true); }
+              }}>
+                {aiLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+                Gerar cronograma com IA
               </Button>
               <Button size="sm" variant="outline" onClick={handleImportFromScope} disabled={importing}>
                 <Download className="h-4 w-4 mr-1" /> Importar do Escopo

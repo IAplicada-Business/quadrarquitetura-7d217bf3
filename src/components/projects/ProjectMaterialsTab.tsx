@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2, Download, ExternalLink, ShoppingCart, Package, Filter, Copy, RefreshCw, RotateCcw, Settings, FileDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, ExternalLink, ShoppingCart, Package, Filter, Copy, RefreshCw, RotateCcw, Settings, FileDown, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +22,10 @@ import { useQuery } from "@tanstack/react-query";
 import { getDisciplineColor } from "@/lib/disciplineColors";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
+import { useProjectAI } from "@/hooks/useProjectAI";
+import { useAuth } from "@/contexts/AuthContext";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 function formatDate(d: string | null) {
   if (!d) return "—";
@@ -40,6 +44,11 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
   const [filterStatus, setFilterStatus] = useState("all");
   const [shoppingListOpen, setShoppingListOpen] = useState(false);
   const navigate = useNavigate();
+  const { callAction, loading: aiLoading } = useProjectAI();
+  const { user } = useAuth();
+  const [aiMaterials, setAiMaterials] = useState<any[] | null>(null);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [selectedAiMaterials, setSelectedAiMaterials] = useState<Set<number>>(new Set());
 
   // Query schedule_tasks with materials
   const { data: taskMaterials = [] } = useQuery({
@@ -195,7 +204,78 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
               <FileDown className="h-4 w-4 mr-1" />
               {importingScopeList ? "Importando..." : "Importar lista do escopo"}
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={aiLoading || activities.length === 0}
+              onClick={async () => {
+                const result = await callAction(projectId, "generate_materials", { activities: activities.map(a => ({ name: a.name, area_m2: a.area_m2, discipline: a.discipline })) });
+                if (result?.materials) {
+                  setAiMaterials(result.materials);
+                  setSelectedAiMaterials(new Set(result.materials.map((_: any, i: number) => i)));
+                  setAiModalOpen(true);
+                }
+              }}
+            >
+              {aiLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+              Calcular materiais com IA
+            </Button>
           </div>
+
+          {/* AI Materials Modal */}
+          <Dialog open={aiModalOpen} onOpenChange={setAiModalOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Materiais Sugeridos pela IA</DialogTitle>
+                <DialogDescription>Selecione os materiais que deseja importar para o rastreamento.</DialogDescription>
+              </DialogHeader>
+              {aiMaterials && (
+                <div className="max-h-80 overflow-y-auto border rounded-lg divide-y">
+                  {aiMaterials.map((m: any, i: number) => (
+                    <div key={i} className="flex items-center gap-3 px-3 py-2 text-sm">
+                      <Checkbox
+                        checked={selectedAiMaterials.has(i)}
+                        onCheckedChange={(c) => {
+                          const next = new Set(selectedAiMaterials);
+                          c ? next.add(i) : next.delete(i);
+                          setSelectedAiMaterials(next);
+                        }}
+                      />
+                      <div className="flex-1">
+                        <span className="font-medium">{m.material_name}</span>
+                        <span className="text-muted-foreground ml-2 text-xs">({m.activity_name})</span>
+                      </div>
+                      <span className="text-xs">{m.quantity} {m.unit}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAiModalOpen(false)}>Cancelar</Button>
+                <Button disabled={selectedAiMaterials.size === 0} onClick={async () => {
+                  if (!user || !aiMaterials) return;
+                  const selected = aiMaterials.filter((_: any, i: number) => selectedAiMaterials.has(i));
+                  const inserts = selected.map((m: any) => {
+                    const act = activities.find(a => a.name === m.activity_name);
+                    return {
+                      project_id: projectId, user_id: user.id,
+                      material_name: m.material_name,
+                      discipline: act?.discipline || null,
+                      activity_id: act?.id || null,
+                      unit: m.unit, quantity_needed: m.quantity,
+                      source: "ai",
+                    };
+                  });
+                  const { error } = await supabase.from("material_tracking").insert(inserts);
+                  if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+                  toast({ title: `${inserts.length} materiais importados da IA` });
+                  setAiModalOpen(false);
+                }}>
+                  Importar {selectedAiMaterials.size} selecionados
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Metrics Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

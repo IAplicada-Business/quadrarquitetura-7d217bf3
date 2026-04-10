@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Upload, FileText, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, FileText, Download, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,9 @@ export function ProjectDocumentsTab({ projectId }: { projectId: string }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
+  const [summarizingId, setSummarizingId] = useState<string | null>(null);
+  const [summaryText, setSummaryText] = useState<string | null>(null);
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -169,11 +172,34 @@ export function ProjectDocumentsTab({ projectId }: { projectId: string }) {
                 <TableCell>
                   <div className="flex gap-1">
                     {doc.file_url && (
-                      <Button size="icon" variant="ghost" className="h-7 w-7" asChild>
-                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                          <Download className="h-3.5 w-3.5" />
-                        </a>
-                      </Button>
+                      <>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" asChild>
+                          <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                            <Download className="h-3.5 w-3.5" />
+                          </a>
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" disabled={summarizingId === doc.id} onClick={async () => {
+                          setSummarizingId(doc.id);
+                          try {
+                            const session = (await supabase.auth.getSession()).data.session;
+                            const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-plant`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+                              body: JSON.stringify({ file_url: doc.file_url, focus: "resumo", instructions: "Resuma o conteúdo deste documento em bullet points, destacando informações relevantes para gestão de obra.", project_id: projectId }),
+                            });
+                            if (!resp.ok) throw new Error("Erro ao resumir");
+                            const result = await resp.json();
+                            setSummaryText(typeof result === "string" ? result : result.ai_result?.summary || result.summary || JSON.stringify(result.ai_result || result, null, 2));
+                            setSummaryOpen(true);
+                          } catch (err: any) {
+                            toast({ title: "Erro", description: err.message, variant: "destructive" });
+                          } finally {
+                            setSummarizingId(null);
+                          }
+                        }}>
+                          {summarizingId === doc.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                        </Button>
+                      </>
                     )}
                     <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeMutation.mutate(doc.id)}>
                       <Trash2 className="h-3.5 w-3.5" />
@@ -216,6 +242,20 @@ export function ProjectDocumentsTab({ projectId }: { projectId: string }) {
               <Button type="submit" disabled={uploading}>{uploading ? "Enviando..." : "Upload"}</Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Summary Modal */}
+      <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-display">Resumo do Documento</DialogTitle>
+          </DialogHeader>
+          <div className="text-sm whitespace-pre-wrap max-h-96 overflow-y-auto">{summaryText}</div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { if (summaryText) navigator.clipboard.writeText(summaryText); toast({ title: "Copiado!" }); }}>Copiar</Button>
+            <Button onClick={() => setSummaryOpen(false)}>Fechar</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
