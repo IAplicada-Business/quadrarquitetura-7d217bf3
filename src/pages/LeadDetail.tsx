@@ -470,6 +470,19 @@ export default function LeadDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {lead && (
+        <SendMessageModal
+          open={msgOpen}
+          onOpenChange={setMsgOpen}
+          category={["lead", "proposta"]}
+          phone={lead.phone}
+          context={{
+            nome_cliente: lead.name,
+            telefone: lead.phone,
+            tipo_projeto: typeLabels[lead.project_type] || lead.project_type,
+          }}
+        />
+      )}
     </div>
   );
 }
