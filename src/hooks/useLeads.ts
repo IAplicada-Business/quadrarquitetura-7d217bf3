@@ -133,10 +133,13 @@ export function useLeads() {
             name: lead.name,
             email: lead.email,
             phone: lead.phone,
-            phone_secondary: lead.phone_secondary,
+            phone_secondary: lead.phone_secondary ?? null,
             client_type: lead.project_type as any,
             origin: lead.origin as any,
-          })
+            observations: lead.notes ?? null,
+            source_lead_id: lead.id,
+            converted_at: new Date().toISOString(),
+          } as any)
           .select()
           .single();
         if (clientError) throw clientError;
