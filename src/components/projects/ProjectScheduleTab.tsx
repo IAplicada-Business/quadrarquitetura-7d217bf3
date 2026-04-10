@@ -285,7 +285,7 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
             source_activity_id: activity.id,
             order_index: items.length + created + 1,
             is_client_visible: true,
-          });
+          } as any);
           if (!error) created++;
         }
       }
