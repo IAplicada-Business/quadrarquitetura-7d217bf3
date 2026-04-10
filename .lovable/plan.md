@@ -1,85 +1,60 @@
 
 
-## Plano: Sistema de Mensagens Padrão com Envio via WhatsApp
+## Plano: Pré-popular Orçamentos, Materiais e Cronograma a partir do Escopo
 
-### 1. Migration — Criar tabela `message_templates`
+### 1. Migration — nova coluna em `schedule_tasks`
 ```sql
-CREATE TABLE message_templates (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  name text NOT NULL,
-  type text DEFAULT 'whatsapp' CHECK (type IN ('whatsapp','email')),
-  category text CHECK (category IN ('lead','proposta','contrato','obra','financeiro','geral')),
-  body text NOT NULL,
-  variables text[] DEFAULT '{}',
-  created_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE message_templates ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Team can view message_templates" ON message_templates
-  FOR SELECT TO authenticated USING (user_id IN (SELECT get_team_user_ids()));
-CREATE POLICY "Team can create message_templates" ON message_templates
-  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Team can update message_templates" ON message_templates
-  FOR UPDATE TO authenticated USING (user_id IN (SELECT get_team_user_ids()));
-CREATE POLICY "Team can delete message_templates" ON message_templates
-  FOR DELETE TO authenticated USING (user_id IN (SELECT get_team_user_ids()));
+ALTER TABLE schedule_tasks
+  ADD COLUMN IF NOT EXISTS source_activity_id uuid
+    REFERENCES project_activities(id) ON DELETE SET NULL;
 ```
 
-### 2. Insert — Templates base (via insert tool)
-5 templates iniciais conforme especificado (Proposta enviada, Contrato assinado, Atualização semanal, Pagamento próximo, Reunião confirmada).
+### 2. `src/components/projects/ProjectBudgetsTab.tsx`
+Adicionar botão **"Importar do Escopo"** no topo da aba (ao lado de "Nova Cotação"):
+- Ao clicar, busca `activities` (já carregado via `useProjectActivities`)
+- Compara com `quotes` existentes por `services_description` para evitar duplicatas
+- Abre modal de confirmação (Dialog) com lista das atividades a importar e contagem
+- Ao confirmar, cria `budget_quotes` para cada atividade:
+  - `services_description` = activity.name
+  - `scope_item_id` = null (ou matched scope item se houver)
+  - `value` = 0
+  - `material_estimate` = activity.area_m2 ?? 0
+  - `status` = "pendente"
+- Toast: "X itens importados do escopo"
 
-### 3. Hook `src/hooks/useMessageTemplates.ts`
-- CRUD completo para `message_templates` com `useQuery` + `useMutation`
-- Filtro por `category` opcional
-- Export de tipos
+### 3. `src/components/projects/ProjectMaterialsTab.tsx`
+Reorganizar a seção de botões:
+- Mover **"Calcular por Atividades"** (`recalculateFromActivities`) para posição de destaque no topo da aba, ANTES dos cards de métricas
+- Adicionar botão secundário **"Importar lista do escopo"** ao lado:
+  - Busca `activities` e para cada uma verifica se já existe `material_tracking` com `activity_id`
+  - Se não existir, cria:
+    - `material_name` = "Material — " + activity.name
+    - `discipline` = activity.discipline
+    - `activity_id` = activity.id
+    - `source` = "manual"
+  - Toast: "X materiais importados do escopo"
 
-### 4. Componente `src/components/messages/SendMessageModal.tsx`
-- Props: `category`, `context` (objeto com variáveis disponíveis), `phone`, `open/onOpenChange`
-- Select de template filtrado por categoria
-- Preview com variáveis interpoladas em tempo real (highlight nas variáveis com cor)
-- Campo telefone pré-preenchido
-- Botão "Abrir no WhatsApp" → `window.open('https://wa.me/55' + phone.replace(/\D/g,'') + '?text=' + encodeURIComponent(text))`
-- Botão "Copiar texto"
+### 4. `src/components/projects/ProjectScheduleTab.tsx`
+Adicionar botão **"Gerar do Escopo"** no topo do Gantt:
+- Busca `activities` com `start_date` ou `duration_days` preenchidos
+- Abre modal de confirmação com contagem
+- Para cada atividade, verifica se já existe `schedule_task` com `source_activity_id`
+  - Se existir → atualiza datas/status
+  - Se não → cria novo `schedule_task`:
+    - `task_name` = activity.name
+    - `start_date` / `end_date` = activity.start_date / activity.end_date
+    - `status` = mapeamento de status da atividade
+    - `discipline` = activity.discipline
+    - `source_activity_id` = activity.id
 
-### 5. Componente `src/components/settings/MessageTemplatesSettings.tsx`
-- Substituir o `MessageTemplatesManager` existente (client-side/settings JSON)
-- CRUD usando hook `useMessageTemplates` (banco)
-- Listar templates com badge de categoria e tipo
-- Preview com variáveis destacadas
-
-### 6. Integração — Botão "Enviar Mensagem" nos contextos
-
-| Local | Arquivo | Categoria |
-|-------|---------|-----------|
-| Card de lead no pipeline | `LeadsPipeline.tsx` | `lead`, `proposta` |
-| Detalhe do lead | `LeadDetail.tsx` | `lead`, `proposta` |
-| Card de contrato | `LeadsContracts.tsx` | `contrato` |
-| Aba Acompanhamento do projeto | `ProjectTrackingTab.tsx` | `obra` |
-| Aba Financeiro do projeto | `ProjectFinancialTab.tsx` | `financeiro` |
-
-Cada local adiciona um botão `MessageSquare` que abre o `SendMessageModal` passando as variáveis do contexto.
-
-### 7. `src/pages/SettingsPage.tsx`
-- Remover import de `MessageTemplatesManager` antigo
-- Substituir pela nova `MessageTemplatesSettings` (que usa banco)
-
-### Arquivos novos
-- `src/hooks/useMessageTemplates.ts`
-- `src/components/messages/SendMessageModal.tsx`
-- `src/components/settings/MessageTemplatesSettings.tsx`
-
-### Arquivos editados
-- `src/pages/SettingsPage.tsx` — trocar componente
-- `src/pages/LeadsPipeline.tsx` — botão no card
-- `src/pages/LeadDetail.tsx` — botão no header
-- `src/pages/LeadsContracts.tsx` — botão no card
-- `src/components/projects/ProjectTrackingTab.tsx` — botão
-- `src/components/projects/ProjectFinancialTab.tsx` — botão
+### Arquivos alterados
+1. Migration SQL (nova coluna `source_activity_id`)
+2. `src/components/projects/ProjectBudgetsTab.tsx` — botão + modal de importação
+3. `src/components/projects/ProjectMaterialsTab.tsx` — reorganizar botões + botão importar
+4. `src/components/projects/ProjectScheduleTab.tsx` — botão + modal gerar do escopo
 
 ### O que NÃO muda
-- Nenhuma rota existente
-- Nenhuma outra funcionalidade
-- `MessageTemplatesManager.tsx` antigo pode ser removido (não mais usado)
+- Estrutura do Gantt
+- Nenhuma outra aba ou rota
+- Hooks existentes (useProjectActivities, useBudgetQuotes, etc.)
 
