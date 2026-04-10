@@ -459,6 +459,24 @@ export function ProjectTrackingTab({ projectId, projectName, clientName, clientP
           resumo: lastEntry?.summary || "",
         }}
       />
+
+      {/* AI Insights Modal */}
+      <Dialog open={aiInsightsOpen} onOpenChange={setAiInsightsOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Insights da Semana</DialogTitle></DialogHeader>
+          {aiInsights && (
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              <div><h4 className="font-semibold text-sm mb-1">✅ Principais Avanços</h4><p className="text-sm text-muted-foreground whitespace-pre-wrap">{aiInsights.advances}</p></div>
+              <div><h4 className="font-semibold text-sm mb-1">⚠️ Problemas / Riscos</h4><p className="text-sm text-muted-foreground whitespace-pre-wrap">{aiInsights.issues}</p></div>
+              <div><h4 className="font-semibold text-sm mb-1">💡 Sugestões</h4><p className="text-sm text-muted-foreground whitespace-pre-wrap">{aiInsights.suggestions}</p></div>
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { const t = [aiInsights?.advances, aiInsights?.issues, aiInsights?.suggestions].filter(Boolean).join("\n\n"); navigator.clipboard.writeText(t); toast("Texto copiado!"); }}>Copiar</Button>
+            <Button onClick={() => setAiInsightsOpen(false)}>Fechar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
