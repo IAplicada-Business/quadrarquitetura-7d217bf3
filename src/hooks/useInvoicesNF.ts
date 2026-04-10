@@ -41,10 +41,8 @@ export function useInvoicesNF(filters: InvoiceNFFilters = {}) {
 
   const create = useMutation({
     mutationFn: async (item: Record<string, unknown>) => {
-      const { error } = await supabase.from("invoices_nf").insert({
-        ...item,
-        user_id: user!.id,
-      });
+      const payload = { ...item, user_id: user!.id } as Parameters<typeof supabase.from<"invoices_nf">>[0] extends string ? never : Record<string, unknown>;
+      const { error } = await supabase.from("invoices_nf").insert(payload as any);
       if (error) throw error;
     },
     onSuccess: () => {
