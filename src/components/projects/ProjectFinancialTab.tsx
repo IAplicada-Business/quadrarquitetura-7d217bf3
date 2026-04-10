@@ -294,9 +294,14 @@ export function ProjectFinancialTab({ projectId, projectName, clientName, client
 
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-display">Fluxo de Pagamentos</h3>
-            <Button size="sm" onClick={() => { setEditingPayment(null); setPaymentFormOpen(true); }}>
-              <Plus className="h-4 w-4 mr-1" /> Novo Pagamento
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => setMsgOpen(true)} disabled={!clientPhone}>
+                <MessageSquare className="h-4 w-4 mr-1" /> Enviar Mensagem
+              </Button>
+              <Button size="sm" onClick={() => { setEditingPayment(null); setPaymentFormOpen(true); }}>
+                <Plus className="h-4 w-4 mr-1" /> Novo Pagamento
+              </Button>
+            </div>
           </div>
 
           {payments.isLoading ? (
