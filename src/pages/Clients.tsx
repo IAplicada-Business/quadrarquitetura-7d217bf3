@@ -217,13 +217,11 @@ export default function Clients() {
     clientOrigins.find((o) => o.value === val)?.label ?? val;
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div className="space-y-6 p-0">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold font-display mb-1">Clientes</h1>
-          <p className="text-muted-foreground">
-            Gerencie a carteira de clientes do escritório
-          </p>
+          <h1 className="text-2xl font-playfair">Clientes</h1>
+          <p className="text-sm text-muted-foreground mt-1">Gerencie a carteira de clientes do escritório</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>

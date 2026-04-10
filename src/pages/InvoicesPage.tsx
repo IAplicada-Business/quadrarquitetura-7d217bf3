@@ -16,10 +16,12 @@ export default function InvoicesPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold font-display">Notas Fiscais</h1>
-        <p className="text-muted-foreground">Visão consolidada de todas as NFs</p>
+    <div className="space-y-6 p-0">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-playfair">Notas Fiscais</h1>
+          <p className="text-sm text-muted-foreground mt-1">Visão consolidada de todas as NFs</p>
+        </div>
       </div>
       <InvoiceNFList showProjectColumn projects={projects} />
     </div>

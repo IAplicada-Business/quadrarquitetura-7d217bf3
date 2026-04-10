@@ -75,11 +75,11 @@ export default function Reports() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in print:p-0">
-      <div className="flex justify-between items-center print:hidden">
+    <div className="space-y-6 p-0 animate-fade-in print:p-0">
+      <div className="flex items-center justify-between print:hidden">
         <div>
-          <h1 className="text-2xl font-bold">Relatórios</h1>
-          <p className="text-muted-foreground">Geração e exportação de relatórios gerenciais</p>
+          <h1 className="text-2xl font-playfair">Relatórios</h1>
+          <p className="text-sm text-muted-foreground mt-1">Geração e exportação de relatórios gerenciais</p>
         </div>
       </div>
 
