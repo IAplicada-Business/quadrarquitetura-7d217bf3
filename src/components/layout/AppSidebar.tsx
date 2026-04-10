@@ -1,15 +1,70 @@
 import {
   ChevronDown,
   ChevronRight,
+  LayoutDashboard,
+  HardHat,
+  FileBarChart,
+  Users,
+  FileText,
+  FileSignature,
+  UserCheck,
+  Building2,
+  ClipboardList,
+  CheckSquare,
+  Mic,
+  CalendarDays,
+  Truck,
+  CalendarRange,
+  Film,
+  Send,
+  Settings,
+  Shield,
+  Receipt,
+  LucideIcon,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import logoLight from "@/assets/logo-light.png";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 type MenuItem = { title: string; url: string; subItems?: { title: string; url: string }[] };
 type MenuGroup = { label: string; items: MenuItem[] };
+
+const iconMap: Record<string, LucideIcon> = {
+  "Dashboard Escritório": LayoutDashboard,
+  "Dashboard Obras": HardHat,
+  "Relatórios": FileBarChart,
+  "Leads": Users,
+  "Documentos": FileText,
+  "Propostas": FileText,
+  "Contratos": FileSignature,
+  "Clientes": UserCheck,
+  "Obras": Building2,
+  "Acompanhamento": ClipboardList,
+  "Tarefas": CheckSquare,
+  "Tarefas por Obra": CheckSquare,
+  "Histórico de Voz": Mic,
+  "Agenda": CalendarDays,
+  "Fornecedores": Truck,
+  "Calendário": CalendarRange,
+  "Roteiros": Film,
+  "Publicações": Send,
+  "Configurações": Settings,
+  "Usuários": Shield,
+  "Notas Fiscais": Receipt,
+};
 
 const menuGroups: MenuGroup[] = [
   {
@@ -82,9 +137,10 @@ const routeGroupMap: Record<string, string> = {
 
 interface AppSidebarProps {
   onNavigate?: () => void;
+  collapsed?: boolean;
 }
 
-export function AppSidebar({ onNavigate }: AppSidebarProps) {
+export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
   const getInitialGroups = (): Record<string, boolean> => {
     try {
       const saved = localStorage.getItem("sidebar_groups_state");
@@ -97,6 +153,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({});
   const manualOverrides = useRef<Set<string>>(new Set());
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const prefix = Object.keys(routeGroupMap).find((p) => location.pathname.startsWith(p));
@@ -128,8 +185,65 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const isSubItemActive = (item: MenuItem) =>
     item.subItems?.some((sub) => location.pathname === sub.url) ?? false;
 
+  const getIcon = (title: string) => {
+    const Icon = iconMap[title];
+    return Icon ? <Icon className="h-4 w-4 shrink-0" /> : null;
+  };
+
+  // --- COLLAPSED (mini) MODE ---
+  if (collapsed) {
+    return (
+      <TooltipProvider delayDuration={0}>
+        <aside className="flex flex-col h-full w-14 border-r border-sidebar-border bg-sidebar transition-all duration-200">
+          <div className="flex items-center justify-center h-14 border-b border-sidebar-border">
+            <LayoutDashboard className="h-5 w-5 text-sidebar-foreground" />
+          </div>
+
+          <nav className="flex-1 py-1 overflow-y-auto">
+            {menuGroups.map((group, gi) => (
+              <div key={group.label} className={cn(gi > 0 && "border-t border-sidebar-border/50")}>
+                {group.items.map((item) => {
+                  if (item.subItems) {
+                    return (
+                      <CollapsedSubMenu
+                        key={item.title}
+                        item={item}
+                        icon={getIcon(item.title)}
+                        isActive={isSubItemActive(item)}
+                        onNavigate={onNavigate}
+                      />
+                    );
+                  }
+                  return (
+                    <Tooltip key={item.url}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => { navigate(item.url); onNavigate?.(); }}
+                          className={cn(
+                            "flex items-center justify-center w-full h-10 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors",
+                            location.pathname === item.url && "bg-sidebar-accent text-sidebar-accent-foreground"
+                          )}
+                        >
+                          {getIcon(item.title)}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="text-xs">
+                        {item.title}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            ))}
+          </nav>
+        </aside>
+      </TooltipProvider>
+    );
+  }
+
+  // --- EXPANDED MODE ---
   return (
-    <aside className="flex flex-col h-full w-64 border-r border-sidebar-border bg-sidebar">
+    <aside className="flex flex-col h-full w-64 border-r border-sidebar-border bg-sidebar transition-all duration-200">
       <div className="flex items-center p-3 border-b border-sidebar-border">
         <div className="h-14 flex items-center flex-1">
           <img src={logoLight} alt="Quadra Arquitetura" className="h-14 object-contain object-left animate-fade-in" />
@@ -168,7 +282,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                           isSubItemActive(item) && "text-sidebar-accent-foreground"
                         )}
                       >
-                        {item.title}
+                        <span className="flex items-center gap-2">
+                          {getIcon(item.title)}
+                          {item.title}
+                        </span>
                         <ChevronRight
                           className={cn(
                             "h-3 w-3 transition-transform duration-200",
@@ -188,10 +305,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                               <NavLink
                                 to={sub.url}
                                 end
-                                className="block rounded-md px-4 py-1.5 text-xs font-medium text-sidebar-foreground transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                                className="flex items-center gap-2 rounded-md px-4 py-1.5 text-xs font-medium text-sidebar-foreground transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                                 activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
                                 onClick={onNavigate}
                               >
+                                {getIcon(sub.title)}
                                 {sub.title}
                               </NavLink>
                             </li>
@@ -204,10 +322,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                       <NavLink
                         to={item.url}
                         end={item.url === "/dashboard"}
-                        className="block rounded-md px-4 py-2 text-sm font-medium text-sidebar-foreground transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        className="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-sidebar-foreground transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                         activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
                         onClick={onNavigate}
                       >
+                        {getIcon(item.title)}
                         {item.title}
                       </NavLink>
                     </li>
@@ -219,5 +338,51 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         ))}
       </nav>
     </aside>
+  );
+}
+
+// Sub-component for collapsed sub-menu items with popover
+function CollapsedSubMenu({
+  item,
+  icon,
+  isActive,
+  onNavigate,
+}: {
+  item: MenuItem;
+  icon: React.ReactNode;
+  isActive: boolean;
+  onNavigate?: () => void;
+}) {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          className={cn(
+            "flex items-center justify-center w-full h-10 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors",
+            isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+          )}
+        >
+          {icon}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="right" align="start" className="w-44 p-1">
+        {item.subItems?.map((sub) => (
+          <button
+            key={sub.url}
+            onClick={() => { navigate(sub.url); onNavigate?.(); }}
+            className={cn(
+              "flex items-center gap-2 w-full rounded-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent transition-colors",
+              location.pathname === sub.url && "bg-accent text-accent-foreground"
+            )}
+          >
+            {iconMap[sub.title] && (() => { const I = iconMap[sub.title]; return <I className="h-3.5 w-3.5" />; })()}
+            {sub.title}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
   );
 }
