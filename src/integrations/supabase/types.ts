@@ -475,6 +475,98 @@ export type Database = {
           },
         ]
       }
+      content_posts: {
+        Row: {
+          created_at: string | null
+          hashtags: string[] | null
+          hook: string | null
+          id: string
+          notes: string | null
+          objective: string | null
+          platform: string | null
+          scheduled_date: string | null
+          script: string | null
+          series_id: string | null
+          status: string | null
+          target_audience: string | null
+          title: string
+          tone: string | null
+          type: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          hashtags?: string[] | null
+          hook?: string | null
+          id?: string
+          notes?: string | null
+          objective?: string | null
+          platform?: string | null
+          scheduled_date?: string | null
+          script?: string | null
+          series_id?: string | null
+          status?: string | null
+          target_audience?: string | null
+          title: string
+          tone?: string | null
+          type?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          hashtags?: string[] | null
+          hook?: string | null
+          id?: string
+          notes?: string | null
+          objective?: string | null
+          platform?: string | null
+          scheduled_date?: string | null
+          script?: string | null
+          series_id?: string | null
+          status?: string | null
+          target_audience?: string | null
+          title?: string
+          tone?: string | null
+          type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_posts_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "content_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_series: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       contract_templates: {
         Row: {
           clause_confidentiality: string | null
