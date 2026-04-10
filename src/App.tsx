@@ -28,6 +28,7 @@ import NotificationsPage from "./pages/NotificationsPage";
 import NotFound from "./pages/NotFound";
 import ClientPortal from "./pages/ClientPortal";
 import InvoicesPage from "./pages/InvoicesPage";
+import ContentPlaceholder from "./pages/ContentPlaceholder";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -93,6 +94,10 @@ const App = () => (
               <Route path="/admin/users" element={<AdminUsersPage />} />
               <Route path="/admin/invoices" element={<InvoicesPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
+              {/* Gestão de Conteúdo */}
+              <Route path="/content/calendar" element={<ContentPlaceholder title="Calendário" />} />
+              <Route path="/content/scripts" element={<ContentPlaceholder title="Roteiros" />} />
+              <Route path="/content/posts" element={<ContentPlaceholder title="Publicações" />} />
               {/* Redirects de compatibilidade */}
               <Route path="/site-tracking" element={<Navigate to="/construction/tracking" replace />} />
               <Route path="/suppliers" element={<Navigate to="/construction/suppliers" replace />} />
