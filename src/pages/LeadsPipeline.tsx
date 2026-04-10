@@ -20,6 +20,7 @@ import { Progress } from "@/components/ui/progress";
 import { useLeads, LEAD_STATUSES, leadStatusLabels, Lead } from "@/hooks/useLeads";
 import { differenceInDays, subMonths, format, startOfMonth } from "date-fns";
 import { pt } from "date-fns/locale";
+import { SendMessageModal } from "@/components/messages/SendMessageModal";
 
 const originLabels: Record<string, string> = {
   indicacao: "Indicação", instagram: "Instagram", google: "Google", site: "Site", outro: "Outro",
