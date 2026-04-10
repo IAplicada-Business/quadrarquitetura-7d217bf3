@@ -40,7 +40,7 @@ export function useInvoicesNF(filters: InvoiceNFFilters = {}) {
   });
 
   const create = useMutation({
-    mutationFn: async (item: Omit<InvoiceNF, "id" | "created_at" | "user_id">) => {
+    mutationFn: async (item: Record<string, unknown>) => {
       const { error } = await supabase.from("invoices_nf").insert({
         ...item,
         user_id: user!.id,
