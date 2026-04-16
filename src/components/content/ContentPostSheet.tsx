@@ -216,7 +216,7 @@ export default function ContentPostSheet({ open, onOpenChange, post, series, onS
                 <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhuma</SelectItem>
-                  {series.map((s) => (
+                  {series.filter((s) => s.id && s.id.trim() !== "").map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       <span className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full" style={{ background: s.color }} />
