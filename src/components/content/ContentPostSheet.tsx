@@ -41,7 +41,7 @@ export default function ContentPostSheet({ open, onOpenChange, post, series, onS
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [hashtagInput, setHashtagInput] = useState("");
   const [notes, setNotes] = useState("");
-  const [seriesId, setSeriesId] = useState("");
+  const [seriesId, setSeriesId] = useState("none");
   const [generating, setGenerating] = useState(false);
 
   // Sync form state when sheet opens with new data
@@ -64,7 +64,7 @@ export default function ContentPostSheet({ open, onOpenChange, post, series, onS
     setHashtags(post?.hashtags || []);
     setHashtagInput("");
     setNotes(post?.notes || "");
-    setSeriesId(post?.series_id || "");
+    setSeriesId(post?.series_id || "none");
   }, [open, post?.id, defaultDate]);
 
   const resetForm = () => {
@@ -81,7 +81,7 @@ export default function ContentPostSheet({ open, onOpenChange, post, series, onS
     setHashtags([]);
     setHashtagInput("");
     setNotes("");
-    setSeriesId("");
+    setSeriesId("none");
   };
 
   const handleHashtagKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -148,7 +148,7 @@ export default function ContentPostSheet({ open, onOpenChange, post, series, onS
       script: script || null,
       hashtags,
       notes: notes || null,
-      series_id: seriesId || null,
+      series_id: seriesId && seriesId !== "none" ? seriesId : null,
       target_audience: targetAudience || null,
       tone: tone || null,
     });
@@ -215,7 +215,7 @@ export default function ContentPostSheet({ open, onOpenChange, post, series, onS
               <Select value={seriesId} onValueChange={setSeriesId} disabled={readOnly}>
                 <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
+                  <SelectItem value="none">Nenhuma</SelectItem>
                   {series.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       <span className="flex items-center gap-2">
