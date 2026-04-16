@@ -162,79 +162,77 @@ export default function ContentCalendar() {
         </Select>
       </div>
 
-      <div className={`flex gap-6 ${isMobile ? "flex-col" : ""}`}>
-        {/* Calendar Grid */}
-        <div className="flex-1">
-          <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden">
-            {WEEKDAYS.map((w) => (
-              <div key={w} className="bg-muted p-2 text-center text-xs font-medium text-muted-foreground">{w}</div>
-            ))}
-            {weeks.flat().map((d, i) => {
-              const key = format(d, "yyyy-MM-dd");
-              const dayPosts = postsByDate[key] || [];
-              const isCurrentMonth = isSameMonth(d, currentDate);
-              const isToday = isSameDay(d, new Date());
-              return (
-                <div
-                  key={i}
-                  className={`bg-card min-h-[80px] p-1 cursor-pointer hover:bg-accent/30 transition-colors ${!isCurrentMonth ? "opacity-40" : ""} ${isToday ? "ring-1 ring-primary ring-inset" : ""}`}
-                  onClick={() => { if (dayPosts.length === 0) handleDayClick(d); }}
-                >
-                  <span className={`text-xs font-medium ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                    {format(d, "d")}
-                  </span>
-                  <div className="space-y-0.5 mt-0.5">
-                    {dayPosts.slice(0, 3).map((p) => (
-                      <div
-                        key={p.id}
-                        className="text-[10px] px-1 py-0.5 rounded truncate text-white cursor-pointer"
-                        style={{ background: TYPE_COLORS[p.type] || "#666" }}
-                        onClick={(e) => { e.stopPropagation(); handlePillClick(p); }}
-                        title={p.title}
-                      >
-                        {p.title.slice(0, 20)}
-                      </div>
-                    ))}
-                    {dayPosts.length > 3 && (
-                      <span className="text-[10px] text-muted-foreground">+{dayPosts.length - 3}</span>
-                    )}
-                  </div>
+      {/* Calendar Grid - full width */}
+      <div>
+        <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden">
+          {WEEKDAYS.map((w) => (
+            <div key={w} className="bg-muted p-2 text-center text-xs font-medium text-muted-foreground">{w}</div>
+          ))}
+          {weeks.flat().map((d, i) => {
+            const key = format(d, "yyyy-MM-dd");
+            const dayPosts = postsByDate[key] || [];
+            const isCurrentMonth = isSameMonth(d, currentDate);
+            const isToday = isSameDay(d, new Date());
+            return (
+              <div
+                key={i}
+                className={`bg-card min-h-[80px] p-1 cursor-pointer hover:bg-accent/30 transition-colors ${!isCurrentMonth ? "opacity-40" : ""} ${isToday ? "ring-1 ring-primary ring-inset" : ""}`}
+                onClick={() => { if (dayPosts.length === 0) handleDayClick(d); }}
+              >
+                <span className={`text-xs font-medium ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+                  {format(d, "d")}
+                </span>
+                <div className="space-y-0.5 mt-0.5">
+                  {dayPosts.slice(0, 3).map((p) => (
+                    <div
+                      key={p.id}
+                      className="text-[10px] px-1 py-0.5 rounded truncate text-white cursor-pointer"
+                      style={{ background: TYPE_COLORS[p.type] || "#666" }}
+                      onClick={(e) => { e.stopPropagation(); handlePillClick(p); }}
+                      title={p.title}
+                    >
+                      {p.title.slice(0, 20)}
+                    </div>
+                  ))}
+                  {dayPosts.length > 3 && (
+                    <span className="text-[10px] text-muted-foreground">+{dayPosts.length - 3}</span>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Progress bar */}
-          <div className="mt-4 space-y-1">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{daysWithContent}/{daysInMonth} dias com conteúdo</span>
-              <span>{fillPercent}%</span>
-            </div>
-            <Progress value={fillPercent} className="h-2" />
-          </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Sidebar - desktop only */}
-        {!isMobile && (
-          <div className="w-64 space-y-3">
-            <h3 className="text-sm font-medium">Próximos 7 posts</h3>
-            {upcoming.length === 0 && <p className="text-xs text-muted-foreground">Nenhum post agendado</p>}
-            {upcoming.map((p) => (
-              <div key={p.id} className="border rounded-lg p-2 space-y-1 cursor-pointer hover:bg-accent/30" onClick={() => handlePillClick(p)}>
-                <div className="flex items-center gap-1">
-                  <Badge className="text-[10px] px-1 py-0 text-white" style={{ background: TYPE_COLORS[p.type] || "#666" }}>
-                    {p.type}
-                  </Badge>
-                  <Badge variant="outline" className="text-[10px] px-1 py-0">{STATUS_LABELS[p.status]}</Badge>
-                </div>
-                <p className="text-xs font-medium">{p.title}</p>
-                {p.scheduled_date && (
-                  <p className="text-[10px] text-muted-foreground">{format(new Date(p.scheduled_date + "T12:00:00"), "dd/MM")}</p>
-                )}
-              </div>
-            ))}
+        {/* Progress bar */}
+        <div className="mt-4 space-y-1">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{daysWithContent}/{daysInMonth} dias com conteúdo</span>
+            <span>{fillPercent}%</span>
           </div>
-        )}
+          <Progress value={fillPercent} className="h-2" />
+        </div>
+      </div>
+
+      {/* Upcoming posts - below calendar */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-medium">Próximos 7 posts</h3>
+        {upcoming.length === 0 && <p className="text-xs text-muted-foreground">Nenhum post agendado</p>}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {upcoming.map((p) => (
+            <div key={p.id} className="border rounded-lg p-2 space-y-1 cursor-pointer hover:bg-accent/30" onClick={() => handlePillClick(p)}>
+              <div className="flex items-center gap-1">
+                <Badge className="text-[10px] px-1 py-0 text-white" style={{ background: TYPE_COLORS[p.type] || "#666" }}>
+                  {p.type}
+                </Badge>
+                <Badge variant="outline" className="text-[10px] px-1 py-0">{STATUS_LABELS[p.status]}</Badge>
+              </div>
+              <p className="text-xs font-medium">{p.title}</p>
+              {p.scheduled_date && (
+                <p className="text-[10px] text-muted-foreground">{format(new Date(p.scheduled_date + "T12:00:00"), "dd/MM")}</p>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       <ContentPostSheet
