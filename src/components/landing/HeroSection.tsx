@@ -20,6 +20,7 @@ export function HeroSection() {
           src={coverImg}
           alt="Quadra Arquitetura"
           className="w-full h-full object-cover"
+          style={{ objectPosition: "center 20%" }}
         />
         {/* Gradient overlay */}
         <div
