@@ -640,15 +640,30 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
               // Calculate dates from project start or today
               const { data: project } = await supabase.from("projects").select("start_date").eq("id", projectId).single();
               const startDate = project?.start_date ? new Date(project.start_date) : new Date();
-              const updates = aiSchedule.map((s: any) => {
-                const act = activities.find(a => a.name === s.activity_name);
-                if (!act) return null;
+              const norm = (s: string) => (s || "").trim().toLowerCase();
+              const activityByName = new Map(activities.map(a => [norm(a.name), a]));
+              const updates: { id: string; start_date: string; end_date: string }[] = [];
+              const unmatched: string[] = [];
+              for (const s of aiSchedule) {
+                const act = activityByName.get(norm(s.activity_name));
                 const actStart = addDays(startDate, (s.week_number - 1) * 7);
                 const actEnd = addDays(actStart, s.duration_days);
-                return { id: act.id, start_date: format(actStart, "yyyy-MM-dd"), end_date: format(actEnd, "yyyy-MM-dd") };
-              }).filter(Boolean);
+                if (act) {
+                  updates.push({ id: act.id, start_date: format(actStart, "yyyy-MM-dd"), end_date: format(actEnd, "yyyy-MM-dd") });
+                } else {
+                  unmatched.push(s.activity_name);
+                }
+              }
               if (updates.length > 0) {
-                batchUpdateDates.mutate(updates as any);
+                batchUpdateDates.mutate(updates);
+              }
+              if (unmatched.length > 0) {
+                toast({
+                  title: `${updates.length} atividades atualizadas, ${unmatched.length} não encontradas`,
+                  description: `Crie manualmente: ${unmatched.slice(0, 3).join(", ")}${unmatched.length > 3 ? "..." : ""}`,
+                  variant: "destructive",
+                });
+              } else if (updates.length > 0) {
                 toast({ title: `${updates.length} atividades atualizadas com cronograma da IA` });
               }
               setAiScheduleOpen(false);

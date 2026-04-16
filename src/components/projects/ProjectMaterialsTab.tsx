@@ -18,7 +18,7 @@ import { ShoppingListDialog } from "./ShoppingListDialog";
 import { MaterialCalcByActivitiesDialog } from "./MaterialCalcByActivitiesDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDisciplineColor } from "@/lib/disciplineColors";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
@@ -46,6 +46,7 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
   const navigate = useNavigate();
   const { callAction, loading: aiLoading } = useProjectAI();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [aiMaterials, setAiMaterials] = useState<any[] | null>(null);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [selectedAiMaterials, setSelectedAiMaterials] = useState<Set<number>>(new Set());
@@ -166,6 +167,7 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
       const finalInserts = inserts.map(i => ({ ...i, user_id: user.id }));
       const { error } = await supabase.from("material_tracking").insert(finalInserts);
       if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["material_tracking", projectId] });
       toast({ title: `${finalInserts.length} materiais importados do escopo` });
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
@@ -268,6 +270,7 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
                   });
                   const { error } = await supabase.from("material_tracking").insert(inserts);
                   if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+                  queryClient.invalidateQueries({ queryKey: ["material_tracking", projectId] });
                   toast({ title: `${inserts.length} materiais importados da IA` });
                   setAiModalOpen(false);
                 }}>
