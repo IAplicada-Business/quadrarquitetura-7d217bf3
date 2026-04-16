@@ -123,7 +123,7 @@ export default function LeadsProposals() {
       feedbackImages: feedbacks,
       selectedPortfolioProjects: formData.portfolio_projects,
       selectedFeedbackIds: formData.feedback_items,
-      formato,
+      
     });
   }, [buildPageProps, portfolio, feedbacks]);
 

@@ -34,9 +34,9 @@ export async function generateProposalPdf(
   await waitForFonts();
 
   const pdf = new jsPDF({
-    orientation: isPresentation ? "landscape" : "portrait",
+    orientation: "portrait",
     unit: "pt",
-    format: [pdfW, pdfH],
+    format: [PDF_W_PT, PDF_H_PT],
   });
 
   for (let i = 0; i < pages.length; i++) {
@@ -44,8 +44,8 @@ export async function generateProposalPdf(
     if (!el) continue;
 
     const canvas = await html2canvas(el, {
-      width: canvasW,
-      height: canvasH,
+      width: PAGE_W,
+      height: PAGE_H,
       scale: 3,
       useCORS: true,
       logging: false,
@@ -53,8 +53,8 @@ export async function generateProposalPdf(
 
     const imgData = canvas.toDataURL("image/png");
 
-    if (i > 0) pdf.addPage([pdfW, pdfH], isPresentation ? "landscape" : "portrait");
-    pdf.addImage(imgData, "PNG", 0, 0, pdfW, pdfH);
+    if (i > 0) pdf.addPage([PDF_W_PT, PDF_H_PT], "portrait");
+    pdf.addImage(imgData, "PNG", 0, 0, PDF_W_PT, PDF_H_PT);
   }
 
   return pdf.output("blob");
