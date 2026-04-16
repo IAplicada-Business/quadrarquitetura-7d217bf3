@@ -91,9 +91,9 @@ export default function ContentScripts() {
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="flex gap-3 overflow-x-auto pb-4">
+        <div className="flex gap-3 overflow-x-auto pb-4 h-[calc(100vh-220px)]">
           {columns.map((col) => (
-            <div key={col.status} className="flex-shrink-0 w-56">
+            <div key={col.status} className="flex-shrink-0 w-56 flex flex-col">
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="text-sm font-medium">{col.label}</h3>
                 <span className="text-xs text-muted-foreground bg-muted rounded-full px-2">{col.posts.length}</span>
@@ -103,7 +103,7 @@ export default function ContentScripts() {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`space-y-2 min-h-[200px] p-2 rounded-lg transition-colors ${snapshot.isDraggingOver ? "bg-accent/30" : "bg-muted/30"}`}
+                    className={`space-y-2 flex-1 overflow-y-auto p-2 rounded-lg transition-colors ${snapshot.isDraggingOver ? "bg-accent/30" : "bg-muted/30"}`}
                   >
                     {col.posts.map((post, index) => (
                       <Draggable key={post.id} draggableId={post.id} index={index}>
