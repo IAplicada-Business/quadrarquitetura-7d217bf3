@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent } from "react";
+import { useState, useEffect, KeyboardEvent } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,38 +28,60 @@ interface ContentPostSheetProps {
 }
 
 export default function ContentPostSheet({ open, onOpenChange, post, series, onSave, readOnly, defaultDate }: ContentPostSheetProps) {
-  const [title, setTitle] = useState(post?.title || "");
-  const [type, setType] = useState(post?.type || "feed");
-  const [platform, setPlatform] = useState(post?.platform || "instagram");
-  const [status, setStatus] = useState(post?.status || "ideia");
-  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(
-    post?.scheduled_date ? new Date(post.scheduled_date + "T12:00:00") : defaultDate ? new Date(defaultDate + "T12:00:00") : undefined
-  );
-  const [objective, setObjective] = useState(post?.objective || "");
-  const [targetAudience, setTargetAudience] = useState(post?.target_audience || "");
-  const [tone, setTone] = useState(post?.tone || "especialista");
-  const [hook, setHook] = useState(post?.hook || "");
-  const [script, setScript] = useState(post?.script || "");
-  const [hashtags, setHashtags] = useState<string[]>(post?.hashtags || []);
+  const [title, setTitle] = useState("");
+  const [type, setType] = useState("feed");
+  const [platform, setPlatform] = useState("instagram");
+  const [status, setStatus] = useState("ideia");
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
+  const [objective, setObjective] = useState("");
+  const [targetAudience, setTargetAudience] = useState("");
+  const [tone, setTone] = useState("especialista");
+  const [hook, setHook] = useState("");
+  const [script, setScript] = useState("");
+  const [hashtags, setHashtags] = useState<string[]>([]);
   const [hashtagInput, setHashtagInput] = useState("");
-  const [notes, setNotes] = useState(post?.notes || "");
-  const [seriesId, setSeriesId] = useState(post?.series_id || "");
+  const [notes, setNotes] = useState("");
+  const [seriesId, setSeriesId] = useState("");
   const [generating, setGenerating] = useState(false);
 
-  const resetForm = () => {
+  // Sync form state when sheet opens with new data
+  useEffect(() => {
+    if (!open) return;
     setTitle(post?.title || "");
     setType(post?.type || "feed");
     setPlatform(post?.platform || "instagram");
     setStatus(post?.status || "ideia");
-    setScheduledDate(post?.scheduled_date ? new Date(post.scheduled_date + "T12:00:00") : defaultDate ? new Date(defaultDate + "T12:00:00") : undefined);
+    setScheduledDate(
+      post?.scheduled_date ? new Date(post.scheduled_date + "T12:00:00")
+      : defaultDate ? new Date(defaultDate + "T12:00:00")
+      : undefined
+    );
     setObjective(post?.objective || "");
     setTargetAudience(post?.target_audience || "");
     setTone(post?.tone || "especialista");
     setHook(post?.hook || "");
     setScript(post?.script || "");
     setHashtags(post?.hashtags || []);
+    setHashtagInput("");
     setNotes(post?.notes || "");
     setSeriesId(post?.series_id || "");
+  }, [open, post?.id, defaultDate]);
+
+  const resetForm = () => {
+    setTitle("");
+    setType("feed");
+    setPlatform("instagram");
+    setStatus("ideia");
+    setScheduledDate(undefined);
+    setObjective("");
+    setTargetAudience("");
+    setTone("especialista");
+    setHook("");
+    setScript("");
+    setHashtags([]);
+    setHashtagInput("");
+    setNotes("");
+    setSeriesId("");
   };
 
   const handleHashtagKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
