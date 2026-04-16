@@ -78,9 +78,9 @@ export function ContactSection() {
                 letterSpacing: "-0.01em",
               }}
             >
-              Pronto para criar
+              Tire sua obra
               <br />
-              <em style={{ color: "#C4756E", fontStyle: "italic" }}>algo unico</em>?
+              <em style={{ color: "#C4756E", fontStyle: "italic" }}>do papel</em>.
             </h2>
 
             <div className="w-12 h-px bg-[#C4756E] mb-8" />
@@ -96,8 +96,8 @@ export function ContactSection() {
                 fontWeight: 300,
               }}
             >
-              Conta pra gente sobre o seu projeto. Retornamos em ate 48 horas uteis para
-              marcar um bate-papo sem compromisso.
+              Conta pra gente sobre o seu projeto. Em ate 48 horas uteis agendamos
+              um diagnostico gratuito para entender o escopo, prazos e estimativa de investimento.
             </p>
 
             <ul className="space-y-4">

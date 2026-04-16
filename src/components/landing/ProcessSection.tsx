@@ -24,7 +24,7 @@ const steps = [
   {
     num: "05",
     title: "Obra",
-    description: "Gestao integrada com cronograma, orcamento e supervisao semanal no canteiro.",
+    description: "Gerenciamento direto: cronograma atualizado, controle de orcamento e supervisao semanal. Voce acompanha cada etapa sem surpresas.",
   },
   {
     num: "06",
@@ -77,7 +77,7 @@ export function ProcessSection() {
               fontWeight: 300,
             }}
           >
-            Um processo claro e bem conduzido, do primeiro encontro a entrega das chaves.
+            Seis etapas claras, com marcos definidos e previsibilidade de prazo e orcamento em cada uma delas.
           </p>
         </motion.div>
 

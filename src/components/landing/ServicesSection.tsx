@@ -3,28 +3,28 @@ import { Compass, Armchair, ClipboardList, Hammer } from "lucide-react";
 
 const services = [
   {
+    icon: ClipboardList,
+    title: "Gerenciamento de Obra",
+    description:
+      "Nosso diferencial. Cronograma, orcamento, compras e supervisao semanal no canteiro — tudo sob nossa gestao direta, com relatorios e previsibilidade em cada etapa.",
+  },
+  {
     icon: Compass,
     title: "Projeto Arquitetonico",
     description:
-      "Concepcao completa de espacos residenciais, comerciais e corporativos, do estudo preliminar ao detalhamento executivo.",
+      "Concepcao completa de espacos residenciais, corporativos e health care, do estudo preliminar ao detalhamento executivo.",
   },
   {
     icon: Armchair,
     title: "Design de Interiores",
     description:
-      "Projetos de interiores autorais, com atencao a ambientacao, materiais, iluminacao e marcenaria sob medida.",
-  },
-  {
-    icon: ClipboardList,
-    title: "Gestao de Obras",
-    description:
-      "Acompanhamento tecnico, orcamentario e de cronograma. Garantimos que a obra saia exatamente como foi projetada.",
+      "Projetos autorais com atencao a ambientacao, materiais, iluminacao e marcenaria sob medida — traduzindo a rotina e os afetos de cada cliente.",
   },
   {
     icon: Hammer,
-    title: "Reformas",
+    title: "Reformas turn-key",
     description:
-      "Planejamento e execucao de reformas complexas, com gestao integrada de fornecedores e entrega turn-key.",
+      "Planejamento e execucao de reformas complexas com gestao integrada de fornecedores. Entregamos a chave, nao uma lista de pendencias.",
   },
 ];
 

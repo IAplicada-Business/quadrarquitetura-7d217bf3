@@ -49,7 +49,7 @@ export function HeroSection() {
               fontWeight: 300,
             }}
           >
-            ARQUITETURA &nbsp;&middot;&nbsp; INTERIORES &nbsp;&middot;&nbsp; OBRAS
+            RESIDENCIAL &nbsp;&middot;&nbsp; CORPORATIVO &nbsp;&middot;&nbsp; HEALTH CARE
           </p>
 
           {/* Decorative line */}
@@ -66,9 +66,9 @@ export function HeroSection() {
               letterSpacing: "-0.02em",
             }}
           >
-            Ambientes que contam
+            A sua obra
             <br />
-            <em style={{ fontStyle: "italic", color: "#C4756E" }}>a sua historia.</em>
+            <em style={{ fontStyle: "italic", color: "#C4756E" }}>sob controle.</em>
           </h1>
 
           {/* Subtitle */}
@@ -81,8 +81,9 @@ export function HeroSection() {
               fontWeight: 300,
             }}
           >
-            Projetos autorais de arquitetura e interiores com gestao integrada de obra.
-            Uma abordagem tecnica, sensivel e sem amadorismos em Belo Horizonte.
+            Arquitetura e interiores com gerenciamento de obra integrado.
+            Cronograma, orcamento e entrega sem surpresas, do briefing a ultima peca instalada.
+            Belo Horizonte e regiao.
           </p>
 
           {/* CTAs */}
