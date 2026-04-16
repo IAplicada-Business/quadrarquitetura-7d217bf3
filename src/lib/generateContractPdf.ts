@@ -53,8 +53,7 @@ export async function generateContractPdf(contractData: ContractPageProps): Prom
     pages,
     (_page, index) => {
       return (pageElements[index]?.firstElementChild as HTMLElement) || null;
-    },
-    "a4"
+    }
   );
 
   // Cleanup
