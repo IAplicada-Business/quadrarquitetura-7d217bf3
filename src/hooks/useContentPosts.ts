@@ -84,6 +84,7 @@ export function useContentPosts() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["content_posts"] });
+      qc.invalidateQueries({ queryKey: ["content_calendar"] });
       toast({ title: "Post criado" });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
@@ -96,6 +97,7 @@ export function useContentPosts() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["content_posts"] });
+      qc.invalidateQueries({ queryKey: ["content_calendar"] });
       toast({ title: "Post atualizado" });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
@@ -108,6 +110,7 @@ export function useContentPosts() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["content_posts"] });
+      qc.invalidateQueries({ queryKey: ["content_calendar"] });
       toast({ title: "Post excluído" });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
