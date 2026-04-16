@@ -16,10 +16,6 @@ export const COLORS = {
 export const PAGE_W = 595;
 export const PAGE_H = 842;
 
-// 16:9 presentation format
-export const PAGE_W_16_9 = 1280;
-export const PAGE_H_16_9 = 720;
-
 export const FONT_TITLE = "'Cormorant Garamond', serif";
 export const FONT_BODY = "'Jost', sans-serif";
 

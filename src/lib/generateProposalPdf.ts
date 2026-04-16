@@ -1,14 +1,10 @@
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
-import { PAGE_W, PAGE_H, PAGE_W_16_9, PAGE_H_16_9 } from "@/components/leads/proposal-pages/shared";
+import { PAGE_W, PAGE_H } from "@/components/leads/proposal-pages/shared";
 
 // PDF dimensions in points matching the 595×842 pixel template
 const PDF_W_PT = 595.28;
 const PDF_H_PT = 841.89;
-
-// 16:9 landscape dimensions in points (1280×720 ratio)
-const PDF_W_16_9_PT = 960;
-const PDF_H_16_9_PT = 540;
 
 /**
  * Pre-loads all font weights used in proposal pages.
@@ -32,21 +28,15 @@ export async function waitForFonts(): Promise<void> {
 export async function generateProposalPdf(
   pages: React.ReactElement[],
   renderPage: (page: React.ReactElement, index: number) => HTMLElement | null,
-  formato: "a4" | "apresentacao" = "a4"
 ): Promise<Blob> {
-  const isPresentation = formato === "apresentacao";
-  const pdfW = isPresentation ? PDF_W_16_9_PT : PDF_W_PT;
-  const pdfH = isPresentation ? PDF_H_16_9_PT : PDF_H_PT;
-  const canvasW = isPresentation ? PAGE_W_16_9 : PAGE_W;
-  const canvasH = isPresentation ? PAGE_H_16_9 : PAGE_H;
 
   // Ensure fonts are loaded before capturing
   await waitForFonts();
 
   const pdf = new jsPDF({
-    orientation: isPresentation ? "landscape" : "portrait",
+    orientation: "portrait",
     unit: "pt",
-    format: [pdfW, pdfH],
+    format: [PDF_W_PT, PDF_H_PT],
   });
 
   for (let i = 0; i < pages.length; i++) {
@@ -54,8 +44,8 @@ export async function generateProposalPdf(
     if (!el) continue;
 
     const canvas = await html2canvas(el, {
-      width: canvasW,
-      height: canvasH,
+      width: PAGE_W,
+      height: PAGE_H,
       scale: 3,
       useCORS: true,
       logging: false,
@@ -63,8 +53,8 @@ export async function generateProposalPdf(
 
     const imgData = canvas.toDataURL("image/png");
 
-    if (i > 0) pdf.addPage([pdfW, pdfH], isPresentation ? "landscape" : "portrait");
-    pdf.addImage(imgData, "PNG", 0, 0, pdfW, pdfH);
+    if (i > 0) pdf.addPage([PDF_W_PT, PDF_H_PT], "portrait");
+    pdf.addImage(imgData, "PNG", 0, 0, PDF_W_PT, PDF_H_PT);
   }
 
   return pdf.output("blob");
