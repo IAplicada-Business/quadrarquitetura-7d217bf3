@@ -17,16 +17,12 @@ interface RendererProps {
   feedbackImages: ProposalAsset[];
   selectedPortfolioProjects: string[];
   selectedFeedbackIds: string[];
-  formato?: "a4" | "apresentacao";
 }
 
-export function buildProposalPages({ data, formato }: RendererProps): React.ReactElement[] {
+export function buildProposalPages({ data }: RendererProps): React.ReactElement[] {
   const showInteriores = !data.servicesIncluded || data.servicesIncluded === "ambos" || data.servicesIncluded === "projeto";
 
-  // Add page dimensions for presentation format
-  const pageData = formato === "apresentacao"
-    ? { ...data, pageWidth: 1280, pageHeight: 720 }
-    : data;
+  const pageData = data;
 
   const pages: React.ReactElement[] = [
     <ProposalCoverPage key="cover" {...pageData} />,
