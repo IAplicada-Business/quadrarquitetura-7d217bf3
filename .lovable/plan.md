@@ -1,33 +1,15 @@
 
 
-## Plano: Remover formato apresentação das propostas
+## Plano: Expandir altura das colunas do Kanban de Roteiros
 
-Remover o botão "Gerar Apresentação (16:9)" e todo o código relacionado ao formato `apresentacao`, mantendo apenas o PDF A4.
+### Alteração
 
-### Alterações
+**`src/pages/ContentScripts.tsx`**
 
-**1. `src/components/leads/ProposalFormNew.tsx`**
-- Remover prop `onGeneratePdfApresentacao` da interface e do componente
-- Remover o botão "Gerar Apresentação (16:9)" do JSX
-- Remover import `Monitor` do Lucide
-
-**2. `src/pages/LeadsProposals.tsx`**
-- Remover função `handleGeneratePdf16x9` inteira
-- Remover prop `onGeneratePdfApresentacao` passada ao `ProposalFormNew`
-- Remover parâmetro `formato` do `buildPages` (sempre A4)
-
-**3. `src/lib/generateProposalPdf.ts`**
-- Remover parâmetro `formato` da função `generateProposalPdf` (sempre A4)
-- Remover constantes `PDF_W_16_9_PT`, `PDF_H_16_9_PT`
-- Remover lógica condicional `isPresentation`
-
-**4. `src/components/leads/ProposalPageRenderer.tsx`**
-- Remover prop `formato` da interface
-- Remover lógica condicional de dimensões 16:9
-
-**5. `src/components/leads/proposal-pages/shared.tsx`**
-- Remover constantes `PAGE_W_16_9` e `PAGE_H_16_9`
+- Container flex das colunas (linha 94): adicionar `h-[calc(100vh-220px)]` para ocupar a altura disponível da página
+- Cada coluna (linha 96): trocar `flex-shrink-0 w-56` → `flex-shrink-0 w-56 flex flex-col` para usar flex vertical
+- Área droppable (linha 106): trocar `min-h-[200px]` → `flex-1` para preencher toda a altura restante da coluna
 
 ### O que NÃO muda
-- Formato A4, rotas, lógica de dados, demais componentes
+- Lógica, drag-and-drop, cards, rotas
 
