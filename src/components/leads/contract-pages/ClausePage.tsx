@@ -1,4 +1,4 @@
-import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, LogoQuadra, CONTRACT_STYLES } from "./shared";
+import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, LogoQuadra, LogoQuadraDark, CONTRACT_STYLES } from "./shared";
 
 interface ClauseItem {
   number: number;
@@ -55,7 +55,7 @@ export function ClausePage({ clauses, pageNumber, isEvenPage }: Props) {
       }}>
         {pageNumber}
       </div>
-      <LogoQuadra />
+      <LogoQuadraDark />
     </PageContainer>
   );
 }

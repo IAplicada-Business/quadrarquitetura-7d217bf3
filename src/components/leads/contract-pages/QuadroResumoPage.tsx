@@ -1,4 +1,4 @@
-import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, LogoQuadra, formatBRL, type ContractPageProps, numberToWords, formatContractDate, CONTRACT_STYLES } from "./shared";
+import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, LogoQuadraDark, formatBRL, type ContractPageProps, numberToWords, formatContractDate, CONTRACT_STYLES } from "./shared";
 import { CONTRATADA_FULL_TEXT, DEFAULT_FORO } from "@/data/defaultContractClauses";
 
 function Row({ label, value, isLast }: { label: string; value: string; isLast?: boolean }) {
@@ -66,7 +66,7 @@ export function QuadroResumoPage(props: ContractPageProps) {
           <Row label="Anexos" value="Anexo I: Cronograma do Projeto" isLast />
         </div>
       </div>
-      <LogoQuadra />
+      <LogoQuadraDark />
     </PageContainer>
   );
 }
