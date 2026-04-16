@@ -77,17 +77,16 @@ export function AboutSection() {
               }}
             >
               <p>
-                A Quadra nasceu do encontro de duas arquitetas com um proposito em
-                comum: transformar espacos em experiencias que fazem sentido para
-                quem os habita. Acreditamos que arquitetura e interiores sao,
-                antes de tudo, sobre pessoas.
+                A Quadra nasceu do encontro de duas arquitetas com um proposito
+                em comum: fazer com que a obra saia do papel do jeito que foi
+                projetada, sem surpresas de prazo, orcamento ou acabamento.
               </p>
               <p>
-                Nosso trabalho parte da escuta. De compreender a rotina, os
-                gostos e os afetos de cada cliente para traduzi-los em projetos
-                autorais, tecnicos e funcionais. Atuamos com projeto e gestao
-                integrada de obra, garantindo que a ideia do papel se materialize
-                com qualidade, transparencia e cuidado.
+                Nosso diferencial e o gerenciamento de obra integrado ao
+                projeto. Cronograma, compras, fornecedores e supervisao de
+                canteiro passam pela nossa gestao direta. A escuta guia o
+                projeto; o processo garante a entrega. Atuamos em residencial,
+                corporativo e health care em Belo Horizonte e regiao.
               </p>
               <p>
                 Mais que entregar projetos, entregamos a tranquilidade de um
