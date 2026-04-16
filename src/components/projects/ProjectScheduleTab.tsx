@@ -214,9 +214,45 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
     if (!user) return;
     setImporting(true);
     try {
+      // Prioriza project_activities (escopo novo, uma linha por atividade).
+      // Fallback para scope_items apenas se não houver atividades cadastradas.
+      if (activities.length > 0) {
+        const existingSourceIds = new Set(
+          items.map((t: any) => t.source_activity_id).filter(Boolean)
+        );
+        const newActivities = activities.filter(a => !existingSourceIds.has(a.id));
+        if (newActivities.length === 0) {
+          toast({ title: "Todas as atividades do escopo já estão no cronograma." });
+          return;
+        }
+        const statusMap: Record<string, string> = {
+          pendente: "planejado",
+          em_andamento: "em_execucao",
+          concluida: "executado",
+          bloqueada: "atrasado",
+        };
+        const inserts = newActivities.map((a, idx) => ({
+          project_id: projectId,
+          user_id: user.id,
+          task_name: a.name,
+          discipline: a.discipline,
+          start_date: a.start_date,
+          end_date: a.end_date,
+          status: statusMap[a.status] || "planejado",
+          source_activity_id: a.id,
+          order_index: items.length + idx + 1,
+          is_client_visible: true,
+        }));
+        const { error } = await supabase.from("schedule_tasks").insert(inserts as any);
+        if (error) throw error;
+        queryClient.invalidateQueries({ queryKey: ["schedule_tasks", projectId] });
+        toast({ title: `${newActivities.length} atividades importadas do escopo!` });
+        return;
+      }
+
       const contractedItems = scopeItems.filter(s => s.scope_type === "contratado" && !s.parent_id);
       if (contractedItems.length === 0) {
-        toast({ title: "Nenhuma disciplina contratada encontrada no escopo." });
+        toast({ title: "Nenhuma atividade ou disciplina contratada encontrada no escopo." });
         return;
       }
       const existingDisciplines = new Set(items.map((t: any) => t.discipline || (t.scope_items as any)?.discipline));
