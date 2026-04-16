@@ -1,4 +1,4 @@
-import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, LogoQuadra, CONTRACT_STYLES, type ContractPageProps } from "./shared";
+import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, LogoQuadraDark, CONTRACT_STYLES, type ContractPageProps } from "./shared";
 import { ANEXO_PRORROGACAO } from "@/data/defaultContractClauses";
 
 function daysText(days: number | null): string {
@@ -83,7 +83,7 @@ export function AnexoCronogramaPage(props: ContractPageProps) {
           </div>
         </div>
       </div>
-      <LogoQuadra />
+      <LogoQuadraDark />
     </PageContainer>
   );
 }

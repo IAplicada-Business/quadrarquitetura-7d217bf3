@@ -1,6 +1,9 @@
 // Re-export shared constants from proposal pages
 export { COLORS, PAGE_W, PAGE_H, FONT_TITLE, FONT_BODY, PageContainer, LogoQuadra, formatBRL } from "@/components/leads/proposal-pages/shared";
 
+// Dark version of LogoQuadra for light backgrounds (begeClaro, white)
+export { LogoQuadraDark } from "./LogoQuadraDark";
+
 // Contract-specific types
 export interface ContractPageProps {
   contractNumber: string;
