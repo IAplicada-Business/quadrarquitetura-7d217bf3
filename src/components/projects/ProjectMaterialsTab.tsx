@@ -11,6 +11,7 @@ import { useMaterialTracking } from "@/hooks/useMaterialTracking";
 import { useProjectPurchases } from "@/hooks/useProjectPurchases";
 import { useScopeItems } from "@/hooks/useScopeItems";
 import { useProjectActivities } from "@/hooks/useProjectActivities";
+import { useProjectDisciplines } from "@/hooks/useProjectDisciplines";
 import { MaterialTrackingForm } from "./MaterialTrackingForm";
 import { ProjectMaterialsInventory } from "./ProjectMaterialsInventory";
 import { ProjectPurchasesTab } from "./ProjectPurchasesTab";
@@ -68,12 +69,14 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
     },
   });
 
+  const { disciplines: scopeDisciplines } = useProjectDisciplines(projectId);
   const disciplines = useMemo(() => {
-    const set = new Set<string>();
-    scopeItems.filter(s => !s.parent_id).forEach(s => set.add(s.discipline));
+    // Escopo é a fonte canônica (useProjectDisciplines já escolhe activities vs scope_items).
+    // Completa com disciplinas que já aparecem em material_tracking para não perder dados soltos.
+    const set = new Set<string>(scopeDisciplines);
     tracking.items.forEach((m: any) => m.discipline && set.add(m.discipline));
     return Array.from(set).sort();
-  }, [scopeItems, tracking.items]);
+  }, [scopeDisciplines, tracking.items]);
 
   // Split tracking items into auto (by activity) and manual
   const autoItems = useMemo(() =>

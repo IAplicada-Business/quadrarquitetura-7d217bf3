@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSiteDiary } from "@/hooks/useSiteDiary";
 import { useScopeItems } from "@/hooks/useScopeItems";
+import { useProjectDisciplines } from "@/hooks/useProjectDisciplines";
 import { useScheduleTasks } from "@/hooks/useScheduleTasks";
 import { useWeeklyReports } from "@/hooks/useWeeklyReports";
 import { useSupplierAllocations } from "@/hooks/useSupplierAllocations";
@@ -98,9 +99,15 @@ export function ProjectTrackingTab({ projectId, projectName, clientName, clientP
   const [observations, setObservations] = useState("");
   const [disciplinesActive, setDisciplinesActive] = useState<string[]>([]);
 
-  const contractedDisciplines = scopeItems
-    .filter(s => s.scope_type === "contratado" && !s.parent_id)
-    .map(s => s.discipline);
+  // Disciplinas vêm da fonte canônica (project_activities, com fallback em scope_items).
+  // Antes lia apenas scope_items "contratado", o que ignorava projetos que editaram só no escopo novo.
+  const { disciplines: canonicalDisciplines } = useProjectDisciplines(projectId);
+  const contractedDisciplines = canonicalDisciplines.length > 0
+    ? canonicalDisciplines
+    : scopeItems
+        .filter(s => s.scope_type === "contratado" && !s.parent_id)
+        .map(s => s.discipline)
+        .filter(Boolean) as string[];
 
   const resetForm = () => {
     setEntryDate(new Date().toISOString().split("T")[0]);
