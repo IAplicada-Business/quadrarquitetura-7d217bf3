@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
-import coverImg from "@/assets/socias-cover.jpg";
+import coverImg from "@/assets/carousel-1.jpg";
 
 export function HeroSection() {
   const smoothTo = (href: string) => {
@@ -20,7 +20,7 @@ export function HeroSection() {
           src={coverImg}
           alt="Quadra Arquitetura"
           className="w-full h-full object-cover"
-          style={{ objectPosition: "center 20%" }}
+          style={{ objectPosition: "center center" }}
         />
         {/* Gradient overlay */}
         <div
@@ -81,7 +81,7 @@ export function HeroSection() {
               fontWeight: 300,
             }}
           >
-            Arquitetura e interiores com gerenciamento de obra integrado.
+            Gerenciamento de obra com design de interiores autoral.
             Cronograma, orcamento e entrega sem surpresas, do briefing a ultima peca instalada.
             Belo Horizonte e regiao.
           </p>

@@ -46,7 +46,7 @@ export function LandingNavbar() {
           <img
             src={scrolled ? logoDark : logoLight}
             alt="Quadra Arquitetura"
-            className="h-8 md:h-10 w-auto transition-opacity duration-300"
+            className="h-12 md:h-16 w-auto transition-opacity duration-300"
           />
         </button>
 
