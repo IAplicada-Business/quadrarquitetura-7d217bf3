@@ -27,7 +27,15 @@ export function HeroSection() {
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(180deg, rgba(27,42,74,0.55) 0%, rgba(27,42,74,0.35) 40%, rgba(27,42,74,0.75) 100%)",
+              "linear-gradient(180deg, rgba(27,42,74,0.75) 0%, rgba(27,42,74,0.65) 50%, rgba(27,42,74,0.85) 100%)",
+          }}
+        />
+        {/* Left-side darkening for text legibility */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(90deg, rgba(27,42,74,0.55) 0%, rgba(27,42,74,0.25) 45%, rgba(27,42,74,0) 70%)",
           }}
         />
       </motion.div>
