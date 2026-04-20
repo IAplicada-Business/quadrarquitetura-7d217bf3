@@ -13,7 +13,7 @@ export function LandingFooter() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-16 pb-12 border-b border-[#F0DCC8]/10">
           {/* Brand */}
           <div>
-            <img src={logoLight} alt="Quadra Arquitetura" className="h-10 w-auto mb-6" />
+            <img src={logoLight} alt="Quadra Arquitetura" className="h-16 w-auto mb-6" />
             <p
               className="max-w-xs"
               style={{
@@ -24,7 +24,7 @@ export function LandingFooter() {
                 fontWeight: 300,
               }}
             >
-              Arquitetura, interiores e gestao de obras. Projetos autorais em Belo Horizonte/MG.
+              Gerenciamento de obra, interiores e reformas turn-key. Projetos em Belo Horizonte/MG.
             </p>
           </div>
 

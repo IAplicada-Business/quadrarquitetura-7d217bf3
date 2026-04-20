@@ -155,7 +155,7 @@ export function ContactSection() {
                   fontWeight: 400,
                 }}
               >
-                Envie uma mensagem
+                Solicite seu diagnostico gratuito
               </h3>
 
               <div className="space-y-5">
@@ -250,7 +250,7 @@ export function ContactSection() {
                     </>
                   ) : (
                     <>
-                      Enviar mensagem
+                      Solicitar diagnostico gratuito
                       <Send className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </>
                   )}

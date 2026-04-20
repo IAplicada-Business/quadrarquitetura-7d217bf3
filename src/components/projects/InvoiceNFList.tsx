@@ -42,10 +42,10 @@ export function InvoiceNFList({ projectId, showProjectColumn, projects }: Invoic
   const [filterProject, setFilterProject] = useState<string>(projectId || "");
 
   const filters = {
-    projectId: filterProject || undefined,
-    nfType: filterType || undefined,
+    projectId: filterProject && filterProject !== "all" ? filterProject : undefined,
+    nfType: filterType && filterType !== "all" ? filterType : undefined,
     competenceMonth: filterMonth || undefined,
-    status: filterStatus || undefined,
+    status: filterStatus && filterStatus !== "all" ? filterStatus : undefined,
   };
   const { items, isLoading, create, update, remove } = useInvoicesNF(filters);
 

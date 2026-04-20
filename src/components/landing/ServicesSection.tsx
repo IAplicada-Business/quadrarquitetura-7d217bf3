@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Compass, Armchair, ClipboardList, Hammer } from "lucide-react";
+import { Armchair, ClipboardList, Hammer } from "lucide-react";
 
 const services = [
   {
@@ -7,12 +7,6 @@ const services = [
     title: "Gerenciamento de Obra",
     description:
       "Nosso diferencial. Cronograma, orcamento, compras e supervisao semanal no canteiro — tudo sob nossa gestao direta, com relatorios e previsibilidade em cada etapa.",
-  },
-  {
-    icon: Compass,
-    title: "Projeto Arquitetonico",
-    description:
-      "Concepcao completa de espacos residenciais, corporativos e health care, do estudo preliminar ao detalhamento executivo.",
   },
   {
     icon: Armchair,
