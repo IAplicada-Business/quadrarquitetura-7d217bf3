@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useScheduleTasks } from "@/hooks/useScheduleTasks";
 import { useScopeItems } from "@/hooks/useScopeItems";
 import { useProjectActivities, computeRecalculateAll } from "@/hooks/useProjectActivities";
+import { useProjectDisciplines } from "@/hooks/useProjectDisciplines";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -59,14 +60,17 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const [aiSchedule, setAiSchedule] = useState<any[] | null>(null);
   const [aiScheduleOpen, setAiScheduleOpen] = useState(false);
 
+  // Disciplinas canônicas vêm do escopo (useProjectDisciplines), mesclando
+  // com o que já existe em schedule_tasks para não perder dados antigos.
+  const { disciplines: scopeDisciplines } = useProjectDisciplines(projectId);
   const disciplines = useMemo(() => {
-    const set = new Set<string>();
+    const set = new Set<string>(scopeDisciplines);
     items.forEach((t: any) => {
       const d = t.discipline || (t.scope_items as any)?.discipline;
       if (d) set.add(d);
     });
     return Array.from(set).sort();
-  }, [items]);
+  }, [scopeDisciplines, items]);
 
   const suppliers = useMemo(() => {
     const set = new Set<string>();

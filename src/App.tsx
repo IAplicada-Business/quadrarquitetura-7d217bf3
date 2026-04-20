@@ -11,6 +11,7 @@ import DashboardEscritorio from "./pages/DashboardEscritorio";
 import DashboardObras from "./pages/DashboardObras";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
+import ProjectsKanban from "./pages/ProjectsKanban";
 import ProjectDetail from "./pages/ProjectDetail";
 import LeadsPipeline from "./pages/LeadsPipeline";
 import LeadDetail from "./pages/LeadDetail";
@@ -78,6 +79,7 @@ const App = () => (
               <Route path="/dashboard/obras" element={<DashboardObras />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/projects" element={<Projects />} />
+              <Route path="/projects/kanban" element={<ProjectsKanban />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
               {/* Leads */}
               <Route path="/leads/pipeline" element={<LeadsPipeline />} />

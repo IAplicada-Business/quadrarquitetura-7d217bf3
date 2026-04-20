@@ -2,6 +2,7 @@ import {
   ChevronDown,
   ChevronRight,
   LayoutDashboard,
+  LayoutGrid,
   HardHat,
   FileBarChart,
   Users,
@@ -52,6 +53,7 @@ const iconMap: Record<string, LucideIcon> = {
   "Contratos": FileSignature,
   "Clientes": UserCheck,
   "Obras": Building2,
+  "Kanban": LayoutGrid,
   "Acompanhamento": ClipboardList,
   "Tarefas": CheckSquare,
   "Tarefas por Obra": CheckSquare,
@@ -94,6 +96,7 @@ const menuGroups: MenuGroup[] = [
     label: "Gestão de Obras",
     items: [
       { title: "Obras", url: "/projects" },
+      { title: "Kanban", url: "/projects/kanban" },
       { title: "Acompanhamento", url: "/construction/tracking" },
       {
         title: "Tarefas",

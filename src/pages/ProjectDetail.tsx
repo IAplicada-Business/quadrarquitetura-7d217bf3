@@ -15,6 +15,7 @@ import { ProjectScenariosTab } from "@/components/projects/ProjectScenariosTab";
 import { ProjectBudgetsTab } from "@/components/projects/ProjectBudgetsTab";
 import { ProjectMaterialsTab } from "@/components/projects/ProjectMaterialsTab";
 import { ProjectScheduleTab } from "@/components/projects/ProjectScheduleTab";
+import { ProjectDeliveryChecklistTab } from "@/components/projects/ProjectDeliveryChecklistTab";
 import { ProjectFinancialTab } from "@/components/projects/ProjectFinancialTab";
 import { ProjectDocumentsTab } from "@/components/projects/ProjectDocumentsTab";
 import { ProjectTrackingTab } from "@/components/projects/ProjectTrackingTab";
@@ -33,6 +34,7 @@ export default function ProjectDetail() {
     { value: "orcamentos", label: "Orçamentos" },
     { value: "materiais", label: "Materiais" },
     { value: "cronograma", label: "Cronograma" },
+    { value: "checklist", label: "Checklist Entrega" },
     { value: "financeiro", label: "Prestação de Contas" },
     { value: "documentos", label: "Documentos" },
     { value: "acompanhamento", label: "Acompanhamento" },
@@ -145,6 +147,9 @@ export default function ProjectDetail() {
           </TabsContent>
           <TabsContent value="cronograma">
             <ProjectScheduleTab projectId={project.id} />
+          </TabsContent>
+          <TabsContent value="checklist">
+            <ProjectDeliveryChecklistTab projectId={project.id} />
           </TabsContent>
           <TabsContent value="financeiro">
             <ProjectFinancialTab projectId={project.id} projectName={project.name} />
