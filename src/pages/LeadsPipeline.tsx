@@ -34,6 +34,8 @@ const statusColors: Record<string, string> = {
   reuniao_agendada: "bg-purple-500/10 text-purple-700 border-purple-200",
   proposta_enviada: "bg-cyan-500/10 text-cyan-700 border-cyan-200",
   fechado: "bg-green-500/10 text-green-700 border-green-200",
+  perdido_definitivo: "bg-red-500/10 text-red-700 border-red-200",
+  backlog_recontato: "bg-orange-500/10 text-orange-700 border-orange-200",
   perdido: "bg-red-500/10 text-red-700 border-red-200",
 };
 
@@ -43,8 +45,14 @@ const columnBorderColors: Record<string, string> = {
   reuniao_agendada: "border-purple-400",
   proposta_enviada: "border-cyan-400",
   fechado: "border-green-400",
+  perdido_definitivo: "border-red-400",
+  backlog_recontato: "border-orange-400",
   perdido: "border-red-400",
 };
+
+// Status terminais (sem "próximo" no funil e excluídos do pipeline ativo)
+const TERMINAL_STATUSES = new Set(["fechado", "perdido_definitivo", "backlog_recontato", "perdido"]);
+const LOST_STATUSES = new Set(["perdido_definitivo", "perdido"]);
 
 export default function LeadsPipeline() {
   const navigate = useNavigate();
@@ -116,9 +124,11 @@ export default function LeadsPipeline() {
   };
 
   const getNextStatus = (status: string): string | null => {
-    const idx = LEAD_STATUSES.indexOf(status as any);
-    if (idx < 0 || idx >= LEAD_STATUSES.length - 2) return null;
-    return LEAD_STATUSES[idx + 1];
+    if (TERMINAL_STATUSES.has(status)) return null;
+    const activeFlow = ["novo", "contato_feito", "reuniao_agendada", "proposta_enviada", "fechado"];
+    const idx = activeFlow.indexOf(status);
+    if (idx < 0 || idx >= activeFlow.length - 1) return null;
+    return activeFlow[idx + 1];
   };
 
   // Drag-and-drop handlers
@@ -230,10 +240,11 @@ export default function LeadsPipeline() {
         const novos = leads.filter((l) => l.status === "novo").length;
         const reunioes = leads.filter((l) => l.status === "reuniao_agendada").length;
         const fechados = leads.filter((l) => l.status === "fechado").length;
-        const perdidos = leads.filter((l) => l.status === "perdido").length;
+        const perdidos = leads.filter((l) => LOST_STATUSES.has(l.status)).length;
+        const backlog = leads.filter((l) => l.status === "backlog_recontato").length;
         const conversionRate = total > 0 ? Math.round((fechados / total) * 100) : 0;
         return (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             <Card className="bg-blue-50/50 border-blue-100">
               <CardContent className="p-4 flex items-center gap-3">
                 <div className="p-2.5 bg-blue-100 rounded-full text-blue-600"><Users className="h-5 w-5" /></div>
@@ -267,6 +278,15 @@ export default function LeadsPipeline() {
                 <div>
                   <p className="text-xs text-muted-foreground font-medium">Conversão</p>
                   <p className="text-xl font-bold text-green-700">{conversionRate}%</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-orange-50/50 border-orange-100">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 bg-orange-100 rounded-full text-orange-600"><ArrowRight className="h-5 w-5" /></div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Backlog</p>
+                  <p className="text-xl font-bold text-orange-700">{backlog}</p>
                 </div>
               </CardContent>
             </Card>
@@ -352,10 +372,15 @@ export default function LeadsPipeline() {
                               Proposta
                             </Button>
                           )}
-                          {lead.status !== "fechado" && lead.status !== "perdido" && (
-                            <Button size="sm" variant="ghost" className="text-xs h-7 text-destructive" onClick={() => moveStatus(lead, "perdido")}>
-                              Perdido
-                            </Button>
+                          {!TERMINAL_STATUSES.has(lead.status) && (
+                            <>
+                              <Button size="sm" variant="ghost" className="text-xs h-7 text-orange-700" title="Mover para backlog de recontato" onClick={() => moveStatus(lead, "backlog_recontato")}>
+                                Backlog
+                              </Button>
+                              <Button size="sm" variant="ghost" className="text-xs h-7 text-destructive" title="Marcar como perdido definitivo" onClick={() => moveStatus(lead, "perdido_definitivo")}>
+                                Perdido
+                              </Button>
+                            </>
                           )}
                           {lead.status === "fechado" && lead.converted_client_id && (
                             <Badge variant="secondary" className="text-[10px]">
@@ -538,11 +563,12 @@ function LeadAnalytics({ leads }: { leads: Lead[] }) {
     LEAD_STATUSES.forEach((s) => { byStatus[s] = leads.filter((l) => l.status === s).length; });
 
     const fechados = byStatus["fechado"] || 0;
-    const perdidos = byStatus["perdido"] || 0;
+    const perdidos = (byStatus["perdido_definitivo"] || 0) + (byStatus["perdido"] || 0);
+    const backlog = byStatus["backlog_recontato"] || 0;
     const conversionRate = total > 0 ? ((fechados / total) * 100) : 0;
 
-    // Funnel conversion rates between stages
-    const stages = LEAD_STATUSES.filter((s) => s !== "perdido");
+    // Funnel conversion rates between stages (exclui status terminais não-fechado)
+    const stages = LEAD_STATUSES.filter((s) => !LOST_STATUSES.has(s) && s !== "backlog_recontato");
     const funnelRates: { from: string; to: string; rate: number }[] = [];
     for (let i = 0; i < stages.length - 1; i++) {
       const fromCount = stages.slice(i).reduce((sum, s) => sum + (byStatus[s] || 0), 0);
@@ -590,15 +616,15 @@ function LeadAnalytics({ leads }: { leads: Lead[] }) {
     }
     const maxMonthly = Math.max(...monthly.map((m) => m.count), 1);
 
-    // Lost reasons
-    const lostLeads = leads.filter((l) => l.status === "perdido" && l.lost_reason);
+    // Lost reasons (inclui status "perdido" legado + "perdido_definitivo")
+    const lostLeads = leads.filter((l) => LOST_STATUSES.has(l.status) && l.lost_reason);
     const lostReasons: Record<string, number> = {};
     lostLeads.forEach((l) => {
       const reason = l.lost_reason || "Não informado";
       lostReasons[reason] = (lostReasons[reason] || 0) + 1;
     });
 
-    return { total, byStatus, fechados, perdidos, conversionRate, funnelRates, avgDays, byOrigin, byType, monthly, maxMonthly, lostReasons, stages };
+    return { total, byStatus, fechados, perdidos, backlog, conversionRate, funnelRates, avgDays, byOrigin, byType, monthly, maxMonthly, lostReasons, stages };
   }, [leads]);
 
   const funnelColors = ["bg-blue-500", "bg-amber-500", "bg-purple-500", "bg-cyan-500", "bg-green-500"];

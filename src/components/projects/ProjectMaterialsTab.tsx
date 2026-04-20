@@ -12,6 +12,7 @@ import { useProjectPurchases } from "@/hooks/useProjectPurchases";
 import { useScopeItems } from "@/hooks/useScopeItems";
 import { useProjectActivities } from "@/hooks/useProjectActivities";
 import { MaterialTrackingForm } from "./MaterialTrackingForm";
+import { ProjectMaterialsInventory } from "./ProjectMaterialsInventory";
 import { ProjectPurchasesTab } from "./ProjectPurchasesTab";
 import { SupplierPurchaseList } from "./SupplierPurchaseList";
 import { ShoppingListDialog } from "./ShoppingListDialog";
@@ -181,9 +182,15 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
       <Tabs defaultValue="rastreamento">
         <TabsList>
           <TabsTrigger value="rastreamento">Rastreamento</TabsTrigger>
+          <TabsTrigger value="inventario">Inventário</TabsTrigger>
           <TabsTrigger value="atividades">Por Atividade (Cronograma)</TabsTrigger>
           <TabsTrigger value="compras">Compras</TabsTrigger>
         </TabsList>
+
+        {/* ===== INVENTÁRIO (3 colunas) ===== */}
+        <TabsContent value="inventario" className="mt-4">
+          <ProjectMaterialsInventory projectId={projectId} />
+        </TabsContent>
 
         {/* ===== RASTREAMENTO ===== */}
         <TabsContent value="rastreamento" className="space-y-4 mt-4">
