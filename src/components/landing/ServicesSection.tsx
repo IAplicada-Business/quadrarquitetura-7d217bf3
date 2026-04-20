@@ -68,7 +68,7 @@ export function ServicesSection() {
           />
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[#F0DCC8]/10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[#F0DCC8]/10">
           {services.map((s, i) => {
             const Icon = s.icon;
             return (
@@ -78,7 +78,7 @@ export function ServicesSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.8, delay: i * 0.1 }}
-                className="group relative bg-[#1B2A4A] p-10 md:p-14 transition-all duration-500 hover:bg-[#243558]"
+                className="group relative bg-[#1B2A4A] p-10 md:p-12 transition-all duration-500 hover:bg-[#243558]"
               >
                 {/* Number */}
                 <span
