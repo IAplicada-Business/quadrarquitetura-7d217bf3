@@ -7,10 +7,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import WeeklyReportView from "@/components/reports/WeeklyReportView";
+import { AccountingReport } from "@/components/reports/AccountingReport";
 
 const REPORT_TYPES = [
   { id: "semanal", name: "Relatório Semanal de Obra", icon: Calendar, desc: "Resumo de atividades, fotos e pendências" },
-  { id: "financeiro", name: "Relatório Financeiro", icon: TrendingUp, desc: "Fluxo de caixa, gastos por categoria e saldo" },
+  { id: "financeiro", name: "Relatório Fiscal (Contabilidade)", icon: TrendingUp, desc: "NFs emitidas e recebidas do mês, para anexar ao extrato bancário" },
   { id: "fornecedor", name: "Relatório de Fornecedores", icon: BarChart3, desc: "Desempenho, pagamentos e contratos" },
   { id: "cliente", name: "Prestação de Contas (Cliente)", icon: PieChart, desc: "Relatório formatado para apresentação ao cliente" },
 ];
@@ -51,6 +52,10 @@ export default function Reports() {
           projectAddress={selectedProjectData?.address || undefined}
         />
       );
+    }
+
+    if (selectedType === "financeiro") {
+      return <AccountingReport />;
     }
 
     // Placeholder for other report types

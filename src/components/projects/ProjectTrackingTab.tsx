@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { SendMessageModal } from "@/components/messages/SendMessageModal";
 import { useProjectAI } from "@/hooks/useProjectAI";
+import { VoiceInputButton } from "@/components/ui/voice-input-button";
 
 const weatherOptions = [
   { value: "ensolarado", label: "Ensolarado", icon: Sun },
@@ -346,11 +347,23 @@ export function ProjectTrackingTab({ projectId, projectName, clientName, clientP
               <Input type="number" value={workersCount} onChange={e => setWorkersCount(e.target.value)} placeholder="Ex: 5" />
             </div>
             <div>
-              <Label>Resumo das Atividades</Label>
+              <div className="flex items-center justify-between">
+                <Label>Resumo das Atividades</Label>
+                <VoiceInputButton
+                  title="Ditar resumo"
+                  onTranscript={(t) => setSummary((prev) => (prev ? prev + " " + t : t))}
+                />
+              </div>
               <Textarea value={summary} onChange={e => setSummary(e.target.value)} placeholder="O que foi executado hoje..." rows={3} />
             </div>
             <div>
-              <Label>Observações</Label>
+              <div className="flex items-center justify-between">
+                <Label>Observações</Label>
+                <VoiceInputButton
+                  title="Ditar observações"
+                  onTranscript={(t) => setObservations((prev) => (prev ? prev + " " + t : t))}
+                />
+              </div>
               <Textarea value={observations} onChange={e => setObservations(e.target.value)} placeholder="Problemas, atrasos, pendências..." rows={2} />
             </div>
             {contractedDisciplines.length > 0 && (

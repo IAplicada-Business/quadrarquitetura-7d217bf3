@@ -10,6 +10,8 @@ export const LEAD_STATUSES = [
   "reuniao_agendada",
   "proposta_enviada",
   "fechado",
+  "perdido_definitivo",
+  "backlog_recontato",
   "perdido",
 ] as const;
 
@@ -19,7 +21,9 @@ export const leadStatusLabels: Record<string, string> = {
   reuniao_agendada: "Reunião Agendada",
   proposta_enviada: "Proposta Enviada",
   fechado: "Fechado",
-  perdido: "Perdido",
+  perdido_definitivo: "Perdido (definitivo)",
+  backlog_recontato: "Backlog (recontato)",
+  perdido: "Perdido (legado)",
 };
 
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
