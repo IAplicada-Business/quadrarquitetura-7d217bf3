@@ -155,8 +155,28 @@ export default function AdminUsersPage() {
       body: form,
     });
 
-    if (error || data?.error) {
-      toast.error(data?.error || error?.message || "Erro ao criar usuário");
+    let errorMessage: string | null = null;
+    if (error) {
+      // Try to extract the JSON error body from FunctionsHttpError
+      const ctx = (error as any)?.context;
+      if (ctx && typeof ctx.json === "function") {
+        try {
+          const body = await ctx.json();
+          errorMessage = body?.error || null;
+        } catch {
+          // ignore parse error
+        }
+      }
+      errorMessage = errorMessage || error.message || "Erro ao criar usuário";
+    } else if (data?.error) {
+      errorMessage = data.error;
+    }
+
+    if (errorMessage) {
+      if (/already been registered|email_exists|already registered/i.test(errorMessage)) {
+        errorMessage = "Já existe um usuário cadastrado com este e-mail";
+      }
+      toast.error(errorMessage);
       setCreating(false);
       return;
     }
