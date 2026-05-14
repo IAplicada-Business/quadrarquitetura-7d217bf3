@@ -253,7 +253,7 @@ export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
         </div>
       </div>
 
-      <nav className="flex-1 py-2 overflow-y-auto">
+      <nav className="flex-1 py-2 overflow-y-auto scrollbar-sidebar">
         {menuGroups.map((group) => (
           <div key={group.label} className="mb-0.5">
             <button
