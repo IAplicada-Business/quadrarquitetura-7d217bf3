@@ -202,7 +202,7 @@ export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
             <LayoutDashboard className="h-5 w-5 text-sidebar-foreground" />
           </div>
 
-          <nav className="flex-1 py-1 overflow-y-auto">
+          <nav className="flex-1 py-1 overflow-y-auto scrollbar-sidebar">
             {menuGroups.map((group, gi) => (
               <div key={group.label} className={cn(gi > 0 && "border-t border-sidebar-border/50")}>
                 {group.items.map((item) => {
@@ -253,7 +253,7 @@ export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
         </div>
       </div>
 
-      <nav className="flex-1 py-2 overflow-y-auto">
+      <nav className="flex-1 py-2 overflow-y-auto scrollbar-sidebar">
         {menuGroups.map((group) => (
           <div key={group.label} className="mb-0.5">
             <button
