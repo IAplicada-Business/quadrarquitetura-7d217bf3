@@ -215,11 +215,7 @@ export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
       <TooltipProvider delayDuration={0}>
         <aside className="flex flex-col h-full w-16 border-r border-sidebar-border bg-sidebar transition-all duration-200">
           <div className="flex items-center justify-center h-16 border-b border-sidebar-border">
-            <img
-              src={logoBege}
-              alt="Quadra Arquitetura"
-              className="h-9 w-9 object-contain"
-            />
+            {/* Logo omitida: quando colapsada o header já exibe a logo */}
           </div>
 
           <nav className="flex-1 py-3 overflow-y-auto scrollbar-sidebar">
