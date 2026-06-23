@@ -163,6 +163,8 @@ export type Database = {
       activity_template_items: {
         Row: {
           ambiente: string | null
+          area_basis: string
+          area_factor: number | null
           area_m2: number | null
           created_at: string
           depends_on_positions: number[] | null
@@ -178,6 +180,8 @@ export type Database = {
         }
         Insert: {
           ambiente?: string | null
+          area_basis?: string
+          area_factor?: number | null
           area_m2?: number | null
           created_at?: string
           depends_on_positions?: number[] | null
@@ -193,6 +197,8 @@ export type Database = {
         }
         Update: {
           ambiente?: string | null
+          area_basis?: string
+          area_factor?: number | null
           area_m2?: number | null
           created_at?: string
           depends_on_positions?: number[] | null
@@ -3018,6 +3024,112 @@ export type Database = {
         }
         Relationships: []
       }
+      schedule_scenarios: {
+        Row: {
+          applied_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_baseline: boolean
+          name: string
+          project_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_baseline?: boolean
+          name: string
+          project_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_baseline?: boolean
+          name?: string
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_scenarios_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_scenario_activities: {
+        Row: {
+          area_m2: number | null
+          created_at: string
+          depends_on: string[] | null
+          description: string | null
+          discipline: string | null
+          duration_days: number | null
+          end_date: string | null
+          id: string
+          name: string
+          position: number
+          scenario_id: string
+          source_activity_id: string | null
+          start_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          area_m2?: number | null
+          created_at?: string
+          depends_on?: string[] | null
+          description?: string | null
+          discipline?: string | null
+          duration_days?: number | null
+          end_date?: string | null
+          id?: string
+          name: string
+          position?: number
+          scenario_id: string
+          source_activity_id?: string | null
+          start_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          area_m2?: number | null
+          created_at?: string
+          depends_on?: string[] | null
+          description?: string | null
+          discipline?: string | null
+          duration_days?: number | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          position?: number
+          scenario_id?: string
+          source_activity_id?: string | null
+          start_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_scenario_activities_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_diary_entries: {
         Row: {
           created_at: string
@@ -3398,51 +3510,63 @@ export type Database = {
       }
       voice_tasks: {
         Row: {
+          assigned_to: string | null
           category: string
           created_at: string
           description: string | null
           due_date: string | null
           id: string
+          is_recurring: boolean
           parent_id: string | null
           priority: string
-          project_id: string
+          project_id: string | null
+          recurrence_rule: string | null
           responsible: string | null
           source_transcript: string | null
           status: string
+          tags: string[] | null
           task_type: string
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          assigned_to?: string | null
           category?: string
           created_at?: string
           description?: string | null
           due_date?: string | null
           id?: string
+          is_recurring?: boolean
           parent_id?: string | null
           priority?: string
-          project_id: string
+          project_id?: string | null
+          recurrence_rule?: string | null
           responsible?: string | null
           source_transcript?: string | null
           status?: string
+          tags?: string[] | null
           task_type?: string
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          assigned_to?: string | null
           category?: string
           created_at?: string
           description?: string | null
           due_date?: string | null
           id?: string
+          is_recurring?: boolean
           parent_id?: string | null
           priority?: string
-          project_id?: string
+          project_id?: string | null
+          recurrence_rule?: string | null
           responsible?: string | null
           source_transcript?: string | null
           status?: string
+          tags?: string[] | null
           task_type?: string
           title?: string
           updated_at?: string

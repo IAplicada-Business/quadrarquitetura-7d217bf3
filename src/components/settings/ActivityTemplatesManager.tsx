@@ -23,12 +23,16 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type ProjectType = Tables<"projects">["project_type"];
 
+type AreaBasis = "fixed" | "proportional" | "per_room";
+
 interface DraftItem {
   position: number;
   name: string;
   ambiente: string;
   discipline: string;
   area_m2: string;
+  area_basis: AreaBasis;
+  area_factor: string;
   duration_days: string;
   description: string;
   // posições (índices na lista) das quais este item depende
@@ -73,6 +77,8 @@ export default function ActivityTemplatesManager() {
         ambiente: "",
         discipline: "",
         area_m2: "",
+        area_basis: "fixed",
+        area_factor: "",
         duration_days: "",
         description: "",
         depends_on_positions: [],
@@ -95,6 +101,8 @@ export default function ActivityTemplatesManager() {
           ambiente: it.ambiente ?? "",
           discipline: it.discipline ?? "",
           area_m2: it.area_m2 != null ? String(it.area_m2) : "",
+          area_basis: ((it as any).area_basis ?? "fixed") as AreaBasis,
+          area_factor: (it as any).area_factor != null ? String((it as any).area_factor) : "",
           duration_days: it.duration_days != null ? String(it.duration_days) : "",
           description: it.description ?? "",
           depends_on_positions: it.depends_on_positions ?? [],
@@ -116,6 +124,8 @@ export default function ActivityTemplatesManager() {
         ambiente: "",
         discipline: "",
         area_m2: "",
+        area_basis: "fixed",
+        area_factor: "",
         duration_days: "",
         description: "",
         depends_on_positions: [],
@@ -171,7 +181,9 @@ export default function ActivityTemplatesManager() {
         name: it.name.trim(),
         ambiente: it.ambiente.trim() || null,
         discipline: it.discipline.trim() || null,
-        area_m2: it.area_m2 ? parseFloat(it.area_m2) : null,
+        area_basis: it.area_basis,
+        area_m2: it.area_basis === "fixed" && it.area_m2 ? parseFloat(it.area_m2) : null,
+        area_factor: it.area_basis !== "fixed" && it.area_factor ? parseFloat(it.area_factor) : null,
         duration_days: it.duration_days ? parseInt(it.duration_days) : null,
         description: it.description.trim() || null,
         depends_on_positions: it.depends_on_positions.length > 0
@@ -323,7 +335,7 @@ export default function ActivityTemplatesManager() {
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
-                    <div className="grid grid-cols-4 gap-2 pl-8">
+                    <div className="grid grid-cols-[1fr_1fr_140px_1fr_80px] gap-2 pl-8">
                       <Input
                         placeholder="Ambiente"
                         value={it.ambiente}
@@ -334,12 +346,33 @@ export default function ActivityTemplatesManager() {
                         value={it.discipline}
                         onChange={(e) => updateItem(it.position, "discipline", e.target.value)}
                       />
-                      <Input
-                        type="number"
-                        placeholder="m²"
-                        value={it.area_m2}
-                        onChange={(e) => updateItem(it.position, "area_m2", e.target.value)}
-                      />
+                      <Select
+                        value={it.area_basis}
+                        onValueChange={(v) => updateItem(it.position, "area_basis", v)}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="fixed">m² fixo</SelectItem>
+                          <SelectItem value="proportional">% da área total</SelectItem>
+                          <SelectItem value="per_room">m² por cômodo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {it.area_basis === "fixed" ? (
+                        <Input
+                          type="number"
+                          placeholder="m²"
+                          value={it.area_m2}
+                          onChange={(e) => updateItem(it.position, "area_m2", e.target.value)}
+                        />
+                      ) : (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder={it.area_basis === "proportional" ? "Ex: 0.3 (30%)" : "m² por cômodo"}
+                          value={it.area_factor}
+                          onChange={(e) => updateItem(it.position, "area_factor", e.target.value)}
+                        />
+                      )}
                       <Input
                         type="number"
                         placeholder="dias úteis"

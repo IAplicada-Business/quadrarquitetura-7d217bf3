@@ -153,9 +153,18 @@ export function useActivityTemplates() {
    * UUIDs reais das atividades criadas. Pula itens com nome duplicado
    * no projeto para que aplicar o mesmo template duas vezes não gere
    * duplicatas.
+   *
+   * Itens com `area_basis = 'proportional'` ou `'per_room'` calculam
+   * `area_m2` no momento da aplicação a partir de `totalArea` e
+   * `roomCount` fornecidos. Itens 'fixed' usam `area_m2` direto.
    */
   const applyToProject = useMutation({
-    mutationFn: async (input: { templateId: string; projectId: string }) => {
+    mutationFn: async (input: {
+      templateId: string;
+      projectId: string;
+      totalArea?: number;
+      roomCount?: number;
+    }) => {
       const { data: tplItems, error: itemsError } = await supabase
         .from("activity_template_items")
         .select("*")
@@ -178,6 +187,18 @@ export function useActivityTemplates() {
         .limit(1);
       const baseOffset = (lastPos?.[0]?.position ?? -1) + 1;
 
+      const resolveArea = (it: any): number | null => {
+        const basis = (it.area_basis ?? "fixed") as "fixed" | "proportional" | "per_room";
+        const factor = it.area_factor as number | null;
+        if (basis === "proportional" && factor != null && input.totalArea != null) {
+          return Math.round(factor * input.totalArea * 100) / 100;
+        }
+        if (basis === "per_room" && factor != null && input.roomCount != null) {
+          return Math.round(factor * input.roomCount * 100) / 100;
+        }
+        return it.area_m2 ?? null;
+      };
+
       // 1ª passada: insere atividades sem `depends_on` e guarda o mapa
       // position-no-template → id-criado.
       const positionToId = new Map<number, string>();
@@ -190,7 +211,7 @@ export function useActivityTemplates() {
             user_id: user!.id,
             name: it.name,
             discipline: it.discipline,
-            area_m2: it.area_m2,
+            area_m2: resolveArea(it),
             duration_days: it.duration_days,
             description: it.description,
             position: baseOffset + it.position,

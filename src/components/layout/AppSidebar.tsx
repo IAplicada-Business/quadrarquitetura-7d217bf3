@@ -58,6 +58,7 @@ const iconMap: Record<string, LucideIcon> = {
   "Tarefas": CheckSquare,
   "Tarefas por Obra": CheckSquare,
   "Tarefas Quadra": ListChecks,
+  "Histórico de Voz": ListChecks,
   "Fornecedores": Truck,
   "Calendário": CalendarRange,
   "Roteiros": Film,
@@ -74,6 +75,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Dashboard Escritório", url: "/dashboard/escritorio" },
       { title: "Dashboard Obras", url: "/dashboard/obras" },
+      { title: "Tarefas Quadra", url: "/tasks" },
       { title: "Relatórios", url: "/construction/reports" },
     ],
   },
@@ -103,7 +105,7 @@ const menuGroups: MenuGroup[] = [
         url: "/construction/tasks",
         subItems: [
           { title: "Tarefas por Obra", url: "/construction/tasks" },
-          { title: "Tarefas Quadra", url: "/construction/voice-tasks" },
+          { title: "Histórico de Voz", url: "/construction/voice-tasks" },
         ],
       },
       { title: "Fornecedores", url: "/construction/suppliers" },

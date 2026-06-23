@@ -6,16 +6,20 @@ import { toast } from "@/hooks/use-toast";
 export interface VoiceTask {
   id: string;
   user_id: string;
-  project_id: string;
+  project_id: string | null;
   parent_id: string | null;
   title: string;
   description: string | null;
   responsible: string | null;
+  assigned_to: string | null;
   task_type: string;
   category: string;
   status: string;
   priority: string;
   due_date: string | null;
+  is_recurring: boolean;
+  recurrence_rule: string | null;
+  tags: string[] | null;
   source_transcript: string | null;
   created_at: string;
   updated_at: string;
@@ -131,27 +135,37 @@ export function useVoiceTasks(projectId?: string) {
   // manual é só plumbing.
   const createOneMutation = useMutation({
     mutationFn: async (task: {
-      project_id: string;
+      project_id?: string | null;
+      parent_id?: string | null;
       title: string;
       description?: string | null;
       responsible?: string | null;
+      assigned_to?: string | null;
       task_type?: string;
       category?: string;
       priority?: string;
       due_date?: string | null;
+      is_recurring?: boolean;
+      recurrence_rule?: string | null;
+      tags?: string[] | null;
     }) => {
       const { data, error } = await supabase
         .from("voice_tasks")
         .insert({
           user_id: user!.id,
-          project_id: task.project_id,
+          project_id: task.project_id ?? null,
+          parent_id: task.parent_id ?? null,
           title: task.title,
           description: task.description || null,
           responsible: task.responsible || null,
+          assigned_to: task.assigned_to || null,
           task_type: task.task_type || "geral",
           category: task.category || "pendencias",
           priority: task.priority || "media",
           due_date: task.due_date || null,
+          is_recurring: task.is_recurring ?? false,
+          recurrence_rule: task.recurrence_rule || null,
+          tags: task.tags ?? null,
           source_transcript: null,
         })
         .select()

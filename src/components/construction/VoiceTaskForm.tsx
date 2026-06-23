@@ -1,5 +1,6 @@
-// Entrada digitada para o módulo de tarefas. Schema (voice_tasks) já
-// suporta tudo — antes só havia entrada por áudio (VoiceAgentDialog).
+// Sprint 6 (Vobi-like): projeto vira opcional, ganha recorrência e
+// tags. Forma única usada em /construction/voice-tasks e em /tasks
+// (visão central).
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,12 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+
+const NO_PROJECT = "__none__";
 
 interface VoiceTaskFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: {
-    project_id: string;
+    project_id?: string | null;
     title: string;
     description?: string;
     responsible?: string;
@@ -20,6 +24,9 @@ interface VoiceTaskFormProps {
     category?: string;
     priority?: string;
     due_date?: string;
+    is_recurring?: boolean;
+    recurrence_rule?: string | null;
+    tags?: string[] | null;
   }) => void;
   projects: { id: string; name: string }[];
   defaultProjectId?: string;
@@ -35,7 +42,7 @@ export function VoiceTaskForm({
   isLoading,
 }: VoiceTaskFormProps) {
   const [form, setForm] = useState({
-    project_id: defaultProjectId || "",
+    project_id: defaultProjectId || NO_PROJECT,
     title: "",
     description: "",
     responsible: "",
@@ -43,22 +50,29 @@ export function VoiceTaskForm({
     category: "pendencias",
     priority: "media",
     due_date: "",
+    is_recurring: false,
+    recurrence_rule: "FREQ=WEEKLY",
+    tags: "",
   });
 
   useEffect(() => {
     if (open) {
       setForm((f) => ({
         ...f,
-        project_id: defaultProjectId || f.project_id,
+        project_id: defaultProjectId || f.project_id || NO_PROJECT,
       }));
     }
   }, [open, defaultProjectId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.project_id || !form.title.trim()) return;
+    if (!form.title.trim()) return;
+    const tagsArr = form.tags
+      .split(/[,\s]+/)
+      .map((t) => t.replace(/^#/, "").trim())
+      .filter(Boolean);
     onSubmit({
-      project_id: form.project_id,
+      project_id: form.project_id === NO_PROJECT ? null : form.project_id,
       title: form.title.trim(),
       description: form.description.trim() || undefined,
       responsible: form.responsible.trim() || undefined,
@@ -66,9 +80,12 @@ export function VoiceTaskForm({
       category: form.category,
       priority: form.priority,
       due_date: form.due_date || undefined,
+      is_recurring: form.is_recurring,
+      recurrence_rule: form.is_recurring ? form.recurrence_rule : null,
+      tags: tagsArr.length > 0 ? tagsArr : null,
     });
     setForm({
-      project_id: defaultProjectId || "",
+      project_id: defaultProjectId || NO_PROJECT,
       title: "",
       description: "",
       responsible: "",
@@ -76,25 +93,29 @@ export function VoiceTaskForm({
       category: "pendencias",
       priority: "media",
       due_date: "",
+      is_recurring: false,
+      recurrence_rule: "FREQ=WEEKLY",
+      tags: "",
     });
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nova Tarefa</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <Label>Projeto *</Label>
+            <Label>Projeto (opcional)</Label>
             <Select
               value={form.project_id}
               onValueChange={(v) => setForm((f) => ({ ...f, project_id: v }))}
             >
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
+                <SelectItem value={NO_PROJECT}>— Sem projeto (tarefa pessoal Quadra) —</SelectItem>
                 {projects.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
@@ -178,11 +199,45 @@ export function VoiceTaskForm({
               />
             </div>
           </div>
+
+          <div className="rounded-md border p-3 space-y-2 bg-muted/20">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Recorrente</Label>
+              <Switch
+                checked={form.is_recurring}
+                onCheckedChange={(v) => setForm((f) => ({ ...f, is_recurring: v }))}
+              />
+            </div>
+            {form.is_recurring && (
+              <Select
+                value={form.recurrence_rule}
+                onValueChange={(v) => setForm((f) => ({ ...f, recurrence_rule: v }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FREQ=DAILY">Todo dia</SelectItem>
+                  <SelectItem value="FREQ=WEEKLY">Toda semana</SelectItem>
+                  <SelectItem value="FREQ=WEEKLY;BYDAY=MO,WE,FR">Seg/Qua/Sex</SelectItem>
+                  <SelectItem value="FREQ=MONTHLY">Todo mês</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          <div>
+            <Label>Tags (separadas por vírgula)</Label>
+            <Input
+              placeholder="urgente, contabilidade, cliente"
+              value={form.tags}
+              onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))}
+            />
+          </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isLoading || !form.project_id || !form.title.trim()}>
+            <Button type="submit" disabled={isLoading || !form.title.trim()}>
               Adicionar
             </Button>
           </div>

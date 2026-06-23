@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -56,7 +57,17 @@ export function GenerateActivitiesDialog({
   const [tab, setTab] = useState("texto");
   const { templates: activityTemplates, applyToProject } = useActivityTemplates();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [tplTotalArea, setTplTotalArea] = useState<string>("");
+  const [tplRoomCount, setTplRoomCount] = useState<string>("");
   const queryClient = useQueryClient();
+
+  const selectedTemplate = activityTemplates.find((t) => t.id === selectedTemplateId);
+  const templateNeedsTotalArea = !!selectedTemplate?.items.some(
+    (it) => (it as any).area_basis === "proportional",
+  );
+  const templateNeedsRoomCount = !!selectedTemplate?.items.some(
+    (it) => (it as any).area_basis === "per_room",
+  );
   const [textInput, setTextInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedActivities, setGeneratedActivities] = useState<GeneratedActivity[] | null>(null);
@@ -764,21 +775,66 @@ export function GenerateActivitiesDialog({
                 )}
                 {selectedTemplateId && (
                   <div className="max-h-64 overflow-y-auto rounded-md border p-3 text-xs space-y-1">
-                    {activityTemplates
-                      .find((t) => t.id === selectedTemplateId)
-                      ?.items.sort((a, b) => a.position - b.position)
-                      .map((it) => (
-                        <div key={it.id} className="flex items-center gap-2">
-                          <span className="font-mono text-muted-foreground">#{it.position + 1}</span>
-                          <span className="flex-1">{it.name}</span>
-                          {it.discipline && (
-                            <Badge variant="outline" className="text-[10px] px-1 py-0">{it.discipline}</Badge>
-                          )}
-                          {it.duration_days != null && (
-                            <span className="text-muted-foreground">{it.duration_days}d</span>
-                          )}
+                    {selectedTemplate?.items
+                      .slice()
+                      .sort((a, b) => a.position - b.position)
+                      .map((it) => {
+                        const basis = (it as any).area_basis as string | undefined;
+                        const factor = (it as any).area_factor as number | null | undefined;
+                        return (
+                          <div key={it.id} className="flex items-center gap-2">
+                            <span className="font-mono text-muted-foreground">#{it.position + 1}</span>
+                            <span className="flex-1">{it.name}</span>
+                            {it.discipline && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0">{it.discipline}</Badge>
+                            )}
+                            {basis === "proportional" && factor != null && (
+                              <span className="text-muted-foreground">{(factor * 100).toFixed(0)}% da obra</span>
+                            )}
+                            {basis === "per_room" && factor != null && (
+                              <span className="text-muted-foreground">{factor} m²/cômodo</span>
+                            )}
+                            {(!basis || basis === "fixed") && it.area_m2 != null && (
+                              <span className="text-muted-foreground">{it.area_m2} m²</span>
+                            )}
+                            {it.duration_days != null && (
+                              <span className="text-muted-foreground">{it.duration_days}d</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+                {selectedTemplateId && (templateNeedsTotalArea || templateNeedsRoomCount) && (
+                  <div className="rounded-md border p-3 bg-muted/30 space-y-2">
+                    <p className="text-xs font-medium">
+                      Este template tem itens parametrizados. Informe os valores da obra para calcular as áreas:
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {templateNeedsTotalArea && (
+                        <div>
+                          <Label className="text-xs">Área total da obra (m²)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="Ex: 120"
+                            value={tplTotalArea}
+                            onChange={(e) => setTplTotalArea(e.target.value)}
+                          />
                         </div>
-                      ))}
+                      )}
+                      {templateNeedsRoomCount && (
+                        <div>
+                          <Label className="text-xs">Número de cômodos</Label>
+                          <Input
+                            type="number"
+                            placeholder="Ex: 5"
+                            value={tplRoomCount}
+                            onChange={(e) => setTplRoomCount(e.target.value)}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </TabsContent>
@@ -808,11 +864,21 @@ export function GenerateActivitiesDialog({
                 onClick={() => {
                   if (!selectedTemplateId) return;
                   applyToProject.mutate(
-                    { templateId: selectedTemplateId, projectId },
+                    {
+                      templateId: selectedTemplateId,
+                      projectId,
+                      totalArea: tplTotalArea ? parseFloat(tplTotalArea) : undefined,
+                      roomCount: tplRoomCount ? parseInt(tplRoomCount) : undefined,
+                    },
                     { onSuccess: () => handleClose(false) },
                   );
                 }}
-                disabled={!selectedTemplateId || applyToProject.isPending}
+                disabled={
+                  !selectedTemplateId ||
+                  applyToProject.isPending ||
+                  (templateNeedsTotalArea && !tplTotalArea) ||
+                  (templateNeedsRoomCount && !tplRoomCount)
+                }
               >
                 {applyToProject.isPending ? (
                   <>
