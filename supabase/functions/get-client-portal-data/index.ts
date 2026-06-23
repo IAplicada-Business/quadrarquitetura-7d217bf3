@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       await Promise.all([
         supabase
           .from("projects")
-          .select("name, address, city, estimated_budget, ideal_budget, start_date, expected_end_date")
+          .select("name, address, city, estimated_budget, ideal_budget, start_date, expected_end_date, client_move_in_date")
           .eq("id", projectId)
           .single(),
         supabase

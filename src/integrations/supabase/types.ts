@@ -2067,6 +2067,7 @@ export type Database = {
           duration_days: number | null
           end_date: string | null
           id: string
+          medicao_date: string | null
           name: string
           position: number | null
           progress_percent: number | null
@@ -2084,6 +2085,7 @@ export type Database = {
           duration_days?: number | null
           end_date?: string | null
           id?: string
+          medicao_date?: string | null
           name: string
           position?: number | null
           progress_percent?: number | null
@@ -2101,6 +2103,7 @@ export type Database = {
           duration_days?: number | null
           end_date?: string | null
           id?: string
+          medicao_date?: string | null
           name?: string
           position?: number | null
           progress_percent?: number | null
@@ -2127,6 +2130,7 @@ export type Database = {
           city: string | null
           client_budget: number | null
           client_id: string | null
+          client_move_in_date: string | null
           construction_type_estimate: string | null
           contingency_percentage: number | null
           contract_id: string | null
@@ -2163,6 +2167,7 @@ export type Database = {
           city?: string | null
           client_budget?: number | null
           client_id?: string | null
+          client_move_in_date?: string | null
           construction_type_estimate?: string | null
           contingency_percentage?: number | null
           contract_id?: string | null
@@ -2199,6 +2204,7 @@ export type Database = {
           city?: string | null
           client_budget?: number | null
           client_id?: string | null
+          client_move_in_date?: string | null
           construction_type_estimate?: string | null
           contingency_percentage?: number | null
           contract_id?: string | null

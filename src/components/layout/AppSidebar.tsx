@@ -24,7 +24,7 @@ import {
   LucideIcon,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import logoBege from "@/assets/logo-bege.png";
@@ -145,15 +145,6 @@ const menuGroups: MenuGroup[] = [
   },
 ];
 
-const routeGroupMap: Record<string, string> = {
-  "/dashboard": "Análises Quadra",
-  "/leads": "Comercial",
-  "/clients": "Comercial",
-  "/projects": "Gestão de Obras",
-  "/construction": "Gestão de Obras",
-  "/content": "Gestão de Conteúdo",
-  "/admin": "Administrativo",
-};
 
 interface AppSidebarProps {
   onNavigate?: () => void;
@@ -161,36 +152,39 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
+  // Sprint 7d — comportamento pedido na call: "menu fica todo aberto,
+  // deveria ficar somente os menus pais". Default sempre fechado.
+  // Mantemos localStorage para persistir a preferência do usuário,
+  // mas migrando estados antigos que vieram com tudo aberto.
   const getInitialGroups = (): Record<string, boolean> => {
+    const allClosed = Object.fromEntries(menuGroups.map((g) => [g.label, false]));
     try {
       const saved = localStorage.getItem("sidebar_groups_state");
-      if (saved) return JSON.parse(saved);
+      if (!saved) return allClosed;
+      const parsed = JSON.parse(saved) as Record<string, boolean>;
+      // Migração: se o estado salvo tem 2+ grupos abertos, descarta —
+      // era da versão antiga que abria muito.
+      const openCount = Object.values(parsed).filter(Boolean).length;
+      if (openCount >= 2) {
+        try { localStorage.removeItem("sidebar_groups_state"); } catch {}
+        return allClosed;
+      }
+      return { ...allClosed, ...parsed };
     } catch {}
-    return Object.fromEntries(menuGroups.map((g) => [g.label, false]));
+    return allClosed;
   };
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(getInitialGroups);
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({});
-  const manualOverrides = useRef<Set<string>>(new Set());
   const location = useLocation();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const prefix = Object.keys(routeGroupMap).find((p) => location.pathname.startsWith(p));
-    if (prefix) {
-      const activeLabel = routeGroupMap[prefix];
-      setOpenGroups((prev) => {
-        const next = { ...prev };
-        if (!manualOverrides.current.has(activeLabel)) {
-          next[activeLabel] = true;
-        }
-        return next;
-      });
-    }
-  }, [location.pathname]);
+  // Sprint 7d — sem auto-open: a sidebar começa fechada e fica fechada
+  // até o usuário expandir um grupo manualmente. Antes um useEffect
+  // abria o grupo da rota ativa em cada navegação, o que dava a
+  // sensação de "tá tudo aberto sozinho".
 
   const toggleGroup = useCallback((label: string) => {
-    manualOverrides.current.add(label);
     setOpenGroups((prev) => {
       const next = { ...prev, [label]: !prev[label] };
       try { localStorage.setItem("sidebar_groups_state", JSON.stringify(next)); } catch {}
