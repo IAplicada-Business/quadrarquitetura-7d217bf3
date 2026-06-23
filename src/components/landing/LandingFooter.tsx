@@ -1,5 +1,5 @@
 import { Instagram } from "lucide-react";
-import logoLight from "@/assets/logo-light.png";
+import logoBege from "@/assets/logo-bege.png";
 
 const year = new Date().getFullYear();
 
@@ -13,7 +13,7 @@ export function LandingFooter() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-16 pb-12 border-b border-[#F0DCC8]/10">
           {/* Brand */}
           <div>
-            <img src={logoLight} alt="Quadra Arquitetura" className="h-16 w-auto mb-6" />
+            <img src={logoBege} alt="Quadra Arquitetura" className="h-24 w-auto mb-6" />
             <p
               className="max-w-xs"
               style={{

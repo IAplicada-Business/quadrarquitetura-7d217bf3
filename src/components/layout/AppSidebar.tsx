@@ -27,7 +27,7 @@ import { NavLink } from "@/components/NavLink";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import logoLight from "@/assets/logo-light.png";
+import logoBege from "@/assets/logo-bege.png";
 import {
   Tooltip,
   TooltipContent,
@@ -205,10 +205,12 @@ export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
     return (
       <TooltipProvider delayDuration={0}>
         <aside className="flex flex-col h-full w-16 border-r border-sidebar-border bg-sidebar transition-all duration-200">
-          <div className="flex items-center justify-center h-16 border-b border-sidebar-border">
-            <div className="h-9 w-9 rounded-xl bg-sidebar-primary/15 grid place-items-center">
-              <LayoutDashboard className="h-4 w-4 text-sidebar-primary" />
-            </div>
+          <div className="flex items-center justify-center h-20 border-b border-sidebar-border">
+            <img
+              src={logoBege}
+              alt="Quadra Arquitetura"
+              className="h-12 w-12 object-contain"
+            />
           </div>
 
           <nav className="flex-1 py-3 overflow-y-auto scrollbar-sidebar">
@@ -267,8 +269,8 @@ export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
   // --- EXPANDED MODE ---
   return (
     <aside className="flex flex-col h-full w-[260px] border-r border-sidebar-border bg-sidebar transition-all duration-200">
-      <div className="flex items-center px-5 h-16 border-b border-sidebar-border">
-        <img src={logoLight} alt="Quadra Arquitetura" className="h-12 object-contain object-left animate-fade-in" />
+      <div className="flex items-center px-5 h-20 border-b border-sidebar-border">
+        <img src={logoBege} alt="Quadra Arquitetura" className="h-16 w-auto object-contain object-left animate-fade-in" />
       </div>
 
       <nav className="flex-1 py-4 px-3 overflow-y-auto scrollbar-sidebar">

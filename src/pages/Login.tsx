@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import logoDark from "@/assets/logo-dark.png";
+import logoAzul from "@/assets/logo-azul.png";
 import carousel1 from "@/assets/carousel-1.jpg";
 import carousel2 from "@/assets/carousel-2.jpg";
 import carousel3 from "@/assets/carousel-3.jpg";
@@ -52,8 +52,8 @@ export default function Login() {
       {/* Left - Form */}
       <div className="flex flex-col justify-center w-full lg:w-1/2 px-8 sm:px-16 lg:px-20 py-12">
         <div className="w-full max-w-md mx-auto">
-          <div className="h-20 mb-10 overflow-hidden">
-            <img src={logoDark} alt="Quadra Arquitetura" className="h-32 -mt-6 object-contain object-left" />
+          <div className="mb-10">
+            <img src={logoAzul} alt="Quadra Arquitetura" className="h-28 w-auto object-contain object-left" />
           </div>
 
           <h2 className="text-2xl font-display font-bold mb-1">
