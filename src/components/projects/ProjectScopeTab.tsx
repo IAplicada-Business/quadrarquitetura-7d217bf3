@@ -345,6 +345,7 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
         onSubmit={handleSubmit}
         initialData={editingItem}
         allActivities={activities}
+        projectId={projectId}
         isLoading={create.isPending || update.isPending}
       />
 

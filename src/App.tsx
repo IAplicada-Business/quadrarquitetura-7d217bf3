@@ -25,7 +25,6 @@ import Reports from "./pages/Reports";
 import SettingsPage from "./pages/SettingsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import VoiceTasksPage from "./pages/VoiceTasksPage";
-import ConstructionAgenda from "./pages/ConstructionAgenda";
 import NotificationsPage from "./pages/NotificationsPage";
 import NotFound from "./pages/NotFound";
 import ClientPortal from "./pages/ClientPortal";
@@ -33,6 +32,7 @@ import InvoicesPage from "./pages/InvoicesPage";
 import ContentCalendar from "./pages/ContentCalendar";
 import ContentScripts from "./pages/ContentScripts";
 import ContentPosts from "./pages/ContentPosts";
+import ContentInstagram from "./pages/ContentInstagram";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -91,7 +91,11 @@ const App = () => (
               <Route path="/construction/tasks" element={<ConstructionTasks />} />
               <Route path="/construction/suppliers" element={<Suppliers />} />
               <Route path="/construction/voice-tasks" element={<VoiceTasksPage />} />
-              <Route path="/construction/agenda" element={<ConstructionAgenda />} />
+              {/* Mariana, vídeo 16: "agenda não faz sentido na minha
+                  agenda, isso é cronograma — vira Trello". A agenda foi
+                  removida; o módulo de tarefas Quadra (kanban) passa a
+                  ser a vista única. */}
+              <Route path="/construction/agenda" element={<Navigate to="/construction/voice-tasks" replace />} />
               <Route path="/construction/documents" element={<Documents />} />
               <Route path="/construction/reports" element={<Reports />} />
               {/* Administrativo */}
@@ -103,6 +107,7 @@ const App = () => (
               <Route path="/content/calendar" element={<ContentCalendar />} />
               <Route path="/content/scripts" element={<ContentScripts />} />
               <Route path="/content/posts" element={<ContentPosts />} />
+              <Route path="/content/instagram" element={<ContentInstagram />} />
               {/* Redirects de compatibilidade */}
               <Route path="/site-tracking" element={<Navigate to="/construction/tracking" replace />} />
               <Route path="/suppliers" element={<Navigate to="/construction/suppliers" replace />} />

@@ -720,6 +720,7 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
         }}
         initialData={editingActivity}
         allActivities={activities}
+        projectId={projectId}
         isLoading={createActivity.isPending || updateActivity.isPending}
       />
 

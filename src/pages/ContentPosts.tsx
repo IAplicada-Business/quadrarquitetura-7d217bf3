@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Copy, Eye, Pencil, Trash2, TrendingUp, Video, Calendar, BarChart3, Search } from "lucide-react";
+import { Copy, Eye, Pencil, Trash2, TrendingUp, Video, Calendar, BarChart3, Search, Plus } from "lucide-react";
 import { format, startOfMonth, endOfMonth, getDaysInMonth } from "date-fns";
 import { useContentPosts, TYPE_COLORS, STATUS_LABELS } from "@/hooks/useContentPosts";
 import { useContentSeries } from "@/hooks/useContentSeries";
@@ -74,6 +74,16 @@ export default function ContentPosts() {
     }
   };
 
+  // Vídeo 15a (Mariana): "isso aqui continua sem funcionar a parte de
+  // post". A tela só permitia editar posts existentes — não tinha
+  // botão para criar um novo direto aqui. O usuário tinha que ir no
+  // calendário ou nos roteiros. Botão "Novo Post" adicionado abaixo.
+  const handleNew = () => {
+    setSelectedPost(null);
+    setReadOnly(false);
+    setSheetOpen(true);
+  };
+
   const isOverdue = (p: ContentPost) => p.scheduled_date && p.scheduled_date < today && p.status !== "publicado";
 
   return (
@@ -83,6 +93,9 @@ export default function ContentPosts() {
           <h1 className="text-2xl font-playfair">Publicações</h1>
           <p className="text-sm text-muted-foreground mt-1">Visão geral de todos os conteúdos</p>
         </div>
+        <Button size="sm" onClick={handleNew}>
+          <Plus className="h-4 w-4 mr-1" /> Novo Post
+        </Button>
       </div>
 
       {/* KPIs */}

@@ -5,8 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { ListChecks, Wand2 } from "lucide-react";
 import { ProjectActivity, computeCascade, CascadeChange } from "@/hooks/useProjectActivities";
 import { CascadePreviewDialog } from "./CascadePreviewDialog";
+import { getPrerequisitePreview, createPrerequisiteTasks } from "@/lib/prerequisiteTasks";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 
 interface ActivityFormProps {
   open: boolean;
@@ -15,10 +21,13 @@ interface ActivityFormProps {
   onCascade?: (changes: { id: string; start_date: string; end_date: string }[]) => void;
   initialData?: Partial<ProjectActivity> | null;
   allActivities: ProjectActivity[];
+  projectId?: string;
   isLoading?: boolean;
 }
 
-export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialData, allActivities, isLoading }: ActivityFormProps) {
+export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialData, allActivities, projectId, isLoading }: ActivityFormProps) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [areaM2, setAreaM2] = useState("");
@@ -182,6 +191,72 @@ export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialD
                 </div>
               </div>
             )}
+
+            {/* Vídeo 13: cadeia automática "medir → orçar → comprar →
+                instalar" só faz sentido para disciplinas de fabricação.
+                Mostra preview e botão "Gerar pré-requisitos" só se
+                houver blueprint para a disciplina escolhida. */}
+            {(() => {
+              const preview = getPrerequisitePreview({
+                id: initialData?.id,
+                name: name || initialData?.name || "",
+                discipline,
+                start_date: startDate || initialData?.start_date,
+              });
+              if (preview.length === 0) return null;
+              return (
+                <div className="rounded-md border p-3 bg-muted/20 space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <ListChecks className="h-4 w-4" />
+                    Pré-requisitos para {discipline}
+                  </div>
+                  <ul className="space-y-1 text-xs text-muted-foreground">
+                    {preview.map((p, i) => (
+                      <li key={i} className="flex items-center justify-between gap-2">
+                        <span>{p.title}</span>
+                        {p.due_date && (
+                          <Badge variant="outline" className="text-[10px]">
+                            {new Date(p.due_date + "T00:00:00").toLocaleDateString("pt-BR")}
+                          </Badge>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      if (!user || !projectId) return;
+                      try {
+                        const created = await createPrerequisiteTasks({
+                          activity: {
+                            id: initialData?.id,
+                            name: name || initialData?.name || "",
+                            discipline,
+                            start_date: startDate || initialData?.start_date,
+                          },
+                          projectId,
+                          userId: user.id,
+                        });
+                        queryClient.invalidateQueries({ queryKey: ["voice_tasks"] });
+                        toast({
+                          title: `${created} tarefa(s) Quadra criada(s)`,
+                          description: "Veja em Tarefas Quadra (kanban).",
+                        });
+                      } catch (e: any) {
+                        toast({ title: "Erro", description: e.message, variant: "destructive" });
+                      }
+                    }}
+                    disabled={!projectId || !user || !name.trim()}
+                    className="w-full"
+                  >
+                    <Wand2 className="h-3.5 w-3.5 mr-1" />
+                    Gerar pré-requisitos como Tarefas Quadra
+                  </Button>
+                </div>
+              );
+            })()}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
