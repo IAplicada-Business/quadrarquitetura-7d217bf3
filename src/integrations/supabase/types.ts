@@ -163,6 +163,8 @@ export type Database = {
       activity_template_items: {
         Row: {
           ambiente: string | null
+          area_basis: string
+          area_factor: number | null
           area_m2: number | null
           created_at: string
           depends_on_positions: number[] | null
@@ -178,6 +180,8 @@ export type Database = {
         }
         Insert: {
           ambiente?: string | null
+          area_basis?: string
+          area_factor?: number | null
           area_m2?: number | null
           created_at?: string
           depends_on_positions?: number[] | null
@@ -193,6 +197,8 @@ export type Database = {
         }
         Update: {
           ambiente?: string | null
+          area_basis?: string
+          area_factor?: number | null
           area_m2?: number | null
           created_at?: string
           depends_on_positions?: number[] | null
