@@ -125,6 +125,48 @@ export function useVoiceTasks(projectId?: string) {
     },
   });
 
+  // Entrada digitada — pedido da Mariana: o módulo de tarefas existe mas hoje
+  // só recebe entrada por áudio (via VoiceAgentDialog). Como o schema já
+  // suporta tudo (source_transcript é nullable), adicionar um create
+  // manual é só plumbing.
+  const createOneMutation = useMutation({
+    mutationFn: async (task: {
+      project_id: string;
+      title: string;
+      description?: string | null;
+      responsible?: string | null;
+      task_type?: string;
+      category?: string;
+      priority?: string;
+      due_date?: string | null;
+    }) => {
+      const { data, error } = await supabase
+        .from("voice_tasks")
+        .insert({
+          user_id: user!.id,
+          project_id: task.project_id,
+          title: task.title,
+          description: task.description || null,
+          responsible: task.responsible || null,
+          task_type: task.task_type || "geral",
+          category: task.category || "pendencias",
+          priority: task.priority || "media",
+          due_date: task.due_date || null,
+          source_transcript: null,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as unknown as VoiceTask;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["voice_tasks"] });
+      toast({ title: "Tarefa criada" });
+    },
+    onError: (e: Error) =>
+      toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<VoiceTask> & { id: string }) => {
       const { error } = await supabase
@@ -156,6 +198,8 @@ export function useVoiceTasks(projectId?: string) {
     isLoading: query.isLoading,
     createBatch: createBatchMutation.mutateAsync,
     isCreating: createBatchMutation.isPending,
+    createOne: createOneMutation.mutateAsync,
+    isCreatingOne: createOneMutation.isPending,
     update: updateMutation.mutate,
     remove: deleteMutation.mutate,
   };
