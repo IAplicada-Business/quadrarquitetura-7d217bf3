@@ -2,8 +2,17 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+// Refresh visual Sprint 5: cards ganham raio maior (rounded-xl), borda
+// mais sutil e sombra multi-layer. Mantemos a API do shadcn.
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("rounded-lg border bg-card text-card-foreground shadow-sm", className)} {...props} />
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-xl border border-border/70 bg-card text-card-foreground shadow-soft transition-shadow",
+      className,
+    )}
+    {...props}
+  />
 ));
 Card.displayName = "Card";
 
@@ -16,7 +25,11 @@ CardHeader.displayName = "CardHeader";
 
 const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
-    <h3 ref={ref} className={cn("text-2xl font-semibold leading-none tracking-tight", className)} {...props} />
+    <h3
+      ref={ref}
+      className={cn("font-display text-xl font-medium leading-tight tracking-tight", className)}
+      {...props}
+    />
   ),
 );
 CardTitle.displayName = "CardTitle";

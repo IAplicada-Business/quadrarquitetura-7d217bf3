@@ -48,15 +48,15 @@ export function AppLayout() {
         </Sheet>
       )}
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden bg-gradient-marca">
         <AppHeader
           showMenuButton={isMobile}
           onMenuClick={() => setMobileOpen(true)}
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={toggleSidebar}
         />
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-6 lg:p-8 animate-fade-in">
+        <main className="flex-1 overflow-y-auto scrollbar-elegant">
+          <div className="mx-auto w-full max-w-[1480px] px-6 py-8 lg:px-10 lg:py-10 animate-fade-in">
             <Outlet />
           </div>
         </main>

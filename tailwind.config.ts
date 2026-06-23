@@ -14,8 +14,17 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Playfair Display', 'serif'],
-        body: ['Inter', 'sans-serif'],
+        display: ['"Cormorant Garamond"', 'serif'],
+        body: ['"Jost"', 'sans-serif'],
+        sans: ['"Jost"', 'sans-serif'],
+        serif: ['"Cormorant Garamond"', 'serif'],
+        playfair: ['"Cormorant Garamond"', 'serif'],
+      },
+      boxShadow: {
+        xs: 'var(--shadow-xs)',
+        soft: 'var(--shadow-sm)',
+        elev: 'var(--shadow-md)',
+        float: 'var(--shadow-lg)',
       },
       colors: {
         border: "hsl(var(--border))",
@@ -92,12 +101,17 @@ export default {
           from: { opacity: "0", transform: "translateX(-12px)" },
           to: { opacity: "1", transform: "translateX(0)" },
         },
+        "rocket-pop": {
+          from: { opacity: "0", transform: "scale(0.96)" },
+          to: { opacity: "1", transform: "scale(1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.4s ease-out",
         "slide-in-left": "slide-in-left 0.3s ease-out",
+        "rocket-pop": "rocket-pop 0.18s ease-out",
       },
     },
   },
