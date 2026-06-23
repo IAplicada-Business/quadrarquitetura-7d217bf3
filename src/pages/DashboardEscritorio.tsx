@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { useComercialMetrics } from "@/hooks/useComercialMetrics";
 import { useFinanceiroMetrics } from "@/hooks/useFinanceiroMetrics";
+import { C } from "@/lib/chartColors";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -51,22 +52,22 @@ const yFmt = (v: number) =>
   v >= 1000 ? `R$${Math.round(v / 1000)}k` : `R$${v}`;
 
 const pipelineConfig: ChartConfig = {
-  fechados: { label: "Fechados", color: "#1B2A4A" },
-  propostas: { label: "Propostas", color: "#8B4557" },
-  em_andamento: { label: "Em andamento", color: "#C4A882" },
+  fechados:    { label: "Fechados",     color: C.navy      },
+  propostas:   { label: "Propostas",    color: C.terra     },
+  em_andamento:{ label: "Em andamento", color: C.navyFaint },
 };
 
 const financeiroConfig: ChartConfig = {
-  receita: { label: "Receita", color: "#1B2A4A" },
-  despesa: { label: "Despesa", color: "#C4756E" },
-  margem: { label: "Margem", color: "#3B6D11" },
+  receita: { label: "Receita", color: C.navy    },
+  despesa: { label: "Despesa", color: C.terra   },
+  margem:  { label: "Margem",  color: C.success },
 };
 
 /* ── border-left color getter for oportunidades ── */
 function oportBorderColor(days: number) {
-  if (days >= 7) return "#E24B4A";
-  if (days >= 3) return "#EF9F27";
-  return "#1D9E75";
+  if (days >= 7) return C.danger;
+  if (days >= 3) return C.warning;
+  return C.success;
 }
 
 export default function DashboardEscritorio() {
@@ -117,7 +118,7 @@ export default function DashboardEscritorio() {
             onClick={() => setTab("comercial")}
             className={`bg-transparent border-none px-6 py-2.5 text-sm font-medium cursor-pointer transition-colors ${
               tab === "comercial"
-                ? "border-b-2 border-[#1B2A4A] text-[#1B2A4A]"
+                ? "border-b-2 border-primary text-primary"
                 : "border-b-2 border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -127,7 +128,7 @@ export default function DashboardEscritorio() {
             onClick={() => setTab("financeiro")}
             className={`bg-transparent border-none px-6 py-2.5 text-sm font-medium cursor-pointer transition-colors ${
               tab === "financeiro"
-                ? "border-b-2 border-[#1B2A4A] text-[#1B2A4A]"
+                ? "border-b-2 border-primary text-primary"
                 : "border-b-2 border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -363,9 +364,9 @@ export default function DashboardEscritorio() {
                 </div>
                 <div className="flex items-center gap-3">
                   {[
-                    { label: "Fechados", color: "#1B2A4A" },
-                    { label: "Propostas", color: "#8B4557" },
-                    { label: "Em andamento", color: "#C4A882" },
+                    { label: "Fechados",     color: C.navy      },
+                    { label: "Propostas",    color: C.terra     },
+                    { label: "Em andamento", color: C.navyFaint },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center gap-1">
                       <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: item.color }} />
@@ -382,9 +383,9 @@ export default function DashboardEscritorio() {
                   <XAxis dataKey="month" className="text-xs" />
                   <YAxis allowDecimals={false} className="text-xs" />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="fechados" stackId="a" fill="#1B2A4A" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="propostas" stackId="a" fill="#8B4557" />
-                  <Bar dataKey="em_andamento" stackId="a" fill="#C4A882" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="fechados"     stackId="a" fill={C.navy}      radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="propostas"   stackId="a" fill={C.terra}     />
+                  <Bar dataKey="em_andamento" stackId="a" fill={C.navyFaint} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ChartContainer>
             </CardContent>
@@ -398,7 +399,7 @@ export default function DashboardEscritorio() {
           {/* BLOCO 1 — 4 KPI cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {/* Receita escritório */}
-            <Card style={{ borderLeft: "3px solid #1B2A4A" }}>
+            <Card style={{ borderLeft: `3px solid ${C.navy}` }}>
               <CardContent className="pt-5 pb-4">
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <Wallet className="h-4 w-4" />
@@ -412,7 +413,7 @@ export default function DashboardEscritorio() {
             </Card>
 
             {/* A receber 30d */}
-            <Card style={{ borderLeft: "3px solid #1D9E75" }}>
+            <Card style={{ borderLeft: `3px solid ${C.success}` }}>
               <CardContent className="pt-5 pb-4">
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <Calendar className="h-4 w-4" />
@@ -426,7 +427,7 @@ export default function DashboardEscritorio() {
             </Card>
 
             {/* Despesas do mês */}
-            <Card style={{ borderLeft: "3px solid #E24B4A" }}>
+            <Card style={{ borderLeft: `3px solid ${C.terra}` }}>
               <CardContent className="pt-5 pb-4">
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <ArrowDown className="h-4 w-4" />
@@ -446,7 +447,7 @@ export default function DashboardEscritorio() {
             </Card>
 
             {/* Margem líquida */}
-            <Card style={{ borderLeft: "3px solid #3B6D11" }}>
+            <Card style={{ borderLeft: `3px solid ${C.success}` }}>
               <CardContent className="pt-5 pb-4">
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <Target className="h-4 w-4" />
@@ -554,9 +555,9 @@ export default function DashboardEscritorio() {
                 </div>
                 <div className="flex items-center gap-3">
                   {[
-                    { label: "Receita", color: "#1B2A4A" },
-                    { label: "Despesa", color: "#C4756E" },
-                    { label: "Margem", color: "#3B6D11" },
+                    { label: "Receita", color: C.navy    },
+                    { label: "Despesa", color: C.terra   },
+                    { label: "Margem",  color: C.success },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center gap-1">
                       <div
@@ -591,15 +592,15 @@ export default function DashboardEscritorio() {
                       />
                     }
                   />
-                  <Bar yAxisId="left" dataKey="receita" fill="#1B2A4A" radius={[4, 4, 0, 0]} barSize={20} />
-                  <Bar yAxisId="left" dataKey="despesa" fill="#C4756E" radius={[4, 4, 0, 0]} barSize={20} />
+                  <Bar yAxisId="left" dataKey="receita" fill={C.navy}    radius={[4, 4, 0, 0]} barSize={20} />
+                  <Bar yAxisId="left" dataKey="despesa" fill={C.terra}   radius={[4, 4, 0, 0]} barSize={20} />
                   <Line
                     yAxisId="right"
                     type="monotone"
                     dataKey="margem"
-                    stroke="#3B6D11"
+                    stroke={C.success}
                     strokeWidth={2}
-                    dot={{ r: 3, fill: "#3B6D11" }}
+                    dot={{ r: 3, fill: C.success }}
                   />
                 </ComposedChart>
               </ChartContainer>
