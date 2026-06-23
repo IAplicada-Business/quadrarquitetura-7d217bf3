@@ -14,6 +14,7 @@ export interface ProjectActivity {
   duration_days: number | null;
   start_date: string | null;
   end_date: string | null;
+  medicao_date: string | null;
   status: string;
   progress_percent: number;
   depends_on: string[];

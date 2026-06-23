@@ -16,6 +16,7 @@ export interface ActivityForTasks {
   name: string;
   discipline: string | null;
   start_date?: string | null;
+  medicao_date?: string | null;
 }
 
 interface TaskBlueprint {
@@ -28,6 +29,13 @@ interface TaskBlueprint {
   // arquiteta resolve depois.
   offset_business_days: number;
 }
+
+// Disciplines where medicao_date re-anchors the chain.
+// When medicao_date is set, offsets are calculated FROM medicao_date (medir=0)
+// instead of from start_date with the full pre-measurement offset.
+export const MEDICAO_ANCHORED_DISCIPLINES = new Set([
+  "Marcenaria", "Marmoraria", "Vidros", "Esquadrias", "Serralheria",
+]);
 
 const PREREQ_BY_DISCIPLINE: Record<string, TaskBlueprint[]> = {
   "Marcenaria": [
@@ -89,13 +97,40 @@ function dateOffset(iso: string | null | undefined, days: number): string | null
 export function getPrerequisitePreview(activity: ActivityForTasks) {
   const discipline = activity.discipline ?? "";
   const blueprints = PREREQ_BY_DISCIPLINE[discipline] ?? [];
-  return blueprints.map((bp) => ({
-    title: bp.title(activity),
-    category: bp.category,
-    task_type: bp.task_type,
-    priority: "media",
-    due_date: dateOffset(activity.start_date ?? null, bp.offset_business_days),
-  }));
+
+  // When medicao_date is set for a measurement-anchored discipline, we know
+  // the real measure date. Recalculate from that anchor:
+  //   medir = medicao_date (offset 0 relative to measurement)
+  //   orçar = medicao_date + (orçar_offset - medir_offset)
+  //   entregar = medicao_date + (entregar_offset - medir_offset)
+  // The "medir" blueprint always has the most negative offset in those
+  // disciplines, so we shift everything by subtracting the medir offset.
+  const useMedicao =
+    activity.medicao_date &&
+    MEDICAO_ANCHORED_DISCIPLINES.has(discipline) &&
+    blueprints.length > 0;
+
+  const measureOffset = useMedicao
+    ? Math.min(...blueprints.map((bp) => bp.offset_business_days))
+    : 0;
+
+  return blueprints.map((bp) => {
+    let due_date: string | null;
+    if (useMedicao) {
+      // Re-anchor: medir task lands on medicao_date, rest shift accordingly.
+      const relativeOffset = bp.offset_business_days - measureOffset;
+      due_date = dateOffset(activity.medicao_date!, relativeOffset);
+    } else {
+      due_date = dateOffset(activity.start_date ?? null, bp.offset_business_days);
+    }
+    return {
+      title: bp.title(activity),
+      category: bp.category,
+      task_type: bp.task_type,
+      priority: "media",
+      due_date,
+    };
+  });
 }
 
 export async function createPrerequisiteTasks(args: {

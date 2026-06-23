@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ListChecks, Wand2 } from "lucide-react";
 import { ProjectActivity, computeCascade, CascadeChange } from "@/hooks/useProjectActivities";
 import { CascadePreviewDialog } from "./CascadePreviewDialog";
-import { getPrerequisitePreview, createPrerequisiteTasks } from "@/lib/prerequisiteTasks";
+import { getPrerequisitePreview, createPrerequisiteTasks, MEDICAO_ANCHORED_DISCIPLINES } from "@/lib/prerequisiteTasks";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
@@ -34,6 +34,7 @@ export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialD
   const [durationDays, setDurationDays] = useState("");
   const [startDate, setStartDate] = useState("");
   const [discipline, setDiscipline] = useState("");
+  const [medicaoDate, setMedicaoDate] = useState("");
   const [dependsOn, setDependsOn] = useState<string[]>([]);
   const [status, setStatus] = useState("pendente");
   const [progressPercent, setProgressPercent] = useState("0");
@@ -48,12 +49,13 @@ export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialD
       setDurationDays(initialData.duration_days?.toString() || "");
       setStartDate(initialData.start_date || "");
       setDiscipline(initialData.discipline || "");
+      setMedicaoDate((initialData as any).medicao_date || "");
       setDependsOn(initialData.depends_on || []);
       setStatus(initialData.status || "pendente");
       setProgressPercent(initialData.progress_percent?.toString() || "0");
     } else {
       setName(""); setDescription(""); setAreaM2(""); setDurationDays("");
-      setStartDate(""); setDiscipline(""); setDependsOn([]); setStatus("pendente");
+      setStartDate(""); setDiscipline(""); setMedicaoDate(""); setDependsOn([]); setStatus("pendente");
       setProgressPercent("0");
     }
   }, [initialData, open]);
@@ -75,6 +77,7 @@ export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialD
       duration_days: dur,
       start_date: startDate || null,
       end_date: endDate,
+      medicao_date: medicaoDate || null,
       discipline: discipline || null,
       depends_on: dependsOn,
       status,
@@ -152,6 +155,21 @@ export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialD
                 <Input value={discipline} onChange={e => setDiscipline(e.target.value)} placeholder="Ex: Elétrica" />
               </div>
             </div>
+            {MEDICAO_ANCHORED_DISCIPLINES.has(discipline) && (
+              <div>
+                <Label>
+                  Data de Medição
+                  <span className="ml-1 text-[11px] text-muted-foreground font-normal">
+                    — quando preenchida, recalcula os pré-requisitos
+                  </span>
+                </Label>
+                <Input
+                  type="date"
+                  value={medicaoDate}
+                  onChange={e => setMedicaoDate(e.target.value)}
+                />
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Status</Label>
@@ -172,7 +190,21 @@ export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialD
             </div>
             {otherActivities.length > 0 && (
               <div>
-                <Label>Dependências</Label>
+                <div className="flex items-center justify-between mb-1">
+                  <Label>Dependências</Label>
+                  {/* Sprint 7d (call 28:00): "ele considerou um tanto de
+                      dependência que eu não consigo tirar". Botão pra
+                      limpar todas em um clique quando a IA exagera. */}
+                  {dependsOn.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setDependsOn([])}
+                      className="text-[11px] text-muted-foreground hover:text-destructive underline underline-offset-2"
+                    >
+                      Limpar {dependsOn.length}
+                    </button>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-1.5 mt-1 max-h-24 overflow-y-auto border rounded-md p-2">
                   {otherActivities.map(a => (
                     <button
@@ -202,6 +234,7 @@ export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialD
                 name: name || initialData?.name || "",
                 discipline,
                 start_date: startDate || initialData?.start_date,
+                medicao_date: medicaoDate || (initialData as any)?.medicao_date || null,
               });
               if (preview.length === 0) return null;
               return (
@@ -235,6 +268,7 @@ export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialD
                             name: name || initialData?.name || "",
                             discipline,
                             start_date: startDate || initialData?.start_date,
+                            medicao_date: medicaoDate || (initialData as any)?.medicao_date || null,
                           },
                           projectId,
                           userId: user.id,
