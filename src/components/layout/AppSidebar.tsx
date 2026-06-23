@@ -43,6 +43,16 @@ import {
 type MenuItem = { title: string; url: string; subItems?: { title: string; url: string }[] };
 type MenuGroup = { label: string; items: MenuItem[] };
 
+// Sprint 7c — ícone por grupo para os "menus pai" deixarem de parecer
+// só texto. Reutiliza ícones já importados do lucide.
+const groupIcons: Record<string, LucideIcon> = {
+  "Análises Quadra": LayoutDashboard,
+  "Comercial": Users,
+  "Gestão de Obras": HardHat,
+  "Gestão de Conteúdo": Film,
+  "Administrativo": Settings,
+};
+
 const iconMap: Record<string, LucideIcon> = {
   "Dashboard Escritório": LayoutDashboard,
   "Dashboard Obras": HardHat,
@@ -205,11 +215,11 @@ export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
     return (
       <TooltipProvider delayDuration={0}>
         <aside className="flex flex-col h-full w-16 border-r border-sidebar-border bg-sidebar transition-all duration-200">
-          <div className="flex items-center justify-center h-20 border-b border-sidebar-border">
+          <div className="flex items-center justify-center h-16 border-b border-sidebar-border">
             <img
               src={logoBege}
               alt="Quadra Arquitetura"
-              className="h-12 w-12 object-contain"
+              className="h-9 w-9 object-contain"
             />
           </div>
 
@@ -269,22 +279,43 @@ export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
   // --- EXPANDED MODE ---
   return (
     <aside className="flex flex-col h-full w-[260px] border-r border-sidebar-border bg-sidebar transition-all duration-200">
-      <div className="flex items-center px-5 h-20 border-b border-sidebar-border">
-        <img src={logoBege} alt="Quadra Arquitetura" className="h-16 w-auto object-contain object-left animate-fade-in" />
+      <div className="flex items-center px-5 h-16 border-b border-sidebar-border">
+        <img src={logoBege} alt="Quadra Arquitetura" className="h-10 w-auto object-contain object-left animate-fade-in" />
       </div>
 
-      <nav className="flex-1 py-4 px-3 overflow-y-auto scrollbar-sidebar">
-        {menuGroups.map((group) => (
-          <div key={group.label} className="mb-3">
+      <nav className="flex-1 py-3 px-2 overflow-y-auto scrollbar-sidebar">
+        {menuGroups.map((group) => {
+          const GroupIcon = groupIcons[group.label];
+          const isOpen = openGroups[group.label];
+          return (
+          <div key={group.label} className="mb-1">
             <button
               onClick={() => toggleGroup(group.label)}
-              className="flex items-center justify-between w-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/55 hover:text-sidebar-foreground transition-colors"
+              className={cn(
+                "group/header flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150",
+                isOpen
+                  ? "bg-sidebar-accent/60 text-sidebar-foreground"
+                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+              )}
             >
-              {group.label}
+              {GroupIcon && (
+                <span className={cn(
+                  "h-7 w-7 rounded-md grid place-items-center shrink-0 transition-colors",
+                  isOpen
+                    ? "bg-sidebar-primary/15 text-sidebar-primary"
+                    : "bg-sidebar-accent/60 text-sidebar-foreground/80 group-hover/header:text-sidebar-foreground"
+                )}>
+                  <GroupIcon className="h-3.5 w-3.5" />
+                </span>
+              )}
+              <span className="flex-1 text-left">{group.label}</span>
+              <span className="text-[10px] text-sidebar-foreground/40 tabular-nums">
+                {group.items.length}
+              </span>
               <ChevronDown
                 className={cn(
-                  "h-3 w-3 transition-transform duration-200",
-                  !openGroups[group.label] && "-rotate-90"
+                  "h-3.5 w-3.5 text-sidebar-foreground/50 transition-transform duration-200",
+                  !isOpen && "-rotate-90"
                 )}
               />
             </button>
@@ -358,7 +389,8 @@ export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
               </ul>
             </div>
           </div>
-        ))}
+          );
+        })}
       </nav>
     </aside>
   );
