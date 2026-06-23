@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
@@ -166,13 +166,18 @@ export default function DashboardObras() {
   }, [scheduleTasks, materials, payments, todayStr, today]);
 
   // ── BLOCO 3 — Financeiro ──
+  // "orcado" = total comprometido em compras/pagamentos da obra (não o
+  // valor do contrato com o cliente). Se não houver pagamentos
+  // registrados ainda, cai de volta para estimated_budget.
   const finChartData = useMemo(() => {
     const active = projects.filter((p) => p.status !== "concluido");
     return active.map((proj) => {
-      const pago = payments.filter((p) => p.project_id === proj.id && p.status === "pago").reduce((s, p) => s + p.value, 0);
+      const projPayments = payments.filter((p) => p.project_id === proj.id);
+      const pago = projPayments.filter((p) => p.status === "pago").reduce((s, p) => s + p.value, 0);
+      const comprometido = projPayments.reduce((s, p) => s + p.value, 0);
       return {
         name: (proj.project_number ? proj.project_number + " " : "") + (proj.name?.length > 12 ? proj.name.slice(0, 12) + "…" : proj.name),
-        orcado: proj.estimated_budget ?? 0,
+        orcado: comprometido > 0 ? comprometido : (proj.estimated_budget ?? 0),
         gasto: pago,
       };
     });
@@ -258,12 +263,35 @@ export default function DashboardObras() {
     };
   }, [projects, scheduleTasks, todayStr, today]);
 
+  const [activeTab, setActiveTab] = useState<"geral" | "multiobras">("geral");
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold font-display mb-1">Obras</h1>
         <p className="text-muted-foreground">Visão operacional de campo</p>
       </div>
+
+      {/* Tabs internas */}
+      <div className="border-b">
+        <div className="flex gap-0">
+          {(["geral", "multiobras"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setActiveTab(t)}
+              className={`bg-transparent border-none px-6 py-2.5 text-sm font-medium cursor-pointer transition-colors ${
+                activeTab === t
+                  ? "border-b-2 border-primary text-primary"
+                  : "border-b-2 border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t === "geral" ? "Visão Geral" : "Multi-Obras"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {activeTab === "geral" && (<>
 
       {/* ═══ BLOCO 1 — VISÃO GERAL DOS PROJETOS ═══ */}
       <Card>
@@ -422,7 +450,10 @@ export default function DashboardObras() {
         </CardContent>
       </Card>
 
-      {/* ═══ VISÃO MULTI-OBRAS (mantida) ═══ */}
+      </>)}
+
+      {/* ═══ ABA MULTI-OBRAS ═══ */}
+      {activeTab === "multiobras" && (<>
       <div className="pt-2">
         <h2 className="text-xl font-bold font-display mb-1" style={{ color: AZUL.textoDestaque }}>Visão Multi-Obras</h2>
         <p className="text-sm text-muted-foreground mb-4">Panorama consolidado de todas as obras ativas</p>
@@ -544,6 +575,7 @@ export default function DashboardObras() {
           )}
         </CardContent>
       </Card>
+      </>)}
     </div>
   );
 }
