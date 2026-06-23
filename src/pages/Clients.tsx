@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { subMonths, startOfMonth, startOfYear } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -101,6 +102,7 @@ export default function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
+  const [filterPeriod, setFilterPeriod] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -236,7 +238,16 @@ export default function Clients() {
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       (c.email && c.email.toLowerCase().includes(search.toLowerCase()));
     const matchesType = filterType === "all" || c.client_type === filterType;
-    return matchesSearch && matchesType;
+    let matchesPeriod = true;
+    if (filterPeriod !== "all") {
+      const d = new Date(c.created_at);
+      const now = new Date();
+      if (filterPeriod === "este_mes") matchesPeriod = d >= startOfMonth(now);
+      else if (filterPeriod === "ultimo_mes") matchesPeriod = d >= startOfMonth(subMonths(now, 1)) && d < startOfMonth(now);
+      else if (filterPeriod === "3_meses") matchesPeriod = d >= subMonths(now, 3);
+      else if (filterPeriod === "este_ano") matchesPeriod = d >= startOfYear(now);
+    }
+    return matchesSearch && matchesType && matchesPeriod;
   });
 
   const typeLabel = (val: string) =>
@@ -423,6 +434,18 @@ export default function Clients() {
                     {t.label}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterPeriod} onValueChange={setFilterPeriod}>
+              <SelectTrigger className="w-full sm:w-44">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todo o período</SelectItem>
+                <SelectItem value="este_mes">Este mês</SelectItem>
+                <SelectItem value="ultimo_mes">Mês passado</SelectItem>
+                <SelectItem value="3_meses">Últimos 3 meses</SelectItem>
+                <SelectItem value="este_ano">Este ano</SelectItem>
               </SelectContent>
             </Select>
           </div>
