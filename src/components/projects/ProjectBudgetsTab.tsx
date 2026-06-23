@@ -253,6 +253,14 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
               <Button variant="outline" size="sm" onClick={() => setShoppingListOpen(true)}>
                 <ShoppingCart className="h-4 w-4 mr-1" /> Lista de Compras
               </Button>
+              {/* Mariana (vídeo 14): "não consigo colocar nada manualmente,
+                  só aceita o que vem de IA". A toolbar tinha "Importar do
+                  Escopo" e "Estimar com IA", mas faltava criar cotação
+                  avulsa direto, sem precisar de item de escopo.
+                  budget_quotes.scope_item_id já era nullable. */}
+              <Button size="sm" variant="outline" onClick={() => handleAddQuote(null)}>
+                <Plus className="h-4 w-4 mr-1" /> Nova Cotação
+              </Button>
               <Button size="sm" onClick={() => setBudgetPreviewOpen(true)}>
                 <Calculator className="h-4 w-4 mr-1" /> Gerar Prévia de Orçamento
               </Button>
