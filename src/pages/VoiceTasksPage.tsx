@@ -1,3 +1,7 @@
+// Sprint 4d (vídeo 16) — "Agenda" desativada; o módulo de Tarefas
+// Quadra ganha vista kanban estilo Trello. A Mariana descreveu a
+// agenda como inadequada para registro de cronograma e pediu uma
+// lista de atividades visual (Trello-like).
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useVoiceTasks, VoiceTask } from "@/hooks/useVoiceTasks";
@@ -7,8 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, CheckCircle2, Clock, Plus, ListChecks } from "lucide-react";
+import { Trash2, CheckCircle2, Clock, Plus, ListChecks, LayoutGrid, List, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { VoiceTaskForm } from "@/components/construction/VoiceTaskForm";
 
 const priorityColors: Record<string, string> = {
@@ -34,12 +40,19 @@ const categoryLabels: Record<string, string> = {
   documentos: "Documentos",
 };
 
+const KANBAN_COLUMNS: Array<{ status: string; label: string; tone: string }> = [
+  { status: "pendente", label: "A fazer", tone: "bg-muted/30" },
+  { status: "em_andamento", label: "Em andamento", tone: "bg-primary/5" },
+  { status: "concluido", label: "Concluído", tone: "bg-success/5" },
+];
+
 export default function VoiceTasksPage() {
   const { user } = useAuth();
   const [filterProject, setFilterProject] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<"lista" | "kanban">("kanban");
 
   const { data: projects = [] } = useQuery({
     queryKey: ["projects_list"],
@@ -51,7 +64,9 @@ export default function VoiceTasksPage() {
     enabled: !!user,
   });
 
-  const { tasks, isLoading, update, remove, createOne, isCreatingOne } = useVoiceTasks(filterProject === "all" ? undefined : filterProject);
+  const { tasks, isLoading, update, remove, createOne, isCreatingOne } = useVoiceTasks(
+    filterProject === "all" ? undefined : filterProject,
+  );
   const [formOpen, setFormOpen] = useState(false);
 
   const filtered = tasks.filter((t) => {
@@ -70,13 +85,34 @@ export default function VoiceTasksPage() {
     return acc;
   }, {});
 
+  const projectsMap = Object.fromEntries(projects.map((p) => [p.id, p.name]));
+
+  // Para o kanban, filtramos as tarefas top-level (sem parent_id) e
+  // separamos por status. Subtarefas continuam aparecendo embaixo do
+  // pai (compatível com voice_tasks gerada por áudio em batch).
+  const topLevel = filtered.filter((t) => !t.parent_id);
+  const byStatus: Record<string, VoiceTask[]> = {};
+  for (const col of KANBAN_COLUMNS) byStatus[col.status] = [];
+  for (const t of topLevel) {
+    const col = byStatus[t.status] ? t.status : "pendente";
+    byStatus[col].push(t);
+  }
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    if (result.source.droppableId === result.destination.droppableId) return;
+    const newStatus = result.destination.droppableId;
+    if (!KANBAN_COLUMNS.find((c) => c.status === newStatus)) return;
+    update({ id: result.draggableId, status: newStatus });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-display">Tarefas</h1>
+          <h1 className="text-2xl font-bold text-display">Tarefas Quadra</h1>
           <p className="text-sm text-muted-foreground">
-            Tarefas criadas por voz, digitação ou geradas automaticamente pelo sistema
+            Tarefas criadas por voz, digitação ou geradas automaticamente. Arraste entre colunas para mudar o status.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -90,8 +126,7 @@ export default function VoiceTasksPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 items-center">
         <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-48 h-9" />
         <Select value={filterProject} onValueChange={setFilterProject}>
           <SelectTrigger className="w-[180px] h-9"><SelectValue placeholder="Projeto" /></SelectTrigger>
@@ -112,20 +147,116 @@ export default function VoiceTasksPage() {
             <SelectItem value="geral">Geral</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[150px] h-9"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="pendente">Pendente</SelectItem>
-            <SelectItem value="em_andamento">Em andamento</SelectItem>
-            <SelectItem value="concluido">Concluído</SelectItem>
-          </SelectContent>
-        </Select>
+        {view === "lista" && (
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[150px] h-9"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              <SelectItem value="pendente">Pendente</SelectItem>
+              <SelectItem value="em_andamento">Em andamento</SelectItem>
+              <SelectItem value="concluido">Concluído</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+        <div className="flex-1" />
+        <Tabs value={view} onValueChange={(v) => setView(v as any)}>
+          <TabsList>
+            <TabsTrigger value="kanban" className="gap-1.5"><LayoutGrid className="h-3.5 w-3.5" /> Kanban</TabsTrigger>
+            <TabsTrigger value="lista" className="gap-1.5"><List className="h-3.5 w-3.5" /> Lista</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
-      {/* Grouped tasks */}
       {isLoading ? (
-        <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+        <div className="text-center py-12 text-muted-foreground flex items-center justify-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
+        </div>
+      ) : view === "kanban" ? (
+        topLevel.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <ListChecks className="h-12 w-12 text-muted-foreground/30 mb-4" />
+              <p className="text-muted-foreground">Nenhuma tarefa encontrada.</p>
+              <p className="text-sm text-muted-foreground">
+                Use o botão <strong>Nova Tarefa</strong> ou o assistente de voz no header.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {KANBAN_COLUMNS.map((col) => (
+                <div key={col.status} className={`rounded-lg border p-3 ${col.tone}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold">{col.label}</h3>
+                    <Badge variant="outline" className="text-xs">{byStatus[col.status].length}</Badge>
+                  </div>
+                  <Droppable droppableId={col.status}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`space-y-2 min-h-[60vh] rounded transition-colors ${
+                          snapshot.isDraggingOver ? "bg-primary/10" : ""
+                        }`}
+                      >
+                        {byStatus[col.status].map((task, idx) => (
+                          <Draggable key={task.id} draggableId={task.id} index={idx}>
+                            {(p, s) => (
+                              <div
+                                ref={p.innerRef}
+                                {...p.draggableProps}
+                                {...p.dragHandleProps}
+                                className={`bg-card border rounded-md p-3 shadow-sm ${
+                                  s.isDragging ? "shadow-md ring-2 ring-primary/30" : ""
+                                }`}
+                              >
+                                <p className="text-sm font-medium leading-snug">{task.title}</p>
+                                {task.description && (
+                                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{task.description}</p>
+                                )}
+                                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
+                                    {projectsMap[task.project_id] ?? "—"}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-[10px] h-4 px-1.5">
+                                    {categoryLabels[task.category] || task.category}
+                                  </Badge>
+                                  <Badge className={`text-[10px] h-4 px-1.5 ${priorityColors[task.priority]}`}>
+                                    {task.priority}
+                                  </Badge>
+                                  {task.responsible && (
+                                    <span className="text-[10px] text-muted-foreground">→ {task.responsible}</span>
+                                  )}
+                                  {task.due_date && (
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {new Date(task.due_date + "T00:00:00").toLocaleDateString("pt-BR")}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center justify-end gap-1 mt-2">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6 text-destructive"
+                                    onClick={() => remove(task.id)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </div>
+              ))}
+            </div>
+          </DragDropContext>
+        )
       ) : Object.keys(grouped).length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">

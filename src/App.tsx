@@ -25,7 +25,6 @@ import Reports from "./pages/Reports";
 import SettingsPage from "./pages/SettingsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import VoiceTasksPage from "./pages/VoiceTasksPage";
-import ConstructionAgenda from "./pages/ConstructionAgenda";
 import NotificationsPage from "./pages/NotificationsPage";
 import NotFound from "./pages/NotFound";
 import ClientPortal from "./pages/ClientPortal";
@@ -91,7 +90,11 @@ const App = () => (
               <Route path="/construction/tasks" element={<ConstructionTasks />} />
               <Route path="/construction/suppliers" element={<Suppliers />} />
               <Route path="/construction/voice-tasks" element={<VoiceTasksPage />} />
-              <Route path="/construction/agenda" element={<ConstructionAgenda />} />
+              {/* Mariana, vídeo 16: "agenda não faz sentido na minha
+                  agenda, isso é cronograma — vira Trello". A agenda foi
+                  removida; o módulo de tarefas Quadra (kanban) passa a
+                  ser a vista única. */}
+              <Route path="/construction/agenda" element={<Navigate to="/construction/voice-tasks" replace />} />
               <Route path="/construction/documents" element={<Documents />} />
               <Route path="/construction/reports" element={<Reports />} />
               {/* Administrativo */}

@@ -13,7 +13,6 @@ import {
   ClipboardList,
   CheckSquare,
   ListChecks,
-  CalendarDays,
   Truck,
   CalendarRange,
   Film,
@@ -58,7 +57,6 @@ const iconMap: Record<string, LucideIcon> = {
   "Tarefas": CheckSquare,
   "Tarefas por Obra": CheckSquare,
   "Tarefas Quadra": ListChecks,
-  "Agenda": CalendarDays,
   "Fornecedores": Truck,
   "Calendário": CalendarRange,
   "Roteiros": Film,
@@ -104,7 +102,6 @@ const menuGroups: MenuGroup[] = [
         subItems: [
           { title: "Tarefas por Obra", url: "/construction/tasks" },
           { title: "Tarefas Quadra", url: "/construction/voice-tasks" },
-          { title: "Agenda", url: "/construction/agenda" },
         ],
       },
       { title: "Fornecedores", url: "/construction/suppliers" },
