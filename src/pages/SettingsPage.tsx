@@ -15,6 +15,7 @@ import ProposalBrandingTab from "@/components/settings/ProposalBrandingTab";
 import { useContentSeries } from "@/hooks/useContentSeries";
 import SupplierCategoriesManager from "@/components/settings/SupplierCategoriesManager";
 import MessageTemplatesSettings from "@/components/settings/MessageTemplatesSettings";
+import ActivityTemplatesManager from "@/components/settings/ActivityTemplatesManager";
 import {
   useCostReferenceTable,
   CONSTRUCTION_TYPE_LABELS,
@@ -312,6 +313,9 @@ export default function SettingsPage() {
               onSave={(cats) => upsert.mutate({ supplier_categories: cats })}
               isPending={upsert.isPending}
             />
+
+            {/* Activity Templates */}
+            <ActivityTemplatesManager />
 
             {/* Message Templates */}
             <MessageTemplatesSettings />

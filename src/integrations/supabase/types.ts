@@ -14,6 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          project_type: Database["public"]["Enums"]["client_type"] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          project_type?: Database["public"]["Enums"]["client_type"] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          project_type?: Database["public"]["Enums"]["client_type"] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      activity_template_items: {
+        Row: {
+          ambiente: string | null
+          area_m2: number | null
+          created_at: string
+          depends_on_positions: number[] | null
+          description: string | null
+          discipline: string | null
+          duration_days: number | null
+          id: string
+          name: string
+          position: number
+          template_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ambiente?: string | null
+          area_m2?: number | null
+          created_at?: string
+          depends_on_positions?: number[] | null
+          description?: string | null
+          discipline?: string | null
+          duration_days?: number | null
+          id?: string
+          name: string
+          position?: number
+          template_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ambiente?: string | null
+          area_m2?: number | null
+          created_at?: string
+          depends_on_positions?: number[] | null
+          description?: string | null
+          discipline?: string | null
+          duration_days?: number | null
+          id?: string
+          name?: string
+          position?: number
+          template_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "activity_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       budget_quote_items: {
         Row: {
           budget_quote_id: string

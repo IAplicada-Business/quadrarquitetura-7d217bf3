@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.analyze-plant]
 verify_jwt = false
+
+[functions.generate-checkpoints]
+verify_jwt = false

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { differenceInDays, isBefore, addDays, format } from "date-fns";
-import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown, RefreshCw, FileDown, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown, RefreshCw, FileDown, Sparkles, Loader2, CalendarCheck, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,9 +21,11 @@ import { GanttChart } from "./GanttChart";
 import { ClientScheduleView } from "./ClientScheduleView";
 import { ActivityForm } from "./ActivityForm";
 import { CascadePreviewDialog, type CascadeChange } from "./CascadePreviewDialog";
+import { ApplyCalendarDialog } from "./ApplyCalendarDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useProjectAI } from "@/hooks/useProjectAI";
+import { csvRow, downloadCsv } from "@/lib/csv";
 
 function formatDate(d: string | null) {
   if (!d) return "—";
@@ -59,6 +61,8 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const { callAction, loading: aiLoading } = useProjectAI();
   const [aiSchedule, setAiSchedule] = useState<any[] | null>(null);
   const [aiScheduleOpen, setAiScheduleOpen] = useState(false);
+  const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
+  const [projectStartDate, setProjectStartDate] = useState<string | null>(null);
 
   // Disciplinas canônicas vêm do escopo (useProjectDisciplines), mesclando
   // com o que já existe em schedule_tasks para não perder dados antigos.
@@ -212,6 +216,89 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const handleRecalcConfirm = () => {
     batchUpdateDates.mutate(recalcChanges.map(c => ({ id: c.id, start_date: c.newStart, end_date: c.newEnd })));
     setRecalcChanges([]);
+  };
+
+  const openCalendarDialog = async () => {
+    // Busca real_start_date do projeto para pré-preencher data de início
+    const { data } = await supabase
+      .from("projects")
+      .select("real_start_date")
+      .eq("id", projectId)
+      .maybeSingle();
+    setProjectStartDate((data?.real_start_date as string | null) ?? null);
+    setCalendarDialogOpen(true);
+  };
+
+  const handleApplyCalendar = (changes: { id: string; start_date: string; end_date: string }[]) => {
+    batchUpdateDates.mutate(changes);
+    setCalendarDialogOpen(false);
+  };
+
+  // Gera checkpoints (Prompt 6 do guia) a partir das atividades já
+  // datadas, chamando a edge `generate-checkpoints` que insere em
+  // `site_visits`. Determinístico: cada disciplina tem regra fixa
+  // de quais checkpoints emitir.
+  const [generatingCheckpoints, setGeneratingCheckpoints] = useState(false);
+  const handleGenerateCheckpoints = async () => {
+    if (activities.length === 0) return;
+    setGeneratingCheckpoints(true);
+    try {
+      const payload = activities
+        .filter((a) => a.start_date && a.end_date)
+        .map((a) => ({
+          id: a.id,
+          name: a.name,
+          discipline: a.discipline,
+          start_date: a.start_date,
+          end_date: a.end_date,
+        }));
+      if (payload.length === 0) {
+        toast({ title: "Aplique o calendário antes para que as atividades tenham datas." });
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke("generate-checkpoints", {
+        body: { project_id: projectId, activities: payload, replace_existing: true },
+      });
+      if (error) throw error;
+      toast({
+        title: `${data?.created ?? 0} checkpoints criados`,
+        description: "Verifique em Acompanhamento da obra (visitas).",
+      });
+    } catch (e: any) {
+      toast({ title: "Erro ao gerar checkpoints", description: e.message, variant: "destructive" });
+    } finally {
+      setGeneratingCheckpoints(false);
+    }
+  };
+
+  // Export CSV do cronograma (Prompt 7 do guia da Mariana — base para
+  // planilha / MS Project / Notion).
+  const handleExportScheduleCSV = () => {
+    const rows = useActivitiesSource
+      ? activities.map((a) => ({
+          name: a.name,
+          discipline: a.discipline ?? "",
+          duration: a.duration_days ?? "",
+          start: a.start_date ?? "",
+          end: a.end_date ?? "",
+          predecessors: (a.depends_on ?? [])
+            .map((id) => activities.find((x) => x.id === id)?.name)
+            .filter(Boolean)
+            .join(" | "),
+        }))
+      : items.map((t: any) => ({
+          name: t.task_name,
+          discipline: t.discipline || (t.scope_items as any)?.discipline || "",
+          duration: t.estimated_days ?? "",
+          start: t.start_date ?? "",
+          end: t.end_date ?? "",
+          predecessors: "",
+        }));
+    let csv = csvRow(["Atividade", "Disciplina", "Duração (dias úteis)", "Início", "Término", "Predecessoras"]);
+    rows.forEach((r) =>
+      csv += csvRow([r.name, r.discipline, r.duration, r.start, r.end, r.predecessors]),
+    );
+    downloadCsv(`cronograma_${projectId}.csv`, csv);
   };
 
   const handleImportFromScope = async () => {
@@ -419,6 +506,36 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
                   <RefreshCw className="h-4 w-4 mr-1" /> Recalcular Cronograma
                 </Button>
               )}
+              {useActivitiesSource && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={openCalendarDialog}
+                  disabled={batchUpdateDates.isPending || activities.length === 0}
+                  title="Aplica calendário brasileiro: pula fim de semana, feriados e recesso"
+                >
+                  <CalendarCheck className="h-4 w-4 mr-1" /> Aplicar calendário BR
+                </Button>
+              )}
+              {useActivitiesSource && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleGenerateCheckpoints}
+                  disabled={generatingCheckpoints || activities.length === 0}
+                  title="Gera visitas técnicas a partir das atividades (medição, recebimento, instalação, finalização)"
+                >
+                  {generatingCheckpoints ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <CalendarCheck className="h-4 w-4 mr-1" />
+                  )}
+                  Gerar Checkpoints
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={handleExportScheduleCSV} disabled={(useActivitiesSource ? activities.length : items.length) === 0}>
+                <FileSpreadsheet className="h-4 w-4 mr-1" /> Exportar Cronograma
+              </Button>
               <Button size="sm" variant="outline" onClick={() => setGenerateDialogOpen(true)} disabled={schedulableActivities.length === 0}>
                 <FileDown className="h-4 w-4 mr-1" /> Gerar do Escopo
               </Button>
@@ -613,6 +730,15 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
         onConfirm={handleRecalcConfirm}
         isLoading={batchUpdateDates.isPending}
         title="Recalcular todo o cronograma"
+      />
+
+      <ApplyCalendarDialog
+        open={calendarDialogOpen}
+        onOpenChange={setCalendarDialogOpen}
+        activities={activities}
+        defaultStartDate={projectStartDate}
+        onApply={handleApplyCalendar}
+        isApplying={batchUpdateDates.isPending}
       />
 
       {/* Generate from Scope Dialog */}
