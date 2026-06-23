@@ -1,6 +1,6 @@
-import { ChevronLeft, ChevronRight, LogOut, Menu, Mic, Moon, Settings, Sun, User } from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { ChevronLeft, ChevronRight, LogOut, Menu, Mic, Moon, Settings, Sun, User, ChevronRight as ChevronRightIcon } from "lucide-react";
+import { useState, useMemo } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -22,11 +22,59 @@ interface AppHeaderProps {
   onToggleSidebar?: () => void;
 }
 
+// Mapeamento legível pra breadcrumb derivado da URL.
+// Caminhos não listados caem para "label" = segmento capitalizado.
+const PATH_LABELS: Record<string, string> = {
+  "dashboard": "Dashboard",
+  "escritorio": "Escritório",
+  "obras": "Obras",
+  "leads": "Leads",
+  "pipeline": "Pipeline",
+  "proposals": "Propostas",
+  "contracts": "Contratos",
+  "clients": "Clientes",
+  "projects": "Obras",
+  "kanban": "Kanban",
+  "construction": "Obra",
+  "tracking": "Acompanhamento",
+  "tasks": "Tarefas",
+  "suppliers": "Fornecedores",
+  "voice-tasks": "Tarefas Quadra",
+  "documents": "Documentos",
+  "reports": "Relatórios",
+  "content": "Conteúdo",
+  "calendar": "Calendário",
+  "scripts": "Roteiros",
+  "posts": "Publicações",
+  "instagram": "Instagrams",
+  "admin": "Administrativo",
+  "settings": "Configurações",
+  "users": "Usuários",
+  "invoices": "Notas Fiscais",
+  "notifications": "Notificações",
+};
+
+function humanize(segment: string): string {
+  if (PATH_LABELS[segment]) return PATH_LABELS[segment];
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(segment)) return "Detalhe";
+  return segment.charAt(0).toUpperCase() + segment.slice(1);
+}
+
 export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onToggleSidebar }: AppHeaderProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+
+  const breadcrumbs = useMemo(() => {
+    const parts = location.pathname.split("/").filter(Boolean);
+    let acc = "";
+    return parts.map((p) => {
+      acc += `/${p}`;
+      return { label: humanize(p), href: acc };
+    });
+  }, [location.pathname]);
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -47,13 +95,12 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
     : email.charAt(0).toUpperCase();
 
   return (
-    <header className="flex items-center justify-between h-14 px-4 lg:px-6 border-b border-primary/20 bg-primary shrink-0">
-      {/* Left side - Logo + toggle */}
-      <div className="flex items-center gap-2">
+    <header className="flex items-center justify-between gap-3 h-16 px-4 lg:px-8 border-b border-border bg-background/85 backdrop-blur-md shrink-0">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         {showMenuButton ? (
           <button
             onClick={onMenuClick}
-            className="p-2 rounded-md text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
+            className="p-2 rounded-lg text-foreground hover:bg-muted transition-colors"
             aria-label="Abrir menu"
           >
             <Menu className="h-5 w-5" />
@@ -62,7 +109,7 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
           onToggleSidebar && (
             <button
               onClick={onToggleSidebar}
-              className="p-2 rounded-md text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
             >
               {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -70,8 +117,8 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
           )
         )}
 
-        {/* Logo in header when sidebar is collapsed */}
-        {sidebarCollapsed && !showMenuButton && (
+        {/* Logo só aparece no mobile/sidebar colapsada */}
+        {(sidebarCollapsed && !showMenuButton) || showMenuButton ? (
           <div className="h-10 overflow-hidden">
             <img
               src={logoLight}
@@ -79,86 +126,86 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
               className="h-16 -mt-3 object-contain object-left animate-fade-in"
             />
           </div>
-        )}
+        ) : null}
 
-        {/* Logo in header on mobile */}
-        {showMenuButton && (
-          <div className="h-10 overflow-hidden">
-            <img
-              src={logoLight}
-              alt="Quadra Arquitetura"
-              className="h-16 -mt-3 object-contain object-left animate-fade-in"
-            />
-          </div>
+        {/* Breadcrumb derivado da rota */}
+        {breadcrumbs.length > 0 && (
+          <nav className="hidden md:flex items-center gap-1.5 text-sm min-w-0 ml-1">
+            {breadcrumbs.map((b, idx) => {
+              const isLast = idx === breadcrumbs.length - 1;
+              return (
+                <span key={b.href} className="flex items-center gap-1.5 min-w-0">
+                  {idx > 0 && <ChevronRightIcon className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />}
+                  {isLast ? (
+                    <span className="font-medium text-foreground truncate">{b.label}</span>
+                  ) : (
+                    <Link
+                      to={b.href}
+                      className="text-muted-foreground hover:text-foreground truncate transition-colors"
+                    >
+                      {b.label}
+                    </Link>
+                  )}
+                </span>
+              );
+            })}
+          </nav>
         )}
       </div>
 
-      {/* Right side */}
-      <div className="flex items-center gap-3">
-        {/* Voice Agent */}
+      <div className="flex items-center gap-2">
         <button
           onClick={() => setVoiceOpen(true)}
-          className="p-2.5 rounded-full bg-secondary text-accent shadow-sm hover:bg-secondary/80 transition-colors"
+          className="h-9 w-9 rounded-full grid place-items-center bg-muted text-accent hover:bg-accent/15 transition-colors"
           aria-label="Assistente de Voz"
+          title="Assistente de voz"
         >
-          <Mic className="h-5 w-5" />
+          <Mic className="h-4 w-4" />
         </button>
         <VoiceAgentDialog open={voiceOpen} onOpenChange={setVoiceOpen} />
 
-        {/* Notifications */}
         <NotificationsPanel />
 
-        {/* Dark mode toggle */}
         <button
           onClick={toggleTheme}
-          className="p-2.5 rounded-full bg-secondary text-accent shadow-sm hover:bg-secondary/80 transition-colors"
+          className="h-9 w-9 rounded-full grid place-items-center bg-muted text-foreground hover:bg-muted/80 transition-colors"
           aria-label="Alternar tema"
+          title={theme === "dark" ? "Tema claro" : "Tema escuro"}
         >
-          {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
 
-        {/* User dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 p-0.5 rounded-full bg-secondary shadow-sm hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-primary">
-              <Avatar className="h-[30px] w-[30px] ring-0">
-                <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-medium">
+            <button className="flex items-center gap-2 pl-1 pr-3 h-9 rounded-full bg-muted hover:bg-muted/80 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background">
+              <Avatar className="h-7 w-7">
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
                   {initials}
                 </AvatarFallback>
               </Avatar>
+              <span className="hidden sm:inline text-sm font-medium text-foreground truncate max-w-[140px]">
+                {fullName?.split(" ")[0] ?? email.split("@")[0]}
+              </span>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 z-50 bg-popover">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                {fullName && (
-                  <p className="text-sm font-medium leading-none">{fullName}</p>
-                )}
-                <p className="text-xs leading-none text-muted-foreground">
-                  {email}
-                </p>
+                {fullName && <p className="text-sm font-medium leading-none">{fullName}</p>}
+                <p className="text-xs leading-none text-muted-foreground">{email}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => navigate("/settings")}
-              className="cursor-pointer"
-            >
+            <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
               <User className="mr-2 h-4 w-4" />
               Perfil
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => navigate("/settings")}
-              className="cursor-pointer"
-            >
+            <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
               <Settings className="mr-2 h-4 w-4" />
               Configurações
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={signOut}
-              className="cursor-pointer text-destructive focus:text-destructive"
-            >
+            <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive focus:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
               Sair
             </DropdownMenuItem>
