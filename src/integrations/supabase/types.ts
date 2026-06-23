@@ -3510,51 +3510,63 @@ export type Database = {
       }
       voice_tasks: {
         Row: {
+          assigned_to: string | null
           category: string
           created_at: string
           description: string | null
           due_date: string | null
           id: string
+          is_recurring: boolean
           parent_id: string | null
           priority: string
-          project_id: string
+          project_id: string | null
+          recurrence_rule: string | null
           responsible: string | null
           source_transcript: string | null
           status: string
+          tags: string[] | null
           task_type: string
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          assigned_to?: string | null
           category?: string
           created_at?: string
           description?: string | null
           due_date?: string | null
           id?: string
+          is_recurring?: boolean
           parent_id?: string | null
           priority?: string
-          project_id: string
+          project_id?: string | null
+          recurrence_rule?: string | null
           responsible?: string | null
           source_transcript?: string | null
           status?: string
+          tags?: string[] | null
           task_type?: string
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          assigned_to?: string | null
           category?: string
           created_at?: string
           description?: string | null
           due_date?: string | null
           id?: string
+          is_recurring?: boolean
           parent_id?: string | null
           priority?: string
-          project_id?: string
+          project_id?: string | null
+          recurrence_rule?: string | null
           responsible?: string | null
           source_transcript?: string | null
           status?: string
+          tags?: string[] | null
           task_type?: string
           title?: string
           updated_at?: string
