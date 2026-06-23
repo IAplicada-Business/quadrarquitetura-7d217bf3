@@ -49,15 +49,22 @@ estava saindo bagunçado):
   7) Marcenaria/Marmoraria/Esquadrias/Serralheria/Vidros (medição,
   produção, instalação); 8) Pintura; 9) Louças e Metais/Iluminação;
   10) Acabamento final; 11) Limpeza.
-- Preencha \`depends_on_indices\` com a lista de índices (0-based,
-  na ordem do array) das atividades pré-requisito. NÃO invente
-  dependências entre disciplinas independentes (ex: pintura da sala
-  NÃO depende de marcenaria da cozinha).
+- Preencha \`depends_on_indices\` com NO MÁXIMO 1 (UMA) dependência
+  por atividade — apenas o pré-requisito DIRETO e imprescindível.
+  Não inclua a cadeia toda; o sistema deriva o resto por ordem.
+  (Mariana 23/06: o modelo estava devolvendo muitas dependências
+  espúrias que ela não conseguia limpar manualmente.)
+- NÃO invente dependências entre disciplinas independentes (ex:
+  pintura da sala NÃO depende de marcenaria da cozinha).
 - Atividades de DIFERENTES ambientes que pertencem à mesma fase
   podem rodar em paralelo: NÃO crie dependência entre elas.
-- Atividades de medição/produção (marcenaria, marmoraria etc.) devem
-  começar cedo no cronograma para que a instalação aconteça depois
-  dos revestimentos. Modele isso com \`depends_on_indices\`.`;
+- Atividades de medição/produção (marcenaria, marmoraria etc.) NÃO
+  precisam depender de demolição/alvenaria — elas só requerem
+  obra liberada para visita. Deixe \`depends_on_indices\` vazio
+  para essas em quase todos os casos.
+- Se está em dúvida se uma dependência é real, NÃO inclua. O
+  cronograma com sequência ordenada já garante a ordem de fluxo;
+  \`depends_on_indices\` serve apenas para travas técnicas reais.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -278,7 +285,13 @@ serve(async (req) => {
         description: parts.join("\n\n") || null,
         incluso: a.incluso ?? [],
         nao_incluso: a.nao_incluso ?? [],
-        depends_on_indices: Array.isArray(a.depends_on_indices) ? a.depends_on_indices : [],
+        // Sprint 7d (call 23/06): mesmo com o prompt limitando a 1
+        // dependência por atividade, o Gemini às vezes devolve 4-5.
+        // Cortamos no servidor para garantir, mantendo só a primeira
+        // (geralmente a mais relevante na ordem que ela retorna).
+        depends_on_indices: Array.isArray(a.depends_on_indices)
+          ? a.depends_on_indices.slice(0, 1)
+          : [],
       };
     });
 

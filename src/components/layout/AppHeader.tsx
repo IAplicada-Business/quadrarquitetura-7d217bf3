@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { NotificationsPanel } from "@/components/layout/NotificationsPanel";
 import { VoiceAgentDialog } from "@/components/layout/VoiceAgentDialog";
+import { InstallPwaButton } from "@/components/layout/InstallPwaButton";
 import logoAzul from "@/assets/logo-azul.png";
 
 interface AppHeaderProps {
@@ -163,6 +164,8 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
           <Mic className="h-4 w-4" />
         </button>
         <VoiceAgentDialog open={voiceOpen} onOpenChange={setVoiceOpen} />
+
+        <InstallPwaButton />
 
         <NotificationsPanel />
 

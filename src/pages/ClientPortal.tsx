@@ -54,7 +54,7 @@ interface PendingResponse {
 }
 
 interface PortalData {
-  project: { name: string; address: string | null; city: string | null; estimated_budget: number | null; ideal_budget: number | null };
+  project: { name: string; address: string | null; city: string | null; estimated_budget: number | null; ideal_budget: number | null; client_move_in_date?: string | null };
   tasks: any[];
   payments: any[];
   invoices: any[];
@@ -195,6 +195,23 @@ export default function ClientPortal() {
             <p className="text-sm opacity-80 mt-1">
               {[project.address, project.city].filter(Boolean).join(" — ")}
             </p>
+          )}
+          {project.client_move_in_date && (
+            <div className="mt-3 inline-flex items-center gap-2 bg-primary-foreground/10 backdrop-blur-sm rounded-md px-3 py-1.5">
+              <span className="text-xs opacity-80">Mudança planejada:</span>
+              <span className="text-sm font-display tabular-nums">
+                {(() => {
+                  const d = new Date(project.client_move_in_date + "T00:00:00");
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const days = Math.round((d.getTime() - today.getTime()) / 86400000);
+                  if (days < 0) return `Há ${Math.abs(days)} dia(s)`;
+                  if (days === 0) return "Hoje";
+                  if (days === 1) return "1 dia";
+                  return `${days} dias`;
+                })()}
+              </span>
+            </div>
           )}
         </div>
       </header>

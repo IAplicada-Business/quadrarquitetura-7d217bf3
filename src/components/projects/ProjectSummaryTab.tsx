@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { format, subDays, isAfter } from "date-fns";
 import { ProjectOnboardingGuide } from "./ProjectOnboardingGuide";
+import { MoveInCountdown } from "./MoveInCountdown";
 import { useProjectActivities } from "@/hooks/useProjectActivities";
 import { ptBR } from "date-fns/locale";
 import { statusLabels } from "@/lib/projectConstants";
@@ -77,6 +78,10 @@ export function ProjectSummaryTab({ project, onTabChange }: ProjectSummaryTabPro
           onDismiss={() => updateProject.mutate({ onboarding_dismissed: true })}
         />
       )}
+
+      {/* Sprint 7d — countdown da mudança do cliente (pedido na call). */}
+      <MoveInCountdown moveInDate={(project as any).client_move_in_date ?? null} />
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-primary/5 border-primary/20">

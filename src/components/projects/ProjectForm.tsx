@@ -36,6 +36,7 @@ export function ProjectForm({ open, onOpenChange, onSubmit, initialData, isLoadi
   const [areaSqm, setAreaSqm] = useState("");
   const [startDate, setStartDate] = useState("");
   const [expectedEndDate, setExpectedEndDate] = useState("");
+  const [clientMoveInDate, setClientMoveInDate] = useState("");
   const [estimatedBudget, setEstimatedBudget] = useState("");
   const [finishLevel, setFinishLevel] = useState("");
 
@@ -61,12 +62,13 @@ export function ProjectForm({ open, onOpenChange, onSubmit, initialData, isLoadi
       setAreaSqm(initialData.area_sqm ? String(initialData.area_sqm) : "");
       setStartDate((initialData.start_date as string) || "");
       setExpectedEndDate((initialData.expected_end_date as string) || "");
+      setClientMoveInDate((initialData.client_move_in_date as string) || "");
       setEstimatedBudget(initialData.estimated_budget ? String(initialData.estimated_budget) : "");
       setFinishLevel(initialData.finish_level ? String(initialData.finish_level) : "");
     } else {
       setName(""); setClientId(""); setStatus("proposta"); setSubStatus(""); setProjectType("residencial");
       setAddress(""); setNeighborhood(""); setCity(""); setAreaSqm(""); setStartDate("");
-      setExpectedEndDate(""); setEstimatedBudget(""); setFinishLevel("");
+      setExpectedEndDate(""); setClientMoveInDate(""); setEstimatedBudget(""); setFinishLevel("");
     }
   }, [initialData, open]);
 
@@ -84,6 +86,7 @@ export function ProjectForm({ open, onOpenChange, onSubmit, initialData, isLoadi
       area_sqm: areaSqm ? Number(areaSqm) : null,
       start_date: startDate || null,
       expected_end_date: expectedEndDate || null,
+      client_move_in_date: clientMoveInDate || null,
       estimated_budget: estimatedBudget ? Number(estimatedBudget) : null,
       finish_level: finishLevel ? Number(finishLevel) : null,
     });
@@ -170,6 +173,16 @@ export function ProjectForm({ open, onOpenChange, onSubmit, initialData, isLoadi
             <div>
               <Label htmlFor="end">Previsão Término</Label>
               <Input id="end" type="date" value={expectedEndDate} onChange={(e) => setExpectedEndDate(e.target.value)} />
+            </div>
+            <div>
+              <Label htmlFor="movein">Mudança do cliente</Label>
+              <Input
+                id="movein"
+                type="date"
+                value={clientMoveInDate}
+                onChange={(e) => setClientMoveInDate(e.target.value)}
+                title="Data planejada para o cliente se mudar — usada na contagem regressiva"
+              />
             </div>
             <div>
               <Label htmlFor="budget">Orçamento Estimado (R$)</Label>
