@@ -2309,6 +2309,7 @@ export type Database = {
       }
       purchases: {
         Row: {
+          area_m2: number | null
           category: string | null
           created_at: string
           deadline: string | null
@@ -2316,8 +2317,10 @@ export type Database = {
           material_calc_id: string | null
           name: string
           payment_info: string | null
+          pieces_count: number | null
           product_link: string | null
           project_id: string
+          room_id: string | null
           specifications: string | null
           status: Database["public"]["Enums"]["purchase_status"] | null
           supplier_name: string | null
@@ -2326,6 +2329,7 @@ export type Database = {
           value: number | null
         }
         Insert: {
+          area_m2?: number | null
           category?: string | null
           created_at?: string
           deadline?: string | null
@@ -2333,8 +2337,10 @@ export type Database = {
           material_calc_id?: string | null
           name: string
           payment_info?: string | null
+          pieces_count?: number | null
           product_link?: string | null
           project_id: string
+          room_id?: string | null
           specifications?: string | null
           status?: Database["public"]["Enums"]["purchase_status"] | null
           supplier_name?: string | null
@@ -2343,6 +2349,7 @@ export type Database = {
           value?: number | null
         }
         Update: {
+          area_m2?: number | null
           category?: string | null
           created_at?: string
           deadline?: string | null
@@ -2350,8 +2357,10 @@ export type Database = {
           material_calc_id?: string | null
           name?: string
           payment_info?: string | null
+          pieces_count?: number | null
           product_link?: string | null
           project_id?: string
+          room_id?: string | null
           specifications?: string | null
           status?: Database["public"]["Enums"]["purchase_status"] | null
           supplier_name?: string | null
@@ -2372,6 +2381,51 @@ export type Database = {
             columns: ["material_calc_id"]
             isOneToOne: false
             referencedRelation: "material_calculations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "project_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_rooms: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          project_id: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          project_id: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          project_id?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_rooms_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -2703,6 +2757,7 @@ export type Database = {
           created_at: string
           id: string
           message_templates: Json | null
+          purchase_categories: string[] | null
           scope: string
           supplier_categories: string[] | null
           tax_rate_percent: number
@@ -2716,6 +2771,7 @@ export type Database = {
           created_at?: string
           id?: string
           message_templates?: Json | null
+          purchase_categories?: string[] | null
           scope?: string
           supplier_categories?: string[] | null
           tax_rate_percent?: number
@@ -2729,6 +2785,7 @@ export type Database = {
           created_at?: string
           id?: string
           message_templates?: Json | null
+          purchase_categories?: string[] | null
           scope?: string
           supplier_categories?: string[] | null
           tax_rate_percent?: number
