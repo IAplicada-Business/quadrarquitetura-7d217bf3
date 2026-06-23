@@ -15,10 +15,13 @@ import type { ProjectActivity } from "@/hooks/useProjectActivities";
 
 interface GeneratedActivity {
   name: string;
+  ambiente?: string;
   discipline: string;
   area_m2?: number;
   duration_days: number;
   description?: string;
+  incluso?: string[];
+  nao_incluso?: string[];
   selected: boolean;
 }
 
@@ -280,8 +283,14 @@ export function GenerateActivitiesDialog({
     }
 
     selected.forEach((a, i) => {
+      // Prefixa o ambiente no nome para o front existente já mostrar a
+      // separação pedida pela Mariana ("aqui eu preciso do cômodo")
+      // sem depender de coluna nova em project_activities.
+      const ambientePrefix = a.ambiente && !a.name.includes(a.ambiente)
+        ? `[${a.ambiente}] `
+        : "";
       onCreate({
-        name: a.name,
+        name: `${ambientePrefix}${a.name}`.slice(0, 200),
         discipline: a.discipline,
         area_m2: a.area_m2 ?? null,
         duration_days: a.duration_days,
@@ -689,6 +698,11 @@ export function GenerateActivitiesDialog({
                       className="h-8 text-sm font-medium"
                     />
                     <div className="flex items-center gap-2 flex-wrap">
+                      {activity.ambiente && (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          {activity.ambiente}
+                        </Badge>
+                      )}
                       <Badge
                         variant="outline"
                         className="text-[10px] px-1.5 py-0 border-0"
@@ -713,9 +727,33 @@ export function GenerateActivitiesDialog({
                         <span className="text-[11px] text-muted-foreground">dias</span>
                       </div>
                     </div>
-                    {activity.description && (
+                    {(activity.incluso?.length || activity.nao_incluso?.length) ? (
+                      <details className="text-[11px]">
+                        <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                          Ver incluso / não incluso
+                        </summary>
+                        <div className="mt-1 pl-2 border-l-2 border-muted">
+                          {activity.incluso && activity.incluso.length > 0 && (
+                            <div>
+                              <p className="font-medium text-success">Incluso:</p>
+                              <ul className="list-disc pl-4 text-muted-foreground">
+                                {activity.incluso.map((x, i) => <li key={i}>{x}</li>)}
+                              </ul>
+                            </div>
+                          )}
+                          {activity.nao_incluso && activity.nao_incluso.length > 0 && (
+                            <div className="mt-1">
+                              <p className="font-medium text-destructive">Não incluso:</p>
+                              <ul className="list-disc pl-4 text-muted-foreground">
+                                {activity.nao_incluso.map((x, i) => <li key={i}>{x}</li>)}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </details>
+                    ) : activity.description ? (
                       <p className="text-[11px] text-muted-foreground truncate">{activity.description}</p>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               ))}
