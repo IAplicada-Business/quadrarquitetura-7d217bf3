@@ -331,7 +331,7 @@ export function ConstructionTaskForm({
               </div>
               {calculatedStartDate && !startDate && (
                 <p className="text-xs text-muted-foreground">
-                  📅 Início calculado: {format(parseISO(calculatedStartDate), "dd/MM/yyyy")}
+                   Início calculado: {format(parseISO(calculatedStartDate), "dd/MM/yyyy")}
                 </p>
               )}
             </div>

@@ -116,7 +116,7 @@ export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoa
     if (project.client_id) {
       const { data: client } = await supabase
         .from("clients")
-        .select("name, cpf_cnpj")
+        .select("name, cpf_cnpj, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zip")
         .eq("id", project.client_id)
         .maybeSingle();
       if (client) {
@@ -124,8 +124,15 @@ export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoa
           ...f,
           recipient_name: f.recipient_name || client.name || "",
           recipient_cnpj: f.recipient_cnpj || client.cpf_cnpj || "",
+          recipient_address_street: f.recipient_address_street || (client as any).address_street || f.recipient_address_street,
+          recipient_address_number: f.recipient_address_number || (client as any).address_number || f.recipient_address_number,
+          recipient_address_complement: f.recipient_address_complement || (client as any).address_complement || f.recipient_address_complement,
+          recipient_address_neighborhood: f.recipient_address_neighborhood || (client as any).address_neighborhood || f.recipient_address_neighborhood,
+          recipient_address_city: f.recipient_address_city || (client as any).address_city || f.recipient_address_city,
+          recipient_address_state: f.recipient_address_state || (client as any).address_state || f.recipient_address_state,
+          recipient_address_zip: f.recipient_address_zip || (client as any).address_zip || f.recipient_address_zip,
         }));
-        toast({ title: "Dados do tomador preenchidos a partir do projeto" });
+        toast({ title: "Dados do tomador preenchidos a partir do cliente" });
       }
     }
   };

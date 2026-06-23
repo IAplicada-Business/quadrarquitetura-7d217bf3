@@ -463,7 +463,7 @@ export default function DashboardObras() {
                           <TableCell key={proj.id} className="text-center">
                             <div className="rounded px-1 py-0.5 text-xs font-medium" style={{ backgroundColor: bgColor, color: textColor }}>
                               S{cell.weeks.join(", S")}
-                              {cell.conflict && " ⚠"}
+                              {cell.conflict && " "}
                             </div>
                           </TableCell>
                         );

@@ -227,10 +227,7 @@ export default function ProjectsKanban() {
               <div
                 className={`rounded-t-lg px-3 py-2 border ${columnBorderColors[status]} ${headerBgColors[status]} font-medium text-sm flex items-center justify-between`}
               >
-                <span>
-                  <span className="mr-1">{statusEmojis[status]}</span>
-                  {statusLabels[status]}
-                </span>
+                <span>{statusLabels[status]}</span>
                 <Badge variant="outline" className="text-[10px] bg-background">
                   {items.length}
                 </Badge>

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Plus, Phone, Mail, ArrowRight, Trash2, Pencil, UserCheck,
   LayoutGrid, List, Search, Filter, Users, CalendarCheck, TrendingUp, XCircle,
-  BarChart3, GripVertical, MessageSquare,
+  BarChart3, GripVertical, MessageSquare, ChevronsLeft, ChevronsRight,
 } from "lucide-react";
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -75,6 +75,23 @@ export default function LeadsPipeline() {
 
   // Drag-and-drop state
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  // Sprint 7 — colunas colapsáveis (pedido na call: "colunas com
+  // ocultação e expansão quando necessário"). Persistimos por sessão.
+  const [collapsedColumns, setCollapsedColumns] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("pipeline_collapsed_cols");
+      if (saved) return new Set(JSON.parse(saved));
+    } catch {}
+    return new Set();
+  });
+  const toggleColumnCollapse = (status: string) => {
+    setCollapsedColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) next.delete(status); else next.add(status);
+      try { localStorage.setItem("pipeline_collapsed_cols", JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
   const [dragOverStatus, setDragOverStatus] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -309,6 +326,34 @@ export default function LeadsPipeline() {
           {LEAD_STATUSES.map((status) => {
             const columnLeads = filtered.filter((l) => l.status === status);
             const isOver = dragOverStatus === status;
+            const isCollapsed = collapsedColumns.has(status);
+            // Coluna colapsada vira faixa vertical estreita que ainda
+            // aceita drop (atalho para empilhar leads rapidamente).
+            if (isCollapsed) {
+              return (
+                <div
+                  key={status}
+                  className={`w-10 flex-shrink-0 flex flex-col rounded-lg border ${statusColors[status]} ${isOver ? `border-2 border-dashed ${columnBorderColors[status]}` : ""} cursor-pointer hover:bg-muted/40 transition-colors`}
+                  onDragOver={handleDragOver}
+                  onDragEnter={() => handleDragEnter(status)}
+                  onDragLeave={(e) => handleDragLeave(e, status)}
+                  onDrop={(e) => handleDrop(e, status)}
+                  onClick={() => toggleColumnCollapse(status)}
+                  title={`Expandir ${leadStatusLabels[status]}`}
+                >
+                  <div className="flex flex-col items-center gap-2 py-3">
+                    <ChevronsRight className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span
+                      className="text-[11px] font-medium tracking-wider"
+                      style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+                    >
+                      {leadStatusLabels[status]}
+                    </span>
+                    <Badge variant="outline" className="text-[10px]">{columnLeads.length}</Badge>
+                  </div>
+                </div>
+              );
+            }
             return (
               <div
                 key={status}
@@ -318,8 +363,17 @@ export default function LeadsPipeline() {
                 onDragLeave={(e) => handleDragLeave(e, status)}
                 onDrop={(e) => handleDrop(e, status)}
               >
-                <div className={`rounded-t-lg px-3 py-2 border ${statusColors[status]} font-medium text-sm flex items-center justify-between`}>
-                  <span>{leadStatusLabels[status]}</span>
+                <div className={`rounded-t-lg px-3 py-2 border ${statusColors[status]} font-medium text-sm flex items-center justify-between gap-2`}>
+                  <span className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => toggleColumnCollapse(status)}
+                      className="hover:text-foreground"
+                      title="Recolher coluna"
+                    >
+                      <ChevronsLeft className="h-3.5 w-3.5" />
+                    </button>
+                    {leadStatusLabels[status]}
+                  </span>
                   <Badge variant="outline" className="text-xs">{columnLeads.length}</Badge>
                 </div>
                 <div className={`border border-t-0 rounded-b-lg bg-muted/30 flex-1 p-2 space-y-2 overflow-y-auto transition-all duration-200 ${isOver ? `border-2 border-dashed ${columnBorderColors[status]} bg-accent/20` : ""}`}>

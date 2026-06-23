@@ -97,7 +97,7 @@ export default function ProjectDetail() {
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
             {clientName && <span>Cliente: {clientName}</span>}
-            {project.address && <span>📍 {project.address}{project.city ? `, ${project.city}` : ""}</span>}
+            {project.address && <span> {project.address}{project.city ? `, ${project.city}` : ""}</span>}
           </div>
         </div>
       </div>

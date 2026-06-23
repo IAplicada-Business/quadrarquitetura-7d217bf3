@@ -18,7 +18,6 @@ import LeadDetail from "./pages/LeadDetail";
 import LeadsProposals from "./pages/LeadsProposals";
 import LeadsContracts from "./pages/LeadsContracts";
 import SiteTracking from "./pages/SiteTracking";
-import ConstructionTasks from "./pages/ConstructionTasks";
 import Suppliers from "./pages/Suppliers";
 import Documents from "./pages/Documents";
 import Reports from "./pages/Reports";
@@ -89,11 +88,17 @@ const App = () => (
               <Route path="/leads/contracts" element={<LeadsContracts />} />
               {/* Obra */}
               <Route path="/construction/tracking" element={<SiteTracking />} />
-              <Route path="/construction/tasks" element={<ConstructionTasks />} />
+              {/* Sprint 7 — "Tarefas por Obra" removida.
+                  Redundante com Kanban Quadra/Projetos (`/tasks`) e o
+                  cronograma da obra. Redireciona pra Kanban Projetos. */}
+              <Route path="/construction/tasks" element={<Navigate to="/tasks/projetos" replace />} />
               <Route path="/construction/suppliers" element={<Suppliers />} />
               <Route path="/construction/voice-tasks" element={<VoiceTasksPage />} />
-              {/* Sprint 6 — Vobi-like central de tarefas Quadra (pessoal + obras). */}
-              <Route path="/tasks" element={<TasksHub />} />
+              {/* Sprint 6/7 — Kanbans: visão central (todas) + submenus
+                  Projetos / Quadra com filtro pré-aplicado. */}
+              <Route path="/tasks" element={<Navigate to="/tasks/projetos" replace />} />
+              <Route path="/tasks/projetos" element={<TasksHub mode="projects" />} />
+              <Route path="/tasks/quadra" element={<TasksHub mode="quadra" />} />
               {/* Mariana, vídeo 16: "agenda não faz sentido na minha
                   agenda, isso é cronograma — vira Trello". A agenda foi
                   removida; o módulo de tarefas Quadra (kanban) passa a

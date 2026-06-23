@@ -118,7 +118,7 @@ export function ClientScheduleView({ tasks, projectName }: ClientScheduleViewPro
     }).join("\n");
 
     let html = `<div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto;">`;
-    html += `<h2 style="color: #1F4E79; border-bottom: 2px solid #1F4E79; padding-bottom: 8px;">📅 Cronograma — ${projectName || "Obra"}</h2>`;
+    html += `<h2 style="color: #1F4E79; border-bottom: 2px solid #1F4E79; padding-bottom: 8px;"> Cronograma — ${projectName || "Obra"}</h2>`;
 
     mergedBlocks.forEach((block) => {
       html += `<div style="margin: 12px 0; padding: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #1F4E79;">`;
@@ -175,7 +175,7 @@ export function ClientScheduleView({ tasks, projectName }: ClientScheduleViewPro
         </style>
       </head>
       <body>
-        <h1>📅 Cronograma — ${projectName || "Obra"}</h1>
+        <h1> Cronograma — ${projectName || "Obra"}</h1>
         ${mergedBlocks.map(block => `
           <div class="week-block">
             <div class="week-title">${block.weekRange}</div>

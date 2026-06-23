@@ -99,7 +99,7 @@ export function ProjectOnboardingGuide({ project, onTabChange, onDismiss }: Proj
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold text-display">
-            🚀 Próximos Passos
+             Próximos Passos
           </CardTitle>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">

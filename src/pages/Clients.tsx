@@ -49,6 +49,13 @@ interface Client {
   client_type: string;
   origin: string;
   observations: string | null;
+  address_street: string | null;
+  address_number: string | null;
+  address_complement: string | null;
+  address_neighborhood: string | null;
+  address_city: string | null;
+  address_state: string | null;
+  address_zip: string | null;
   created_at: string;
   source_lead_id: string | null;
   converted_at: string | null;
@@ -79,6 +86,13 @@ const emptyForm = {
   client_type: "residencial",
   origin: "outro",
   observations: "",
+  address_street: "",
+  address_number: "",
+  address_complement: "",
+  address_neighborhood: "",
+  address_city: "",
+  address_state: "",
+  address_zip: "",
 };
 
 export default function Clients() {
@@ -149,6 +163,13 @@ export default function Clients() {
       client_type: form.client_type as "residencial" | "comercial" | "saude" | "outro",
       origin: form.origin as "indicacao" | "instagram" | "google" | "site" | "outro",
       observations: form.observations || null,
+      address_street: form.address_street || null,
+      address_number: form.address_number || null,
+      address_complement: form.address_complement || null,
+      address_neighborhood: form.address_neighborhood || null,
+      address_city: form.address_city || null,
+      address_state: form.address_state || null,
+      address_zip: form.address_zip || null,
       user_id: user.id,
     };
 
@@ -183,6 +204,13 @@ export default function Clients() {
       client_type: client.client_type,
       origin: client.origin,
       observations: client.observations || "",
+      address_street: client.address_street || "",
+      address_number: client.address_number || "",
+      address_complement: client.address_complement || "",
+      address_neighborhood: client.address_neighborhood || "",
+      address_city: client.address_city || "",
+      address_state: client.address_state || "",
+      address_zip: client.address_zip || "",
     });
     setDialogOpen(true);
   };
@@ -322,6 +350,22 @@ export default function Clients() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+              <div className="rounded-md border p-3 space-y-2 bg-muted/20">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">Endereço</Label>
+                <div className="grid grid-cols-[1fr_120px] gap-2">
+                  <Input placeholder="Logradouro" value={form.address_street} onChange={(e) => setForm({ ...form, address_street: e.target.value })} />
+                  <Input placeholder="Número" value={form.address_number} onChange={(e) => setForm({ ...form, address_number: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="Complemento" value={form.address_complement} onChange={(e) => setForm({ ...form, address_complement: e.target.value })} />
+                  <Input placeholder="Bairro" value={form.address_neighborhood} onChange={(e) => setForm({ ...form, address_neighborhood: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-[1fr_80px_140px] gap-2">
+                  <Input placeholder="Cidade" value={form.address_city} onChange={(e) => setForm({ ...form, address_city: e.target.value })} />
+                  <Input placeholder="UF" maxLength={2} value={form.address_state} onChange={(e) => setForm({ ...form, address_state: e.target.value.toUpperCase() })} />
+                  <Input placeholder="CEP" value={form.address_zip} onChange={(e) => setForm({ ...form, address_zip: e.target.value })} />
                 </div>
               </div>
               <div className="space-y-2">

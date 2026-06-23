@@ -43,10 +43,23 @@ function isOverdue(t: VoiceTask, todayIso: string) {
   return t.due_date && t.due_date < todayIso && t.status !== "concluido";
 }
 
-export default function TasksHub() {
+/**
+ * Sprint 7 — `mode` controla o pré-filtro de projeto:
+ *  - "all"     : Quadra + projetos
+ *  - "quadra"  : só sem projeto (pessoal)
+ *  - "projects": só com project_id (todas as obras)
+ */
+interface TasksHubProps {
+  mode?: "all" | "quadra" | "projects";
+  title?: string;
+}
+
+export default function TasksHub({ mode = "all", title }: TasksHubProps) {
   const { user } = useAuth();
   const [view, setView] = useState<"kanban" | "lista" | "agenda">("kanban");
-  const [filterProject, setFilterProject] = useState(PROJECT_ALL);
+  const initialProjectFilter =
+    mode === "quadra" ? PROJECT_NONE : PROJECT_ALL;
+  const [filterProject, setFilterProject] = useState(initialProjectFilter);
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
   const [filterTag, setFilterTag] = useState("");
@@ -68,6 +81,9 @@ export default function TasksHub() {
 
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
+      // Filtro forçado por modo (sobrepõe o filterProject quando aplicável).
+      if (mode === "quadra" && t.project_id) return false;
+      if (mode === "projects" && !t.project_id) return false;
       if (filterProject === PROJECT_NONE && t.project_id) return false;
       if (filterCategory !== "all" && t.category !== filterCategory) return false;
       if (filterPriority !== "all" && t.priority !== filterPriority) return false;
@@ -75,7 +91,7 @@ export default function TasksHub() {
       if (search && !t.title.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [tasks, filterProject, filterCategory, filterPriority, filterTag, search]);
+  }, [tasks, mode, filterProject, filterCategory, filterPriority, filterTag, search]);
 
   const projectsMap = useMemo(
     () => Object.fromEntries(projects.map((p) => [p.id, p.name])),
@@ -119,9 +135,15 @@ export default function TasksHub() {
     <div className="space-y-6">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-display font-light">Tarefas Quadra</h1>
+          <h1 className="text-2xl font-display font-light">
+            {title ?? (mode === "quadra" ? "Kanban Quadra" : mode === "projects" ? "Kanban Projetos" : "Tarefas Quadra")}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Centro de tarefas pessoais e por obra. Por voz, por digitação ou geradas automaticamente.
+            {mode === "quadra"
+              ? "Tarefas internas da Quadra (sem vínculo a uma obra específica)."
+              : mode === "projects"
+              ? "Tarefas vinculadas às obras em andamento."
+              : "Centro de tarefas pessoais e por obra. Por voz, por digitação ou geradas automaticamente."}
           </p>
         </div>
         <Button size="sm" onClick={() => setFormOpen(true)}>

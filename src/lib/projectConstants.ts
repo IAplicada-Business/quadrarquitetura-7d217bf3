@@ -32,13 +32,13 @@ export const statusColors: Record<string, string> = {
 };
 
 export const statusEmojis: Record<string, string> = {
-  proposta: "📋",
-  contrato: "✍️",
-  projeto: "📐",
-  planejamento: "🧮",
-  mobilizacao: "🏗️",
-  execucao: "🔨",
-  concluido: "✅",
+  proposta: "",
+  contrato: "",
+  projeto: "",
+  planejamento: "",
+  mobilizacao: "",
+  execucao: "",
+  concluido: "",
 };
 
 // Sub-fases por fase macro (uso interno granular)
