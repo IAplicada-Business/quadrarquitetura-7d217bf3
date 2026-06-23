@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
@@ -29,16 +29,17 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, parseISO, differenceInDays, getISOWeek, addDays, min as dateMin, max as dateMax } from "date-fns";
+import { C } from "@/lib/chartColors";
 
-/* ── paleta azul obras ──────────────────────────── */
+/* ── paleta obras — alinhada ao brand navy/terra ── */
 const AZUL = {
-  destaque: "hsl(209, 59%, 30%)",
-  fundoSuave: "hsl(209, 30%, 96%)",
-  textoDestaque: "hsl(209, 50%, 25%)",
-  fill1: "hsl(209, 59%, 30%)",
-  fill2: "hsl(209, 45%, 50%)",
-  fill3: "hsl(195, 55%, 55%)",
-  fill4: "hsl(209, 30%, 70%)",
+  destaque:      C.navy,
+  fundoSuave:    C.navyBg,
+  textoDestaque: C.navyMid,
+  fill1:         C.navy,
+  fill2:         C.terra,
+  fill3:         C.navyMid,
+  fill4:         C.navyFaint,
 };
 
 function fmt(value: number) {
@@ -112,7 +113,7 @@ export default function DashboardObras() {
         .sort((a, b) => (a.start_date ?? "").localeCompare(b.start_date ?? ""))[0];
 
       const statusLabel: Record<string, string> = { execucao: "Em execução", mobilizacao: "Mobilização", planejamento: "Planejamento" };
-      const statusColor: Record<string, string> = { execucao: "hsl(152, 60%, 40%)", mobilizacao: "hsl(38, 92%, 50%)", planejamento: "hsl(210, 70%, 50%)" };
+      const statusColor: Record<string, string> = { execucao: C.success, mobilizacao: C.warning, planejamento: C.navyMid };
 
       return {
         id: proj.id,
@@ -165,13 +166,18 @@ export default function DashboardObras() {
   }, [scheduleTasks, materials, payments, todayStr, today]);
 
   // ── BLOCO 3 — Financeiro ──
+  // "orcado" = total comprometido em compras/pagamentos da obra (não o
+  // valor do contrato com o cliente). Se não houver pagamentos
+  // registrados ainda, cai de volta para estimated_budget.
   const finChartData = useMemo(() => {
     const active = projects.filter((p) => p.status !== "concluido");
     return active.map((proj) => {
-      const pago = payments.filter((p) => p.project_id === proj.id && p.status === "pago").reduce((s, p) => s + p.value, 0);
+      const projPayments = payments.filter((p) => p.project_id === proj.id);
+      const pago = projPayments.filter((p) => p.status === "pago").reduce((s, p) => s + p.value, 0);
+      const comprometido = projPayments.reduce((s, p) => s + p.value, 0);
       return {
         name: (proj.project_number ? proj.project_number + " " : "") + (proj.name?.length > 12 ? proj.name.slice(0, 12) + "…" : proj.name),
-        orcado: proj.estimated_budget ?? 0,
+        orcado: comprometido > 0 ? comprometido : (proj.estimated_budget ?? 0),
         gasto: pago,
       };
     });
@@ -233,9 +239,9 @@ export default function DashboardObras() {
         const elapsed = differenceInDays(today, minDate);
         expectedProgress = Math.min(100, Math.max(0, Math.round((elapsed / totalDays) * 100)));
       }
-      let barColor = "hsl(152, 60%, 40%)";
-      if (progress < expectedProgress - 20) barColor = "hsl(0, 70%, 50%)";
-      else if (progress < expectedProgress - 5) barColor = "hsl(38, 92%, 50%)";
+      let barColor = C.success;
+      if (progress < expectedProgress - 20) barColor = C.danger;
+      else if (progress < expectedProgress - 5) barColor = C.warning;
 
       return { projectId: proj.id, name: proj.name, minDate, maxDate, progress, barColor, nextDelivery: nextTask?.task_name ?? null };
     }).filter((p) => p.minDate && p.maxDate);
@@ -257,12 +263,35 @@ export default function DashboardObras() {
     };
   }, [projects, scheduleTasks, todayStr, today]);
 
+  const [activeTab, setActiveTab] = useState<"geral" | "multiobras">("geral");
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold font-display mb-1">Obras</h1>
         <p className="text-muted-foreground">Visão operacional de campo</p>
       </div>
+
+      {/* Tabs internas */}
+      <div className="border-b">
+        <div className="flex gap-0">
+          {(["geral", "multiobras"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setActiveTab(t)}
+              className={`bg-transparent border-none px-6 py-2.5 text-sm font-medium cursor-pointer transition-colors ${
+                activeTab === t
+                  ? "border-b-2 border-primary text-primary"
+                  : "border-b-2 border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t === "geral" ? "Visão Geral" : "Multi-Obras"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {activeTab === "geral" && (<>
 
       {/* ═══ BLOCO 1 — VISÃO GERAL DOS PROJETOS ═══ */}
       <Card>
@@ -307,10 +336,10 @@ export default function DashboardObras() {
       {/* ═══ BLOCO 2 — ALERTAS CONSOLIDADOS ═══ */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Atividades atrasadas */}
-        <Card className="border-l-4" style={{ borderLeftColor: alerts.overdueTasks.length > 0 ? "hsl(0, 70%, 50%)" : "hsl(152, 60%, 40%)" }}>
+        <Card className="border-l-4" style={{ borderLeftColor: alerts.overdueTasks.length > 0 ? C.danger : C.success }}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4" style={{ color: "hsl(0, 70%, 50%)" }} />
+              <Clock className="h-4 w-4" style={{ color: C.danger }} />
               Atividades Atrasadas
               {alerts.overdueTasks.length > 0 && <Badge variant="destructive" className="text-xs">{alerts.overdueTasks.length}</Badge>}
             </CardTitle>
@@ -324,7 +353,7 @@ export default function DashboardObras() {
                       <p className="font-medium text-xs">{t.taskName}</p>
                       <p className="text-xs text-muted-foreground">{t.projectName}</p>
                     </div>
-                    <Badge variant="outline" className="text-xs" style={{ borderColor: "hsl(0,70%,50%)", color: "hsl(0,70%,50%)" }}>{t.daysOverdue}d</Badge>
+                    <Badge variant="outline" className="text-xs" style={{ borderColor: C.danger, color: C.danger }}>{t.daysOverdue}d</Badge>
                   </Link>
                 ))}
               </div>
@@ -335,12 +364,12 @@ export default function DashboardObras() {
         </Card>
 
         {/* Materiais não entregues */}
-        <Card className="border-l-4" style={{ borderLeftColor: alerts.delayedMaterials.length > 0 ? "hsl(38, 92%, 50%)" : "hsl(152, 60%, 40%)" }}>
+        <Card className="border-l-4" style={{ borderLeftColor: alerts.delayedMaterials.length > 0 ? C.warning : C.success }}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Truck className="h-4 w-4" style={{ color: "hsl(38, 92%, 50%)" }} />
+              <Truck className="h-4 w-4" style={{ color: C.warning }} />
               Materiais Aguardando
-              {alerts.delayedMaterials.length > 0 && <Badge className="text-xs" style={{ backgroundColor: "hsl(38,80%,50%)", color: "white" }}>{alerts.delayedMaterials.length}</Badge>}
+              {alerts.delayedMaterials.length > 0 && <Badge className="text-xs" style={{ backgroundColor: C.warning, color: "white" }}>{alerts.delayedMaterials.length}</Badge>}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -363,10 +392,10 @@ export default function DashboardObras() {
         </Card>
 
         {/* Pagamentos de obra vencidos */}
-        <Card className="border-l-4" style={{ borderLeftColor: alerts.overduePayments.length > 0 ? "hsl(0, 70%, 50%)" : "hsl(152, 60%, 40%)" }}>
+        <Card className="border-l-4" style={{ borderLeftColor: alerts.overduePayments.length > 0 ? C.danger : C.success }}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <CreditCard className="h-4 w-4" style={{ color: "hsl(0, 70%, 50%)" }} />
+              <CreditCard className="h-4 w-4" style={{ color: C.danger }} />
               Pagamentos Vencidos
               {alerts.overduePayments.length > 0 && <Badge variant="destructive" className="text-xs">{alerts.overduePayments.length}</Badge>}
             </CardTitle>
@@ -382,7 +411,7 @@ export default function DashboardObras() {
                     </div>
                     <div className="text-right">
                       <p className="text-xs font-semibold">{fmt(p.value)}</p>
-                      <p className="text-xs" style={{ color: "hsl(0,70%,50%)" }}>{p.daysOverdue}d</p>
+                      <p className="text-xs" style={{ color: C.danger }}>{p.daysOverdue}d</p>
                     </div>
                   </Link>
                 ))}
@@ -421,7 +450,10 @@ export default function DashboardObras() {
         </CardContent>
       </Card>
 
-      {/* ═══ VISÃO MULTI-OBRAS (mantida) ═══ */}
+      </>)}
+
+      {/* ═══ ABA MULTI-OBRAS ═══ */}
+      {activeTab === "multiobras" && (<>
       <div className="pt-2">
         <h2 className="text-xl font-bold font-display mb-1" style={{ color: AZUL.textoDestaque }}>Visão Multi-Obras</h2>
         <p className="text-sm text-muted-foreground mb-4">Panorama consolidado de todas as obras ativas</p>
@@ -455,10 +487,10 @@ export default function DashboardObras() {
                       {multiObras.supplierMatrix.projects.map((proj) => {
                         const cell = multiObras.supplierMatrix.matrix[supplier]?.[proj.id];
                         if (!cell || cell.weeks.length === 0) {
-                          return <TableCell key={proj.id} className="text-center"><div className="h-6 w-full rounded" style={{ backgroundColor: "hsl(0,0%,92%)" }} /></TableCell>;
+                          return <TableCell key={proj.id} className="text-center"><div className="h-6 w-full rounded bg-muted" /></TableCell>;
                         }
-                        const bgColor = cell.conflict ? "hsl(38, 92%, 85%)" : "hsl(152, 50%, 85%)";
-                        const textColor = cell.conflict ? "hsl(38, 80%, 30%)" : "hsl(152, 50%, 25%)";
+                        const bgColor = cell.conflict ? "hsl(32, 88%, 88%)" : "hsl(152, 50%, 85%)";
+                        const textColor = cell.conflict ? C.warning : C.success;
                         return (
                           <TableCell key={proj.id} className="text-center">
                             <div className="rounded px-1 py-0.5 text-xs font-medium" style={{ backgroundColor: bgColor, color: textColor }}>
@@ -543,6 +575,7 @@ export default function DashboardObras() {
           )}
         </CardContent>
       </Card>
+      </>)}
     </div>
   );
 }

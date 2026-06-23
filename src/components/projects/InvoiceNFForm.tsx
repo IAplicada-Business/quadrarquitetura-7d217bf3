@@ -18,6 +18,7 @@ interface InvoiceNFFormProps {
   projectId?: string;
   showProjectSelect?: boolean;
   projects?: { id: string; name: string }[];
+  defaultServiceCode?: string | null;
 }
 
 const EMPTY = {
@@ -35,6 +36,7 @@ const EMPTY = {
   recipient_address_city: "",
   recipient_address_state: "",
   recipient_address_zip: "",
+  service_code: "",
   service_description: "",
   amount: "",
   issue_date: "",
@@ -46,8 +48,8 @@ const EMPTY = {
 
 const NO_PROJECT = "__none__";
 
-export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoading, projectId, showProjectSelect, projects }: InvoiceNFFormProps) {
-  const [form, setForm] = useState({ ...EMPTY, project_id: projectId || "" });
+export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoading, projectId, showProjectSelect, projects, defaultServiceCode }: InvoiceNFFormProps) {
+  const [form, setForm] = useState({ ...EMPTY, project_id: projectId || "", service_code: defaultServiceCode || "" });
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -67,6 +69,7 @@ export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoa
         recipient_address_city: (initialData.recipient_address_city as string) || "",
         recipient_address_state: (initialData.recipient_address_state as string) || "",
         recipient_address_zip: (initialData.recipient_address_zip as string) || "",
+        service_code: (initialData.service_code as string) || defaultServiceCode || "",
         service_description: (initialData.service_description as string) || "",
         amount: String(initialData.amount ?? ""),
         issue_date: (initialData.issue_date as string) || "",
@@ -76,9 +79,9 @@ export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoa
         file_url: (initialData.file_url as string) || "",
       });
     } else {
-      setForm({ ...EMPTY, project_id: projectId || "" });
+      setForm({ ...EMPTY, project_id: projectId || "", service_code: defaultServiceCode || "" });
     }
-  }, [initialData, projectId, open]);
+  }, [initialData, projectId, open, defaultServiceCode]);
 
   // Bug 6/7: a competência costumava ficar nula porque o usuário precisava
   // preencher manualmente. Como o filtro do relatório fiscal usa
@@ -176,6 +179,7 @@ export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoa
       recipient_address_city: form.recipient_address_city || null,
       recipient_address_state: form.recipient_address_state || null,
       recipient_address_zip: form.recipient_address_zip || null,
+      service_code: form.service_code || null,
       service_description: form.service_description || null,
       amount: parseFloat(form.amount),
       issue_date: form.issue_date,
@@ -267,9 +271,19 @@ export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoa
               <Input placeholder="CEP" value={form.recipient_address_zip} onChange={(e) => setForm((f) => ({ ...f, recipient_address_zip: e.target.value }))} />
             </div>
           </div>
-          <div>
-            <Label>Descrição do serviço</Label>
-            <Textarea value={form.service_description} onChange={(e) => setForm((f) => ({ ...f, service_description: e.target.value }))} rows={2} />
+          <div className="grid grid-cols-[180px_1fr] gap-3">
+            <div>
+              <Label>Código de Serviço</Label>
+              <Input
+                value={form.service_code}
+                onChange={(e) => setForm((f) => ({ ...f, service_code: e.target.value }))}
+                placeholder="ex: 7.01"
+              />
+            </div>
+            <div>
+              <Label>Descrição do serviço</Label>
+              <Input value={form.service_description} onChange={(e) => setForm((f) => ({ ...f, service_description: e.target.value }))} />
+            </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>

@@ -27,7 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { format } from "date-fns";
+import { format, subMonths, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const typeLabels: Record<string, string> = {
@@ -47,6 +47,7 @@ export default function Projects() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [periodFilter, setPeriodFilter] = useState("all");
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ["projects"],
@@ -129,7 +130,16 @@ export default function Projects() {
       (p.clients as { name: string } | null)?.name?.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || p.status === statusFilter;
     const matchesType = typeFilter === "all" || p.project_type === typeFilter;
-    return matchesSearch && matchesStatus && matchesType;
+    let matchesPeriod = true;
+    if (periodFilter !== "all" && p.start_date) {
+      const d = new Date(p.start_date);
+      const now = new Date();
+      if (periodFilter === "este_mes") matchesPeriod = d >= startOfMonth(now);
+      else if (periodFilter === "ultimo_mes") matchesPeriod = d >= startOfMonth(subMonths(now, 1)) && d < startOfMonth(now);
+      else if (periodFilter === "3_meses") matchesPeriod = d >= subMonths(now, 3);
+      else if (periodFilter === "este_ano") matchesPeriod = d >= startOfYear(now);
+    }
+    return matchesSearch && matchesStatus && matchesType && matchesPeriod;
   });
 
   const handleSubmit = (data: Record<string, unknown>) => {
@@ -193,6 +203,18 @@ export default function Projects() {
             {(["residencial", "comercial", "saude", "outro"] as const).map((t) => (
               <SelectItem key={t} value={t}>{typeLabels[t] || t}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        <Select value={periodFilter} onValueChange={setPeriodFilter}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Período (início)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todo o período</SelectItem>
+            <SelectItem value="este_mes">Este mês</SelectItem>
+            <SelectItem value="ultimo_mes">Mês passado</SelectItem>
+            <SelectItem value="3_meses">Últimos 3 meses</SelectItem>
+            <SelectItem value="este_ano">Este ano</SelectItem>
           </SelectContent>
         </Select>
       </div>

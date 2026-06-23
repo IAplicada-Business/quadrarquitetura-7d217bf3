@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Settings, User, Palette, Calculator, Save } from "lucide-react";
+import { Settings, User, Palette, Calculator, Save, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import CalculationRulesTab from "@/components/settings/CalculationRulesTab";
 import ProposalBrandingTab from "@/components/settings/ProposalBrandingTab";
@@ -303,6 +303,35 @@ export default function SettingsPage() {
                     }}
                   />
                   <Label className="text-muted-foreground">%</Label>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* NF Service Code */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-display flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Notas Fiscais
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Código de serviço padrão (LC 116/2003) pré-preenchido em novas NFs.
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 max-w-xs">
+                    <Label className="text-sm">Código de Serviço</Label>
+                    <Input
+                      className="mt-1"
+                      placeholder="ex: 7.01"
+                      defaultValue={(settings as any)?.nf_service_code ?? ""}
+                      onBlur={(e) => {
+                        const val = e.target.value.trim();
+                        upsert.mutate({ nf_service_code: val || null });
+                      }}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>

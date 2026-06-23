@@ -63,7 +63,7 @@ const iconMap: Record<string, LucideIcon> = {
   "Contratos": FileSignature,
   "Clientes": UserCheck,
   "Obras": Building2,
-  "Kanban": LayoutGrid,
+  "Lista de Obras": Building2,
   "Acompanhamento": ClipboardList,
   "Tarefas": CheckSquare,
   "Tarefas por Obra": CheckSquare,
@@ -119,9 +119,14 @@ const menuGroups: MenuGroup[] = [
   {
     label: "Gestão de Obras",
     items: [
-      { title: "Obras", url: "/projects" },
-      { title: "Kanban", url: "/projects/kanban" },
-      { title: "Acompanhamento", url: "/construction/tracking" },
+      {
+        title: "Obras",
+        url: "/projects",
+        subItems: [
+          { title: "Lista de Obras", url: "/projects" },
+          { title: "Acompanhamento", url: "/construction/tracking" },
+        ],
+      },
       { title: "Histórico de Voz", url: "/construction/voice-tasks" },
       { title: "Fornecedores", url: "/construction/suppliers" },
     ],
@@ -210,11 +215,7 @@ export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
       <TooltipProvider delayDuration={0}>
         <aside className="flex flex-col h-full w-16 border-r border-sidebar-border bg-sidebar transition-all duration-200">
           <div className="flex items-center justify-center h-16 border-b border-sidebar-border">
-            <img
-              src={logoBege}
-              alt="Quadra Arquitetura"
-              className="h-9 w-9 object-contain"
-            />
+            {/* Logo omitida: quando colapsada o header já exibe a logo */}
           </div>
 
           <nav className="flex-1 py-3 overflow-y-auto scrollbar-sidebar">

@@ -18,7 +18,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { useLeads, LEAD_STATUSES, leadStatusLabels, Lead } from "@/hooks/useLeads";
-import { differenceInDays, subMonths, format, startOfMonth } from "date-fns";
+import { differenceInDays, subMonths, format, startOfMonth, startOfYear } from "date-fns";
 import { pt } from "date-fns/locale";
 import { SendMessageModal } from "@/components/messages/SendMessageModal";
 
@@ -62,6 +62,7 @@ export default function LeadsPipeline() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("todos");
   const [filterOrigin, setFilterOrigin] = useState("todos");
+  const [filterPeriod, setFilterPeriod] = useState("todos");
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -102,8 +103,19 @@ export default function LeadsPipeline() {
     }
     if (filterStatus !== "todos") result = result.filter((l) => l.status === filterStatus);
     if (filterOrigin !== "todos") result = result.filter((l) => l.origin === filterOrigin);
+    if (filterPeriod !== "todos") {
+      const now = new Date();
+      result = result.filter((l) => {
+        const d = new Date(l.created_at);
+        if (filterPeriod === "este_mes") return d >= startOfMonth(now);
+        if (filterPeriod === "ultimo_mes") return d >= startOfMonth(subMonths(now, 1)) && d < startOfMonth(now);
+        if (filterPeriod === "3_meses") return d >= subMonths(now, 3);
+        if (filterPeriod === "este_ano") return d >= startOfYear(now);
+        return true;
+      });
+    }
     return result;
-  }, [leads, search, filterStatus, filterOrigin]);
+  }, [leads, search, filterStatus, filterOrigin, filterPeriod]);
 
   const openNew = () => {
     setEditingLead(null);
@@ -202,7 +214,9 @@ export default function LeadsPipeline() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold font-display">Pipeline de Leads</h1>
-          <p className="text-sm text-muted-foreground">{filtered.length} de {leads.length} lead(s)</p>
+          {filtered.length < leads.length && (
+            <p className="text-sm text-muted-foreground">{filtered.length} de {leads.length}</p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Tabs value={view} onValueChange={(v) => setView(v as any)}>
@@ -246,6 +260,18 @@ export default function LeadsPipeline() {
               {Object.entries(originLabels).map(([k, v]) => (
                 <SelectItem key={k} value={k}>{v}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterPeriod} onValueChange={setFilterPeriod}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todo o período</SelectItem>
+              <SelectItem value="este_mes">Este mês</SelectItem>
+              <SelectItem value="ultimo_mes">Mês passado</SelectItem>
+              <SelectItem value="3_meses">Últimos 3 meses</SelectItem>
+              <SelectItem value="este_ano">Este ano</SelectItem>
             </SelectContent>
           </Select>
         </div>
