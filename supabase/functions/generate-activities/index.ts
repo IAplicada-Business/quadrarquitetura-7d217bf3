@@ -38,9 +38,26 @@ Regras obrigatórias:
 - Para áreas, derive do material quando ele disser algo como
   "cozinha de 12m²" — atribua os 12m² ao piso/parede/forro
   dessa cozinha conforme a disciplina exigir.
-- Ordene as atividades pela sequência lógica de execução em obra
-  de interiores (demolição → infraestrutura → revestimento →
-  acabamento → instalações finais → limpeza).`;
+
+REGRAS DE SEQUENCIAMENTO (críticas — Mariana sinalizou que isso
+estava saindo bagunçado):
+
+- Ordene SEMPRE pela sequência lógica de execução em obra de
+  interiores: 1) Demolição; 2) Estrutura/Alvenaria; 3) Infraestrutura
+  (Hidráulica/Elétrica/Ar-condicionado/Automação primária);
+  4) Impermeabilização; 5) Gesso/Forro; 6) Revestimentos e pisos;
+  7) Marcenaria/Marmoraria/Esquadrias/Serralheria/Vidros (medição,
+  produção, instalação); 8) Pintura; 9) Louças e Metais/Iluminação;
+  10) Acabamento final; 11) Limpeza.
+- Preencha \`depends_on_indices\` com a lista de índices (0-based,
+  na ordem do array) das atividades pré-requisito. NÃO invente
+  dependências entre disciplinas independentes (ex: pintura da sala
+  NÃO depende de marcenaria da cozinha).
+- Atividades de DIFERENTES ambientes que pertencem à mesma fase
+  podem rodar em paralelo: NÃO crie dependência entre elas.
+- Atividades de medição/produção (marcenaria, marmoraria etc.) devem
+  começar cedo no cronograma para que a instalação aconteça depois
+  dos revestimentos. Modele isso com \`depends_on_indices\`.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -157,6 +174,12 @@ serve(async (req) => {
                         description:
                           "Lista do que NÃO está incluso neste serviço (evita conflito com fornecedor).",
                       },
+                      depends_on_indices: {
+                        type: "array",
+                        items: { type: "integer" },
+                        description:
+                          "Índices (0-based) das outras atividades neste mesmo array que precisam estar concluídas antes desta começar. Use somente para dependências reais entre disciplinas (ex: revestimento depende de hidráulica/elétrica).",
+                      },
                     },
                     required: ["name", "ambiente", "discipline", "duration_days"],
                     additionalProperties: false,
@@ -206,13 +229,32 @@ serve(async (req) => {
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
 
     if (!toolCall?.function?.arguments) {
+      // Mariana (vídeo 11): quando o tool_calls vem vazio, antes
+      // mostrávamos "Erro ao gerar atividades" seco. Devolvemos
+      // mensagem útil mencionando texto simplificado.
+      console.error("Tool call vazio. Resposta bruta:", JSON.stringify(data).slice(0, 500));
       return new Response(
-        JSON.stringify({ error: "Resposta inesperada da IA" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error:
+            "A IA não conseguiu estruturar o conteúdo. Tente um texto mais direto, sem bullets ou markdown.",
+        }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const parsed = JSON.parse(toolCall.function.arguments);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(toolCall.function.arguments);
+    } catch (parseErr) {
+      console.error("Falha ao parsear tool_call:", parseErr, toolCall.function.arguments.slice(0, 300));
+      return new Response(
+        JSON.stringify({
+          error:
+            "A IA retornou em formato inesperado. Tente novamente — se persistir, simplifique o texto.",
+        }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Compõe a `description` final concatenando bullets de incluso/não-incluso
     // — assim o front existente (que só lê `description`) já mostra o
@@ -236,6 +278,7 @@ serve(async (req) => {
         description: parts.join("\n\n") || null,
         incluso: a.incluso ?? [],
         nao_incluso: a.nao_incluso ?? [],
+        depends_on_indices: Array.isArray(a.depends_on_indices) ? a.depends_on_indices : [],
       };
     });
 

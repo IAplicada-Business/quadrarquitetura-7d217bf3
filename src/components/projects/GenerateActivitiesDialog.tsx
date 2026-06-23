@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { getDisciplineColor } from "@/lib/disciplineColors";
 import { useActivityTemplates } from "@/hooks/useActivityTemplates";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ProjectActivity } from "@/hooks/useProjectActivities";
 
 interface GeneratedActivity {
@@ -23,6 +24,7 @@ interface GeneratedActivity {
   description?: string;
   incluso?: string[];
   nao_incluso?: string[];
+  depends_on_indices?: number[];
   selected: boolean;
 }
 
@@ -54,6 +56,7 @@ export function GenerateActivitiesDialog({
   const [tab, setTab] = useState("texto");
   const { templates: activityTemplates, applyToProject } = useActivityTemplates();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const queryClient = useQueryClient();
   const [textInput, setTextInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedActivities, setGeneratedActivities] = useState<GeneratedActivity[] | null>(null);
@@ -162,6 +165,31 @@ export function GenerateActivitiesDialog({
     setPlantPreview(URL.createObjectURL(file));
   };
 
+  // ── Sanitização do texto colado ──
+  // Vídeo 11 (Mariana, 18/06): "tô copiando coisas do GPT pra cá e dá
+  // erro". A causa é que o markdown colado do ChatGPT (bullets `•`,
+  // headers `##`, negrito `**`, emojis) às vezes confunde o tool-call
+  // do Gemini, que devolve JSON malformado e o servidor estoura no
+  // parse. Removemos a formatação aqui antes de mandar — a IA precisa
+  // do conteúdo, não da decoração.
+  const sanitizeForAI = (raw: string): string => {
+    return raw
+      // headers markdown
+      .replace(/^#{1,6}\s+/gm, "")
+      // bullets unicode/markdown — converte para hífen ASCII
+      .replace(/^[\s ]*[•▪◦*\-·]\s+/gm, "- ")
+      // negrito e itálico (markdown e HTML simples)
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/__([^_]+)__/g, "$1")
+      .replace(/\*([^*]+)\*/g, "$1")
+      .replace(/_([^_]+)_/g, "$1")
+      // emojis e símbolos exóticos fora do BMP usual de texto
+      .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "")
+      // múltiplas linhas em branco
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  };
+
   // ── Generate (text/audio/photo) ──
   const handleGenerate = async () => {
     let mode: string;
@@ -187,13 +215,13 @@ export function GenerateActivitiesDialog({
       mode = "image";
       content = urlData.publicUrl;
     } else {
-      const text = tab === "audio" ? transcription : textInput;
-      if (!text.trim()) {
+      const rawText = tab === "audio" ? transcription : textInput;
+      if (!rawText.trim()) {
         toast({ title: "Descreva o projeto para gerar atividades", variant: "destructive" });
         return;
       }
       mode = "text";
-      content = text;
+      content = sanitizeForAI(rawText);
     }
 
     setIsGenerating(true);
@@ -209,10 +237,18 @@ export function GenerateActivitiesDialog({
       setGeneratedActivities(activities);
 
       if (activities.length === 0) {
-        toast({ title: "Nenhuma atividade gerada. Tente descrever com mais detalhes." });
+        toast({
+          title: "Nenhuma atividade gerada",
+          description: "Tente descrever com mais detalhes ou em texto mais simples (sem bullets/markdown).",
+        });
       }
     } catch (err: any) {
-      toast({ title: "Erro ao gerar atividades", description: err.message, variant: "destructive" });
+      // Mensagens úteis ao invés de "Erro ao gerar atividades" seco.
+      let description = err.message ?? "Erro desconhecido";
+      if (/json|parse|tool_calls?/i.test(description)) {
+        description = "A IA retornou em formato inesperado. Tente novamente ou simplifique o texto colado.";
+      }
+      toast({ title: "Erro ao gerar atividades", description, variant: "destructive" });
     } finally {
       setIsGenerating(false);
     }
@@ -277,7 +313,12 @@ export function GenerateActivitiesDialog({
   };
 
   // ── Add selected (text/audio/photo) ──
-  const handleAddSelected = () => {
+  // Vídeo 12 (Mariana, 18/06): "outra inconsistência na geração de
+  // sequenciamento". A IA agora devolve `depends_on_indices` (índices
+  // de pré-requisitos no mesmo array). Inserimos batch diretamente via
+  // Supabase para colher IDs criados, depois traduzimos os índices em
+  // UUIDs reais e atualizamos `depends_on`.
+  const handleAddSelected = async () => {
     if (!generatedActivities) return;
     const selected = generatedActivities.filter((a) => a.selected);
     if (selected.length === 0) {
@@ -285,14 +326,29 @@ export function GenerateActivitiesDialog({
       return;
     }
 
-    selected.forEach((a, i) => {
-      // Prefixa o ambiente no nome para o front existente já mostrar a
-      // separação pedida pela Mariana ("aqui eu preciso do cômodo")
-      // sem depender de coluna nova em project_activities.
+    // Mapa: índice no array gerado (todos) → índice no array de selecionados.
+    const allIndexToSelectedPosition = new Map<number, number>();
+    let pos = 0;
+    generatedActivities.forEach((a, originalIdx) => {
+      if (a.selected) {
+        allIndexToSelectedPosition.set(originalIdx, pos);
+        pos++;
+      }
+    });
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({ title: "Sessão expirada", variant: "destructive" });
+      return;
+    }
+
+    const inserts = selected.map((a, i) => {
       const ambientePrefix = a.ambiente && !a.name.includes(a.ambiente)
         ? `[${a.ambiente}] `
         : "";
-      onCreate({
+      return {
+        project_id: projectId,
+        user_id: user.id,
         name: `${ambientePrefix}${a.name}`.slice(0, 200),
         discipline: a.discipline,
         area_m2: a.area_m2 ?? null,
@@ -301,10 +357,50 @@ export function GenerateActivitiesDialog({
         status: "pendente",
         position: existingCount + i,
         progress_percent: 0,
-      } as any);
+      };
     });
 
-    toast({ title: `${selected.length} atividade(s) adicionada(s)` });
+    const { data: created, error } = await supabase
+      .from("project_activities")
+      .insert(inserts as any)
+      .select("id");
+
+    if (error) {
+      toast({ title: "Erro ao criar atividades", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    const createdIds = (created ?? []).map((r: any) => r.id as string);
+
+    // 2ª passada: aplica `depends_on` materializado em UUIDs.
+    const updates: Array<{ id: string; depends_on: string[] }> = [];
+    selected.forEach((a, sIdx) => {
+      const myId = createdIds[sIdx];
+      if (!myId || !a.depends_on_indices?.length) return;
+      const deps = a.depends_on_indices
+        .map((origIdx) => {
+          const selPos = allIndexToSelectedPosition.get(origIdx);
+          return selPos != null ? createdIds[selPos] : null;
+        })
+        .filter((x): x is string => !!x && x !== myId);
+      if (deps.length > 0) updates.push({ id: myId, depends_on: deps });
+    });
+
+    if (updates.length > 0) {
+      await Promise.all(
+        updates.map((u) =>
+          supabase.from("project_activities").update({ depends_on: u.depends_on } as any).eq("id", u.id),
+        ),
+      );
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["project_activities", projectId] });
+    queryClient.invalidateQueries({ queryKey: ["material_tracking", projectId] });
+
+    toast({
+      title: `${selected.length} atividade(s) adicionada(s)`,
+      description: updates.length > 0 ? `${updates.length} com dependências preservadas.` : undefined,
+    });
     handleClose(false);
   };
 
@@ -509,14 +605,17 @@ export function GenerateActivitiesDialog({
 
               <TabsContent value="texto" className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Descreva o projeto para a IA gerar as atividades automaticamente.
+                  Descreva o projeto ou cole um escopo do ChatGPT. Bullets, negrito e emojis são removidos automaticamente antes de enviar para a IA.
                 </p>
                 <Textarea
                   placeholder="Ex: Reforma de sala e cozinha, 45m², cliente quer piso novo, pintura completa, nova iluminação e demolição de meia parede"
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
-                  rows={5}
+                  rows={8}
                 />
+                <p className="text-[11px] text-muted-foreground text-right">
+                  {textInput.length.toLocaleString("pt-BR")} caracteres
+                </p>
               </TabsContent>
 
               <TabsContent value="audio" className="space-y-3">
