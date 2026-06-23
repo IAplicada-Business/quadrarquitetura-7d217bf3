@@ -8,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { useInvoicesNF } from "@/hooks/useInvoicesNF";
 import { InvoiceNFForm } from "./InvoiceNFForm";
 import { csvRow, csvBrl, downloadCsv } from "@/lib/csv";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const NF_TYPE_LABEL: Record<string, string> = { emitida: "Emitida", recebida: "Recebida" };
 const STATUS_LABEL: Record<string, string> = {
@@ -44,6 +47,7 @@ interface InvoiceNFListProps {
 }
 
 export function InvoiceNFList({ projectId, showProjectColumn, projects }: InvoiceNFListProps) {
+  const { user } = useAuth();
   const [filterType, setFilterType] = useState<string>("");
   const [filterMonth, setFilterMonth] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
@@ -56,6 +60,15 @@ export function InvoiceNFList({ projectId, showProjectColumn, projects }: Invoic
     status: filterStatus && filterStatus !== "all" ? filterStatus : undefined,
   };
   const { items, isLoading, create, update, remove } = useInvoicesNF(filters);
+
+  const { data: defaultServiceCode } = useQuery({
+    queryKey: ["settings-nf-service-code"],
+    queryFn: async () => {
+      const { data } = await supabase.from("settings").select("nf_service_code").limit(1).maybeSingle();
+      return (data as any)?.nf_service_code as string | null ?? null;
+    },
+    enabled: !!user,
+  });
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
@@ -214,6 +227,7 @@ export function InvoiceNFList({ projectId, showProjectColumn, projects }: Invoic
         projectId={projectId}
         showProjectSelect={showProjectColumn}
         projects={projects}
+        defaultServiceCode={defaultServiceCode}
       />
     </div>
   );

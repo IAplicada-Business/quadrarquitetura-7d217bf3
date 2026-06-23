@@ -1284,6 +1284,7 @@ export type Database = {
           recipient_cnpj: string | null
           recipient_name: string | null
           sent_to_accountant_at: string | null
+          service_code: string | null
           service_description: string | null
           status: string | null
           user_id: string
@@ -1311,6 +1312,7 @@ export type Database = {
           recipient_cnpj?: string | null
           recipient_name?: string | null
           sent_to_accountant_at?: string | null
+          service_code?: string | null
           service_description?: string | null
           status?: string | null
           user_id: string
@@ -1338,6 +1340,7 @@ export type Database = {
           recipient_cnpj?: string | null
           recipient_name?: string | null
           sent_to_accountant_at?: string | null
+          service_code?: string | null
           service_description?: string | null
           status?: string | null
           user_id?: string
@@ -3013,6 +3016,7 @@ export type Database = {
           created_at: string
           id: string
           message_templates: Json | null
+          nf_service_code: string | null
           purchase_categories: string[] | null
           scope: string
           supplier_categories: string[] | null
@@ -3027,6 +3031,7 @@ export type Database = {
           created_at?: string
           id?: string
           message_templates?: Json | null
+          nf_service_code?: string | null
           purchase_categories?: string[] | null
           scope?: string
           supplier_categories?: string[] | null
@@ -3041,6 +3046,7 @@ export type Database = {
           created_at?: string
           id?: string
           message_templates?: Json | null
+          nf_service_code?: string | null
           purchase_categories?: string[] | null
           scope?: string
           supplier_categories?: string[] | null
