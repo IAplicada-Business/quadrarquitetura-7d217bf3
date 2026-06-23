@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { Upload } from "lucide-react";
+import { Upload, Wand2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface InvoiceNFFormProps {
   open: boolean;
@@ -19,23 +20,34 @@ interface InvoiceNFFormProps {
   projects?: { id: string; name: string }[];
 }
 
+const EMPTY = {
+  project_id: "",
+  nf_number: "",
+  nf_type: "recebida" as string,
+  issuer_name: "",
+  issuer_cnpj: "",
+  recipient_name: "",
+  recipient_cnpj: "",
+  recipient_address_street: "",
+  recipient_address_number: "",
+  recipient_address_complement: "",
+  recipient_address_neighborhood: "",
+  recipient_address_city: "",
+  recipient_address_state: "",
+  recipient_address_zip: "",
+  service_description: "",
+  amount: "",
+  issue_date: "",
+  competence_month: "",
+  status: "pendente",
+  notes: "",
+  file_url: "",
+};
+
+const NO_PROJECT = "__none__";
+
 export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoading, projectId, showProjectSelect, projects }: InvoiceNFFormProps) {
-  const [form, setForm] = useState({
-    project_id: projectId || "",
-    nf_number: "",
-    nf_type: "recebida" as string,
-    issuer_name: "",
-    issuer_cnpj: "",
-    recipient_name: "",
-    recipient_cnpj: "",
-    service_description: "",
-    amount: "",
-    issue_date: "",
-    competence_month: "",
-    status: "pendente",
-    notes: "",
-    file_url: "",
-  });
+  const [form, setForm] = useState({ ...EMPTY, project_id: projectId || "" });
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -48,6 +60,13 @@ export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoa
         issuer_cnpj: (initialData.issuer_cnpj as string) || "",
         recipient_name: (initialData.recipient_name as string) || "",
         recipient_cnpj: (initialData.recipient_cnpj as string) || "",
+        recipient_address_street: (initialData.recipient_address_street as string) || "",
+        recipient_address_number: (initialData.recipient_address_number as string) || "",
+        recipient_address_complement: (initialData.recipient_address_complement as string) || "",
+        recipient_address_neighborhood: (initialData.recipient_address_neighborhood as string) || "",
+        recipient_address_city: (initialData.recipient_address_city as string) || "",
+        recipient_address_state: (initialData.recipient_address_state as string) || "",
+        recipient_address_zip: (initialData.recipient_address_zip as string) || "",
         service_description: (initialData.service_description as string) || "",
         amount: String(initialData.amount ?? ""),
         issue_date: (initialData.issue_date as string) || "",
@@ -57,24 +76,66 @@ export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoa
         file_url: (initialData.file_url as string) || "",
       });
     } else {
-      setForm({
-        project_id: projectId || "",
-        nf_number: "",
-        nf_type: "recebida",
-        issuer_name: "",
-        issuer_cnpj: "",
-        recipient_name: "",
-        recipient_cnpj: "",
-        service_description: "",
-        amount: "",
-        issue_date: "",
-        competence_month: "",
-        status: "pendente",
-        notes: "",
-        file_url: "",
-      });
+      setForm({ ...EMPTY, project_id: projectId || "" });
     }
   }, [initialData, projectId, open]);
+
+  // Bug 6/7: a competência costumava ficar nula porque o usuário precisava
+  // preencher manualmente. Como o filtro do relatório fiscal usa
+  // `.eq("competence_month", X)`, NFs sem competência sumiam dos relatórios.
+  // Agora derivamos automaticamente da `issue_date`.
+  const handleIssueDateChange = (issueDate: string) => {
+    setForm((f) => ({
+      ...f,
+      issue_date: issueDate,
+      competence_month: f.competence_month || (issueDate ? issueDate.slice(0, 7) : ""),
+    }));
+  };
+
+  // Auto-fill do tomador a partir do cliente vinculado ao projeto.
+  // Pedido da Mariana: "dá pra buscar no contrato essa informação,
+  // ela vem pra cá e ela já fica pronta".
+  const autofillFromProject = async (selectedProjectId: string) => {
+    if (!selectedProjectId || selectedProjectId === NO_PROJECT) return;
+    const { data: project } = await supabase
+      .from("projects")
+      .select("client_id, address, city, neighborhood")
+      .eq("id", selectedProjectId)
+      .maybeSingle();
+    if (!project) return;
+
+    // Endereço da obra serve como fallback de tomador (residencial).
+    setForm((f) => ({
+      ...f,
+      project_id: selectedProjectId,
+      recipient_address_street: f.recipient_address_street || project.address || "",
+      recipient_address_neighborhood: f.recipient_address_neighborhood || project.neighborhood || "",
+      recipient_address_city: f.recipient_address_city || project.city || "",
+    }));
+
+    if (project.client_id) {
+      const { data: client } = await supabase
+        .from("clients")
+        .select("name, cpf_cnpj")
+        .eq("id", project.client_id)
+        .maybeSingle();
+      if (client) {
+        setForm((f) => ({
+          ...f,
+          recipient_name: f.recipient_name || client.name || "",
+          recipient_cnpj: f.recipient_cnpj || client.cpf_cnpj || "",
+        }));
+        toast({ title: "Dados do tomador preenchidos a partir do projeto" });
+      }
+    }
+  };
+
+  const handleProjectChange = (value: string) => {
+    setForm((f) => ({ ...f, project_id: value === NO_PROJECT ? "" : value }));
+    if (value && value !== NO_PROJECT && !form.recipient_name) {
+      void autofillFromProject(value);
+    }
+  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -92,19 +153,26 @@ export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoa
   };
 
   const handleSubmit = () => {
-    if (!form.amount || !form.issue_date || !form.project_id) return;
+    if (!form.amount || !form.issue_date) return;
     onSubmit({
-      project_id: form.project_id,
+      project_id: form.project_id || null,
       nf_number: form.nf_number || null,
       nf_type: form.nf_type,
       issuer_name: form.issuer_name || null,
       issuer_cnpj: form.issuer_cnpj || null,
       recipient_name: form.recipient_name || null,
       recipient_cnpj: form.recipient_cnpj || null,
+      recipient_address_street: form.recipient_address_street || null,
+      recipient_address_number: form.recipient_address_number || null,
+      recipient_address_complement: form.recipient_address_complement || null,
+      recipient_address_neighborhood: form.recipient_address_neighborhood || null,
+      recipient_address_city: form.recipient_address_city || null,
+      recipient_address_state: form.recipient_address_state || null,
+      recipient_address_zip: form.recipient_address_zip || null,
       service_description: form.service_description || null,
       amount: parseFloat(form.amount),
       issue_date: form.issue_date,
-      competence_month: form.competence_month || null,
+      competence_month: form.competence_month || (form.issue_date ? form.issue_date.slice(0, 7) : null),
       status: form.status,
       notes: form.notes || null,
       file_url: form.file_url || null,
@@ -114,20 +182,30 @@ export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{initialData ? "Editar Nota Fiscal" : "Nova Nota Fiscal"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           {showProjectSelect && projects && (
             <div>
-              <Label>Projeto *</Label>
-              <Select value={form.project_id} onValueChange={(v) => setForm((f) => ({ ...f, project_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <Label>Projeto (opcional)</Label>
+              <Select value={form.project_id || NO_PROJECT} onValueChange={handleProjectChange}>
+                <SelectTrigger><SelectValue placeholder="Sem projeto vinculado" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={NO_PROJECT}>— Sem projeto (ex: RT, avulsa) —</SelectItem>
                   {projects.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {form.project_id && (
+                <button
+                  type="button"
+                  onClick={() => void autofillFromProject(form.project_id)}
+                  className="mt-1 text-xs text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  <Wand2 className="h-3 w-3" /> Preencher tomador pelo projeto
+                </button>
+              )}
             </div>
           )}
           <div className="grid grid-cols-2 gap-3">
@@ -158,12 +236,28 @@ export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoa
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Destinatário</Label>
+              <Label>Tomador / Destinatário</Label>
               <Input value={form.recipient_name} onChange={(e) => setForm((f) => ({ ...f, recipient_name: e.target.value }))} />
             </div>
             <div>
-              <Label>CNPJ Destinatário</Label>
+              <Label>CPF/CNPJ Tomador</Label>
               <Input value={form.recipient_cnpj} onChange={(e) => setForm((f) => ({ ...f, recipient_cnpj: e.target.value }))} />
+            </div>
+          </div>
+          <div className="rounded-md border p-3 space-y-2 bg-muted/20">
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Endereço do tomador</Label>
+            <div className="grid grid-cols-[1fr_120px] gap-2">
+              <Input placeholder="Logradouro" value={form.recipient_address_street} onChange={(e) => setForm((f) => ({ ...f, recipient_address_street: e.target.value }))} />
+              <Input placeholder="Número" value={form.recipient_address_number} onChange={(e) => setForm((f) => ({ ...f, recipient_address_number: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Input placeholder="Complemento" value={form.recipient_address_complement} onChange={(e) => setForm((f) => ({ ...f, recipient_address_complement: e.target.value }))} />
+              <Input placeholder="Bairro" value={form.recipient_address_neighborhood} onChange={(e) => setForm((f) => ({ ...f, recipient_address_neighborhood: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-[1fr_80px_140px] gap-2">
+              <Input placeholder="Cidade" value={form.recipient_address_city} onChange={(e) => setForm((f) => ({ ...f, recipient_address_city: e.target.value }))} />
+              <Input placeholder="UF" maxLength={2} value={form.recipient_address_state} onChange={(e) => setForm((f) => ({ ...f, recipient_address_state: e.target.value.toUpperCase() }))} />
+              <Input placeholder="CEP" value={form.recipient_address_zip} onChange={(e) => setForm((f) => ({ ...f, recipient_address_zip: e.target.value }))} />
             </div>
           </div>
           <div>
@@ -177,7 +271,7 @@ export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoa
             </div>
             <div>
               <Label>Data Emissão *</Label>
-              <Input type="date" value={form.issue_date} onChange={(e) => setForm((f) => ({ ...f, issue_date: e.target.value }))} />
+              <Input type="date" value={form.issue_date} onChange={(e) => handleIssueDateChange(e.target.value)} />
             </div>
             <div>
               <Label>Competência</Label>
@@ -211,7 +305,7 @@ export function InvoiceNFForm({ open, onOpenChange, onSubmit, initialData, isLoa
               </a>
             )}
           </div>
-          <Button onClick={handleSubmit} disabled={isLoading || !form.amount || !form.issue_date || !form.project_id} className="w-full">
+          <Button onClick={handleSubmit} disabled={isLoading || !form.amount || !form.issue_date} className="w-full">
             {initialData ? "Salvar" : "Adicionar"}
           </Button>
         </div>

@@ -39,10 +39,24 @@ export function useInvoicesNF(filters: InvoiceNFFilters = {}) {
     enabled: !!user,
   });
 
+  // Bug raiz dos relatos "cadê a NF" e "competência não entra": form aceita
+  // salvar `competence_month` nulo, e os filtros de relatório/lista usam
+  // `.eq("competence_month", X)`, escondendo NFs sem o campo. Garantimos
+  // aqui (defesa em profundidade — o form também preenche) que toda NF
+  // tem competência derivada de `issue_date` quando não vier explícita.
+  const withCompetence = (item: Record<string, unknown>) => {
+    const issueDate = item.issue_date as string | undefined;
+    const competence = item.competence_month as string | undefined;
+    if (!competence && issueDate) {
+      return { ...item, competence_month: issueDate.slice(0, 7) };
+    }
+    return item;
+  };
+
   const create = useMutation({
     mutationFn: async (item: Record<string, unknown>) => {
       const { error } = await supabase.from("invoices_nf").insert({
-        ...(item as object),
+        ...(withCompetence(item) as object),
         user_id: user!.id,
       } as never);
       if (error) throw error;
@@ -56,7 +70,7 @@ export function useInvoicesNF(filters: InvoiceNFFilters = {}) {
 
   const update = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Record<string, unknown>) => {
-      const { error } = await supabase.from("invoices_nf").update(updates as never).eq("id", id);
+      const { error } = await supabase.from("invoices_nf").update(withCompetence(updates) as never).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

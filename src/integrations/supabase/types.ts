@@ -1045,6 +1045,13 @@ export type Database = {
           nf_type: string | null
           notes: string | null
           project_id: string | null
+          recipient_address_city: string | null
+          recipient_address_complement: string | null
+          recipient_address_neighborhood: string | null
+          recipient_address_number: string | null
+          recipient_address_state: string | null
+          recipient_address_street: string | null
+          recipient_address_zip: string | null
           recipient_cnpj: string | null
           recipient_name: string | null
           sent_to_accountant_at: string | null
@@ -1065,6 +1072,13 @@ export type Database = {
           nf_type?: string | null
           notes?: string | null
           project_id?: string | null
+          recipient_address_city?: string | null
+          recipient_address_complement?: string | null
+          recipient_address_neighborhood?: string | null
+          recipient_address_number?: string | null
+          recipient_address_state?: string | null
+          recipient_address_street?: string | null
+          recipient_address_zip?: string | null
           recipient_cnpj?: string | null
           recipient_name?: string | null
           sent_to_accountant_at?: string | null
@@ -1085,6 +1099,13 @@ export type Database = {
           nf_type?: string | null
           notes?: string | null
           project_id?: string | null
+          recipient_address_city?: string | null
+          recipient_address_complement?: string | null
+          recipient_address_neighborhood?: string | null
+          recipient_address_number?: string | null
+          recipient_address_state?: string | null
+          recipient_address_street?: string | null
+          recipient_address_zip?: string | null
           recipient_cnpj?: string | null
           recipient_name?: string | null
           sent_to_accountant_at?: string | null
