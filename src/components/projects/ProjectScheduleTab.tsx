@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { differenceInDays, isBefore, addDays, format } from "date-fns";
-import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown, RefreshCw, FileDown, Sparkles, Loader2, CalendarCheck, FileSpreadsheet } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown, RefreshCw, FileDown, Sparkles, Loader2, CalendarCheck, FileSpreadsheet, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import { ClientScheduleView } from "./ClientScheduleView";
 import { ActivityForm } from "./ActivityForm";
 import { CascadePreviewDialog, type CascadeChange } from "./CascadePreviewDialog";
 import { ApplyCalendarDialog } from "./ApplyCalendarDialog";
+import { ScheduleScenariosDialog } from "./ScheduleScenariosDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useProjectAI } from "@/hooks/useProjectAI";
@@ -63,6 +64,7 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const [aiScheduleOpen, setAiScheduleOpen] = useState(false);
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
   const [projectStartDate, setProjectStartDate] = useState<string | null>(null);
+  const [scenariosDialogOpen, setScenariosDialogOpen] = useState(false);
 
   // Disciplinas canônicas vêm do escopo (useProjectDisciplines), mesclando
   // com o que já existe em schedule_tasks para não perder dados antigos.
@@ -521,6 +523,17 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
                 <Button
                   size="sm"
                   variant="outline"
+                  onClick={() => setScenariosDialogOpen(true)}
+                  disabled={activities.length === 0}
+                  title="Cria snapshots editáveis do cronograma para testar mudanças"
+                >
+                  <FlaskConical className="h-4 w-4 mr-1" /> Cenários
+                </Button>
+              )}
+              {useActivitiesSource && (
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={handleGenerateCheckpoints}
                   disabled={generatingCheckpoints || activities.length === 0}
                   title="Gera visitas técnicas a partir das atividades (medição, recebimento, instalação, finalização)"
@@ -740,6 +753,14 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
         defaultStartDate={projectStartDate}
         onApply={handleApplyCalendar}
         isApplying={batchUpdateDates.isPending}
+      />
+
+      <ScheduleScenariosDialog
+        open={scenariosDialogOpen}
+        onOpenChange={setScenariosDialogOpen}
+        projectId={projectId}
+        projectStartDate={projectStartDate}
+        activities={activities}
       />
 
       {/* Generate from Scope Dialog */}
