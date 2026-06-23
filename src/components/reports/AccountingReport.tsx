@@ -6,6 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useInvoicesNF } from "@/hooks/useInvoicesNF";
+import { csvRow, csvBrl, downloadCsv } from "@/lib/csv";
+
+const NF_TYPE_LABEL: Record<string, string> = { emitida: "Emitida", recebida: "Recebida" };
+const STATUS_LABEL: Record<string, string> = {
+  pendente: "Pendente",
+  enviada_contador: "Enviada ao Contador",
+  arquivada: "Arquivada",
+};
 
 function formatCurrency(v: number | null | undefined) {
   if (v == null) return "—";
@@ -58,24 +66,30 @@ export function AccountingReport() {
   }, [month]);
 
   const handleExportCSV = () => {
-    const header = "Nº NF,Tipo,Projeto,Emitente/Destinatário,Valor,Data Emissão,Competência,Status\n";
-    const toRow = (i: any) =>
-      `"${i.nf_number || ""}","${i.nf_type}","${i.projects?.name || ""}","${i.issuer_name || ""}",${i.amount ?? 0},"${i.issue_date || ""}","${i.competence_month || ""}","${i.status}"\n`;
+    const header = csvRow([
+      "Nº NF", "Tipo", "Projeto", "Emitente", "Tomador",
+      "Valor (R$)", "Data Emissão", "Competência", "Status",
+    ]);
+    const toRow = (i: any) => csvRow([
+      i.nf_number || "",
+      NF_TYPE_LABEL[i.nf_type] ?? i.nf_type,
+      i.projects?.name || "",
+      i.issuer_name || "",
+      i.recipient_name || "",
+      csvBrl(i.amount),
+      i.issue_date || "",
+      i.competence_month || "",
+      STATUS_LABEL[i.status] ?? i.status,
+    ]);
     let csv = `RELATÓRIO FISCAL — ${monthLabel.toUpperCase()}\n\n`;
     csv += "NOTAS FISCAIS EMITIDAS\n" + header;
-    emitidas.forEach((i: any) => (csv += toRow(i)));
-    csv += `\nTotal Emitidas,,,,${totalEmitidas.toFixed(2)}\n\n`;
+    emitidas.forEach((i: any) => { csv += toRow(i); });
+    csv += csvRow(["", "", "", "", "Total Emitidas", csvBrl(totalEmitidas)]) + "\n";
     csv += "NOTAS FISCAIS RECEBIDAS\n" + header;
-    recebidas.forEach((i: any) => (csv += toRow(i)));
-    csv += `\nTotal Recebidas,,,,${totalRecebidas.toFixed(2)}\n`;
-    csv += `\nSaldo (Emitidas - Recebidas),,,,${saldo.toFixed(2)}\n`;
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `contabilidade_${month || "geral"}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    recebidas.forEach((i: any) => { csv += toRow(i); });
+    csv += csvRow(["", "", "", "", "Total Recebidas", csvBrl(totalRecebidas)]) + "\n";
+    csv += csvRow(["", "", "", "", "Saldo (Emitidas − Recebidas)", csvBrl(saldo)]);
+    downloadCsv(`contabilidade_${month || "geral"}.csv`, csv);
   };
 
   return (

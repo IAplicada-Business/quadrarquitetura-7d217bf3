@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mic, Trash2, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { Trash2, CheckCircle2, Clock, Plus, ListChecks } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { VoiceTaskForm } from "@/components/construction/VoiceTaskForm";
 
 const priorityColors: Record<string, string> = {
   baixa: "bg-muted text-muted-foreground",
@@ -50,7 +51,8 @@ export default function VoiceTasksPage() {
     enabled: !!user,
   });
 
-  const { tasks, isLoading, update, remove } = useVoiceTasks(filterProject === "all" ? undefined : filterProject);
+  const { tasks, isLoading, update, remove, createOne, isCreatingOne } = useVoiceTasks(filterProject === "all" ? undefined : filterProject);
+  const [formOpen, setFormOpen] = useState(false);
 
   const filtered = tasks.filter((t) => {
     if (filterType !== "all" && t.task_type !== filterType) return false;
@@ -72,13 +74,20 @@ export default function VoiceTasksPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-display">Tarefas de Voz</h1>
-          <p className="text-sm text-muted-foreground">Tarefas criadas pelo assistente de voz IA</p>
+          <h1 className="text-2xl font-bold text-display">Tarefas</h1>
+          <p className="text-sm text-muted-foreground">
+            Tarefas criadas por voz, digitação ou geradas automaticamente pelo sistema
+          </p>
         </div>
-        <Badge variant="outline" className="gap-1">
-          <Mic className="h-3 w-3" />
-          {tasks.length} tarefas
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="gap-1">
+            <ListChecks className="h-3 w-3" />
+            {tasks.length} tarefas
+          </Badge>
+          <Button size="sm" onClick={() => setFormOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Nova Tarefa
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -120,9 +129,11 @@ export default function VoiceTasksPage() {
       ) : Object.keys(grouped).length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Mic className="h-12 w-12 text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground">Nenhuma tarefa de voz encontrada.</p>
-            <p className="text-sm text-muted-foreground">Use o assistente de voz no header para criar tarefas.</p>
+            <ListChecks className="h-12 w-12 text-muted-foreground/30 mb-4" />
+            <p className="text-muted-foreground">Nenhuma tarefa encontrada.</p>
+            <p className="text-sm text-muted-foreground">
+              Use o botão <strong>Nova Tarefa</strong> ou o assistente de voz no header.
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -192,6 +203,15 @@ export default function VoiceTasksPage() {
           </Card>
         ))
       )}
+
+      <VoiceTaskForm
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        projects={projects}
+        defaultProjectId={filterProject !== "all" ? filterProject : undefined}
+        isLoading={isCreatingOne}
+        onSubmit={(data) => { void createOne(data); }}
+      />
     </div>
   );
 }

@@ -7,6 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { useInvoicesNF } from "@/hooks/useInvoicesNF";
 import { InvoiceNFForm } from "./InvoiceNFForm";
+import { csvRow, csvBrl, downloadCsv } from "@/lib/csv";
+
+const NF_TYPE_LABEL: Record<string, string> = { emitida: "Emitida", recebida: "Recebida" };
+const STATUS_LABEL: Record<string, string> = {
+  pendente: "Pendente",
+  enviada_contador: "Enviada ao Contador",
+  arquivada: "Arquivada",
+};
 
 function formatCurrency(v: number | null | undefined) {
   if (v == null) return "—";
@@ -62,21 +70,27 @@ export function InvoiceNFList({ projectId, showProjectColumn, projects }: Invoic
   const handleExportCSV = () => {
     const emitidas = items.filter((i: any) => i.nf_type === "emitida");
     const recebidas = items.filter((i: any) => i.nf_type === "recebida");
-    const header = "Nº NF,Tipo,Emitente,Valor,Data Emissão,Competência,Status\n";
-    const toRow = (i: any) => `"${i.nf_number || ""}","${i.nf_type}","${i.issuer_name || ""}",${i.amount},"${i.issue_date}","${i.competence_month || ""}","${i.status}"\n`;
+    const header = csvRow([
+      "Nº NF", "Tipo", "Emitente", "Tomador", "Valor (R$)",
+      "Data Emissão", "Competência", "Status",
+    ]);
+    const toRow = (i: any) => csvRow([
+      i.nf_number || "",
+      NF_TYPE_LABEL[i.nf_type] ?? i.nf_type,
+      i.issuer_name || "",
+      i.recipient_name || "",
+      csvBrl(i.amount),
+      i.issue_date || "",
+      i.competence_month || "",
+      STATUS_LABEL[i.status] ?? i.status,
+    ]);
     let csv = "NOTAS FISCAIS EMITIDAS\n" + header;
     emitidas.forEach((i: any) => { csv += toRow(i); });
-    csv += `\nTotal Emitidas:,,,${totalEmitidas}\n\n`;
+    csv += csvRow(["", "", "", "Total Emitidas", csvBrl(totalEmitidas)]) + "\n";
     csv += "NOTAS FISCAIS RECEBIDAS\n" + header;
     recebidas.forEach((i: any) => { csv += toRow(i); });
-    csv += `\nTotal Recebidas:,,,${totalRecebidas}\n`;
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `relatorio_nf_${filterMonth || "geral"}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    csv += csvRow(["", "", "", "Total Recebidas", csvBrl(totalRecebidas)]);
+    downloadCsv(`relatorio_nf_${filterMonth || "geral"}.csv`, csv);
   };
 
   return (

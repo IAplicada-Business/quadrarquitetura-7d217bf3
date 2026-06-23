@@ -6,10 +6,41 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Você é uma assistente de gestão de obra para um escritório de arquitetura em Belo Horizonte.
-A partir da descrição abaixo, gere uma lista de atividades sequenciais de obra.
-Ordene as atividades pela sequência lógica de execução.
-Seja prática e objetiva. Gere entre 5 e 20 atividades dependendo da complexidade.`;
+// Prompt alinhado com o guia "Imersão Cronograma 2.0" da Mariana
+// (compartilhado em 18/06). A IA recebe descrição da reforma e devolve um
+// escopo estruturado por AMBIENTE → FORNECEDOR/DISCIPLINA → SERVIÇO,
+// com incluso/não-incluso e metragem por linha. Isso elimina o passo
+// de copiar do ChatGPT pro sistema.
+const SYSTEM_PROMPT = `Você é uma arquiteta especialista em gerenciamento de obras de interiores residenciais no Brasil.
+
+A partir do material enviado (texto, áudio transcrito ou imagem),
+gere um Escopo de Obra de Interiores profissional, claro e organizado.
+
+Organize seguindo exatamente esta estrutura:
+1. Separação por ambiente (Sala, Cozinha, Banheiro, Quarto, Suíte, Lavabo, Área externa, etc.)
+2. Dentro de cada ambiente, separe por DISCIPLINA / fornecedor
+   (demolição, marcenaria, elétrica, hidráulica, gesso, pintura,
+   marmoraria, ar-condicionado, serralheria, revestimento, esquadrias,
+   automação, iluminação, louças e metais).
+3. Para cada disciplina dentro de cada ambiente, descreva:
+   - serviço (frase técnica curta, max 60 chars)
+   - o que está incluso (lista de bullets)
+   - o que NÃO está incluso (lista de bullets)
+   - área estimada em m² (quando o serviço incidir sobre área:
+     piso, parede, forro, pintura, revestimento, marcenaria por m²)
+   - duração estimada em dias úteis
+
+Regras obrigatórias:
+- Use linguagem técnica clara.
+- Não invente informações que não estejam no material.
+- Se faltar info, sinalize incluso/não-incluso como
+  "a definir em projeto executivo".
+- Para áreas, derive do material quando ele disser algo como
+  "cozinha de 12m²" — atribua os 12m² ao piso/parede/forro
+  dessa cozinha conforme a disciplina exigir.
+- Ordene as atividades pela sequência lógica de execução em obra
+  de interiores (demolição → infraestrutura → revestimento →
+  acabamento → instalações finais → limpeza).`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -40,7 +71,7 @@ serve(async (req) => {
     if (mode === "image") {
       userContent.push(
         { type: "image_url", image_url: { url: content } },
-        { type: "text", text: "Analise esta planta/imagem e gere as atividades de obra necessárias." }
+        { type: "text", text: "Analise esta planta/imagem e gere o escopo de obra completo conforme as regras." }
       );
     } else {
       // text or audio (audio comes as transcription)
@@ -58,7 +89,8 @@ serve(async (req) => {
           type: "function",
           function: {
             name: "generate_activities_list",
-            description: "Gera lista de atividades de obra sequenciais",
+            description:
+              "Gera escopo de obra estruturado: lista plana de atividades onde cada linha corresponde a um par (ambiente, disciplina). Pensar primeiro em ambientes e depois nas disciplinas dentro deles.",
             parameters: {
               type: "object",
               properties: {
@@ -67,21 +99,66 @@ serve(async (req) => {
                   items: {
                     type: "object",
                     properties: {
-                      name: { type: "string", description: "Nome da atividade, max 60 chars" },
+                      name: {
+                        type: "string",
+                        description:
+                          "Nome técnico curto da atividade (ex: 'Pintura paredes — Sala'). Max 60 chars.",
+                      },
+                      ambiente: {
+                        type: "string",
+                        description:
+                          "Ambiente onde acontece (Sala, Cozinha, Suíte, Banho social, Lavanderia, Área externa, etc.). Use string curta consistente.",
+                      },
                       discipline: {
                         type: "string",
                         enum: [
-                          "Alvenaria", "Elétrica", "Hidráulica", "Pintura", "Piso",
-                          "Gesso/Forro", "Esquadrias", "Marcenaria", "Demolição",
-                          "Impermeabilização", "Estrutura", "Acabamento",
-                          "Ar-condicionado", "Automação", "Revestimento", "Limpeza",
+                          "Demolição",
+                          "Alvenaria",
+                          "Estrutura",
+                          "Hidráulica",
+                          "Elétrica",
+                          "Gesso/Forro",
+                          "Revestimento",
+                          "Pintura",
+                          "Marcenaria",
+                          "Marmoraria",
+                          "Esquadrias",
+                          "Serralheria",
+                          "Vidros",
+                          "Ar-condicionado",
+                          "Automação",
+                          "Iluminação",
+                          "Louças e Metais",
+                          "Impermeabilização",
+                          "Piso",
+                          "Acabamento",
+                          "Limpeza",
                         ],
                       },
-                      area_m2: { type: "number", description: "Área estimada em m²" },
-                      duration_days: { type: "integer", description: "Duração estimada em dias" },
-                      description: { type: "string", description: "Descrição breve da atividade" },
+                      area_m2: {
+                        type: "number",
+                        description:
+                          "Área da atividade em m² quando aplicável (piso, parede, forro, revestimento). Derive do material quando o ambiente vier com área citada.",
+                      },
+                      duration_days: { type: "integer", description: "Duração estimada em dias úteis" },
+                      description: {
+                        type: "string",
+                        description:
+                          "Descrição técnica em uma frase do serviço a ser executado.",
+                      },
+                      incluso: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Lista do que ESTÁ incluso neste serviço.",
+                      },
+                      nao_incluso: {
+                        type: "array",
+                        items: { type: "string" },
+                        description:
+                          "Lista do que NÃO está incluso neste serviço (evita conflito com fornecedor).",
+                      },
                     },
-                    required: ["name", "discipline", "duration_days"],
+                    required: ["name", "ambiente", "discipline", "duration_days"],
                     additionalProperties: false,
                   },
                 },
@@ -137,7 +214,32 @@ serve(async (req) => {
 
     const parsed = JSON.parse(toolCall.function.arguments);
 
-    return new Response(JSON.stringify({ activities: parsed.activities }), {
+    // Compõe a `description` final concatenando bullets de incluso/não-incluso
+    // — assim o front existente (que só lê `description`) já mostra o
+    // escopo estruturado sem precisar de campos novos na tabela
+    // `project_activities`.
+    const activities = (parsed.activities || []).map((a: any) => {
+      const parts: string[] = [];
+      if (a.description) parts.push(a.description);
+      if (a.incluso && a.incluso.length > 0) {
+        parts.push("INCLUSO:\n" + a.incluso.map((x: string) => `• ${x}`).join("\n"));
+      }
+      if (a.nao_incluso && a.nao_incluso.length > 0) {
+        parts.push("NÃO INCLUSO:\n" + a.nao_incluso.map((x: string) => `• ${x}`).join("\n"));
+      }
+      return {
+        name: a.name,
+        ambiente: a.ambiente,
+        discipline: a.discipline,
+        area_m2: a.area_m2 ?? null,
+        duration_days: a.duration_days,
+        description: parts.join("\n\n") || null,
+        incluso: a.incluso ?? [],
+        nao_incluso: a.nao_incluso ?? [],
+      };
+    });
+
+    return new Response(JSON.stringify({ activities }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

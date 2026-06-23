@@ -166,6 +166,162 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Helper: para regras que geram "Tarefas Quadra" além da notificação.
+    // Evita duplicar tarefa para a mesma entidade nos últimos 3 dias.
+    async function hasRecentVoiceTask(userId: string, projectId: string, title: string): Promise<boolean> {
+      const { data } = await supabase
+        .from("voice_tasks")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("project_id", projectId)
+        .eq("title", title)
+        .gte("created_at", threeDaysAgoISO)
+        .limit(1);
+      return (data && data.length > 0) ?? false;
+    }
+
+    // Rule 7: Cliente sem resposta no portal há 5+ dias.
+    // Pedido vídeo 9 ("gere tarefas para mim Quadra, coisas que eu preciso
+    // resolver"): além de notificar, criar entrada em voice_tasks para
+    // aparecer no kanban de tarefas internas.
+    const { data: stalePendingResponses } = await supabase
+      .from("client_pending_responses")
+      .select("id, pending_item, weekly_report_id, status, created_at, weekly_reports!inner(project_id, user_id)")
+      .eq("status", "pendente")
+      .lte("created_at", fiveDaysAgo);
+
+    if (stalePendingResponses) {
+      for (const r of stalePendingResponses as any[]) {
+        const projectId = r.weekly_reports?.project_id;
+        const userId = r.weekly_reports?.user_id;
+        if (!projectId || !userId) continue;
+        if (await isDuplicate("client_no_response", r.id)) continue;
+        const days = Math.floor((Date.now() - new Date(r.created_at).getTime()) / 86400000);
+        await supabase.from("notifications").insert({
+          user_id: userId,
+          type: "client_no_response",
+          title: "Cliente sem resposta no portal",
+          message: `Pendência "${r.pending_item}" sem resposta há ${days} dias`,
+          related_entity_type: "pending_response",
+          related_entity_id: r.id,
+          related_project_id: projectId,
+        });
+        const taskTitle = `Cobrar resposta do cliente: ${r.pending_item}`;
+        if (!(await hasRecentVoiceTask(userId, projectId, taskTitle))) {
+          await supabase.from("voice_tasks").insert({
+            user_id: userId,
+            project_id: projectId,
+            title: taskTitle,
+            description: `Cliente não respondeu há ${days} dias — entrar em contato manualmente.`,
+            category: "pendencias",
+            task_type: "administrativo",
+            priority: days >= 10 ? "alta" : "media",
+          });
+        }
+        totalCreated++;
+      }
+    }
+
+    // Rule 8: Projeto em execução sem atividade atualizada há 14+ dias.
+    // Pedido vídeo 9: detectar obras paradas/sem registro e jogar
+    // "atualizar acompanhamento" na lista de tarefas internas.
+    const fourteenDaysAgoISO = new Date(Date.now() - 14 * 86400000).toISOString();
+    const { data: runningProjects } = await supabase
+      .from("projects")
+      .select("id, name, user_id, updated_at, status")
+      .in("status", ["mobilizacao", "execucao"]);
+
+    if (runningProjects) {
+      for (const p of runningProjects as any[]) {
+        const { data: recentActivity } = await supabase
+          .from("project_activities")
+          .select("id")
+          .eq("project_id", p.id)
+          .gte("updated_at", fourteenDaysAgoISO)
+          .limit(1);
+        if (recentActivity && recentActivity.length > 0) continue;
+
+        const { data: recentDiary } = await supabase
+          .from("site_diary_entries")
+          .select("id")
+          .eq("project_id", p.id)
+          .gte("entry_date", new Date(Date.now() - 14 * 86400000).toISOString().split("T")[0])
+          .limit(1);
+        if (recentDiary && recentDiary.length > 0) continue;
+
+        if (await isDuplicate("project_stale", p.id)) continue;
+        await supabase.from("notifications").insert({
+          user_id: p.user_id,
+          type: "project_stale",
+          title: "Obra sem registro recente",
+          message: `${p.name} — nenhuma atividade ou RDO atualizado nos últimos 14 dias`,
+          related_entity_type: "project",
+          related_entity_id: p.id,
+          related_project_id: p.id,
+        });
+        const taskTitle = `Atualizar acompanhamento: ${p.name}`;
+        if (!(await hasRecentVoiceTask(p.user_id, p.id, taskTitle))) {
+          await supabase.from("voice_tasks").insert({
+            user_id: p.user_id,
+            project_id: p.id,
+            title: taskTitle,
+            description: "Nenhuma atividade ou RDO registrado nas últimas 2 semanas.",
+            category: "cronograma",
+            task_type: "obra",
+            priority: "media",
+          });
+        }
+        totalCreated++;
+      }
+    }
+
+    // Rule 9: Contrato assinado há 30+ dias sem NF emitida.
+    // Pedido implícito (vídeo 10): emissão de NF é fricção; lembrar.
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+    const { data: signedContracts } = await supabase
+      .from("contracts")
+      .select("id, title, contract_number, user_id, project_id, signed_at, value")
+      .eq("status", "assinado")
+      .not("signed_at", "is", null)
+      .lte("signed_at", thirtyDaysAgo);
+
+    if (signedContracts) {
+      for (const c of signedContracts as any[]) {
+        if (!c.project_id) continue;
+        const { data: existingNf } = await supabase
+          .from("invoices_nf")
+          .select("id")
+          .eq("project_id", c.project_id)
+          .eq("nf_type", "emitida")
+          .limit(1);
+        if (existingNf && existingNf.length > 0) continue;
+        if (await isDuplicate("contract_no_nf", c.id)) continue;
+
+        await supabase.from("notifications").insert({
+          user_id: c.user_id,
+          type: "contract_no_nf",
+          title: "Contrato sem NF emitida",
+          message: `${c.contract_number || c.title || "Contrato"} assinado há 30+ dias e nenhuma NF emitida vinculada`,
+          related_entity_type: "contract",
+          related_entity_id: c.id,
+          related_project_id: c.project_id,
+        });
+        const taskTitle = `Emitir NF do contrato ${c.contract_number || c.title || ""}`.trim();
+        if (!(await hasRecentVoiceTask(c.user_id, c.project_id, taskTitle))) {
+          await supabase.from("voice_tasks").insert({
+            user_id: c.user_id,
+            project_id: c.project_id,
+            title: taskTitle,
+            description: `Contrato assinado em ${c.signed_at?.slice(0, 10)}, valor R$ ${Number(c.value ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}.`,
+            category: "financeiro",
+            task_type: "financeiro",
+            priority: "alta",
+          });
+        }
+        totalCreated++;
+      }
+    }
+
     return new Response(JSON.stringify({ success: true, notifications_created: totalCreated }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
