@@ -234,6 +234,43 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
     setCalendarDialogOpen(false);
   };
 
+  // Gera checkpoints (Prompt 6 do guia) a partir das atividades já
+  // datadas, chamando a edge `generate-checkpoints` que insere em
+  // `site_visits`. Determinístico: cada disciplina tem regra fixa
+  // de quais checkpoints emitir.
+  const [generatingCheckpoints, setGeneratingCheckpoints] = useState(false);
+  const handleGenerateCheckpoints = async () => {
+    if (activities.length === 0) return;
+    setGeneratingCheckpoints(true);
+    try {
+      const payload = activities
+        .filter((a) => a.start_date && a.end_date)
+        .map((a) => ({
+          id: a.id,
+          name: a.name,
+          discipline: a.discipline,
+          start_date: a.start_date,
+          end_date: a.end_date,
+        }));
+      if (payload.length === 0) {
+        toast({ title: "Aplique o calendário antes para que as atividades tenham datas." });
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke("generate-checkpoints", {
+        body: { project_id: projectId, activities: payload, replace_existing: true },
+      });
+      if (error) throw error;
+      toast({
+        title: `${data?.created ?? 0} checkpoints criados`,
+        description: "Verifique em Acompanhamento da obra (visitas).",
+      });
+    } catch (e: any) {
+      toast({ title: "Erro ao gerar checkpoints", description: e.message, variant: "destructive" });
+    } finally {
+      setGeneratingCheckpoints(false);
+    }
+  };
+
   // Export CSV do cronograma (Prompt 7 do guia da Mariana — base para
   // planilha / MS Project / Notion).
   const handleExportScheduleCSV = () => {
@@ -478,6 +515,22 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
                   title="Aplica calendário brasileiro: pula fim de semana, feriados e recesso"
                 >
                   <CalendarCheck className="h-4 w-4 mr-1" /> Aplicar calendário BR
+                </Button>
+              )}
+              {useActivitiesSource && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleGenerateCheckpoints}
+                  disabled={generatingCheckpoints || activities.length === 0}
+                  title="Gera visitas técnicas a partir das atividades (medição, recebimento, instalação, finalização)"
+                >
+                  {generatingCheckpoints ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <CalendarCheck className="h-4 w-4 mr-1" />
+                  )}
+                  Gerar Checkpoints
                 </Button>
               )}
               <Button size="sm" variant="outline" onClick={handleExportScheduleCSV} disabled={(useActivitiesSource ? activities.length : items.length) === 0}>
