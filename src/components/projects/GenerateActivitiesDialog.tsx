@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Sparkles, Mic, MicOff, ImagePlus, Loader2, X, Map, Building2 } from "lucide-react";
+import { Sparkles, Mic, MicOff, ImagePlus, Loader2, X, Map, Building2, LayoutTemplate } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { getDisciplineColor } from "@/lib/disciplineColors";
+import { useActivityTemplates } from "@/hooks/useActivityTemplates";
 import type { ProjectActivity } from "@/hooks/useProjectActivities";
 
 interface GeneratedActivity {
@@ -51,6 +52,8 @@ export function GenerateActivitiesDialog({
   onCreate,
 }: GenerateActivitiesDialogProps) {
   const [tab, setTab] = useState("texto");
+  const { templates: activityTemplates, applyToProject } = useActivityTemplates();
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [textInput, setTextInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedActivities, setGeneratedActivities] = useState<GeneratedActivity[] | null>(null);
@@ -498,6 +501,10 @@ export function GenerateActivitiesDialog({
                   <Map className="h-3.5 w-3.5 mr-1" />
                   Planta Baixa
                 </TabsTrigger>
+                <TabsTrigger value="template" className="flex-1">
+                  <LayoutTemplate className="h-3.5 w-3.5 mr-1" />
+                  Template
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="texto" className="space-y-3">
@@ -632,6 +639,50 @@ export function GenerateActivitiesDialog({
                   </div>
                 </div>
               </TabsContent>
+
+              <TabsContent value="template" className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Aplique um template criado em <strong>Configurações &gt; Templates de Atividades</strong>.
+                  As atividades do template são copiadas com disciplinas, durações e dependências preservadas.
+                </p>
+                {activityTemplates.length === 0 ? (
+                  <div className="border-2 border-dashed rounded-lg py-8 text-center text-sm text-muted-foreground">
+                    Nenhum template cadastrado.
+                    <br />
+                    Crie um em <strong>Configurações &gt; Templates de Atividades</strong>.
+                  </div>
+                ) : (
+                  <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                    <SelectTrigger><SelectValue placeholder="Selecione um template" /></SelectTrigger>
+                    <SelectContent>
+                      {activityTemplates.map((tpl) => (
+                        <SelectItem key={tpl.id} value={tpl.id}>
+                          {tpl.name} ({tpl.items.length} atividades)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {selectedTemplateId && (
+                  <div className="max-h-64 overflow-y-auto rounded-md border p-3 text-xs space-y-1">
+                    {activityTemplates
+                      .find((t) => t.id === selectedTemplateId)
+                      ?.items.sort((a, b) => a.position - b.position)
+                      .map((it) => (
+                        <div key={it.id} className="flex items-center gap-2">
+                          <span className="font-mono text-muted-foreground">#{it.position + 1}</span>
+                          <span className="flex-1">{it.name}</span>
+                          {it.discipline && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0">{it.discipline}</Badge>
+                          )}
+                          {it.duration_days != null && (
+                            <span className="text-muted-foreground">{it.duration_days}d</span>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </TabsContent>
             </Tabs>
 
             {tab === "planta" ? (
@@ -649,6 +700,30 @@ export function GenerateActivitiesDialog({
                   <>
                     <Map className="h-4 w-4 mr-2" />
                     Analisar Planta e Gerar Atividades
+                  </>
+                )}
+              </Button>
+            ) : tab === "template" ? (
+              <Button
+                className="w-full"
+                onClick={() => {
+                  if (!selectedTemplateId) return;
+                  applyToProject.mutate(
+                    { templateId: selectedTemplateId, projectId },
+                    { onSuccess: () => handleClose(false) },
+                  );
+                }}
+                disabled={!selectedTemplateId || applyToProject.isPending}
+              >
+                {applyToProject.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Aplicando template...
+                  </>
+                ) : (
+                  <>
+                    <LayoutTemplate className="h-4 w-4 mr-2" />
+                    Aplicar Template
                   </>
                 )}
               </Button>
