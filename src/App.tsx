@@ -32,6 +32,7 @@ import InvoicesPage from "./pages/InvoicesPage";
 import ContentCalendar from "./pages/ContentCalendar";
 import ContentScripts from "./pages/ContentScripts";
 import ContentPosts from "./pages/ContentPosts";
+import ContentInstagram from "./pages/ContentInstagram";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -106,6 +107,7 @@ const App = () => (
               <Route path="/content/calendar" element={<ContentCalendar />} />
               <Route path="/content/scripts" element={<ContentScripts />} />
               <Route path="/content/posts" element={<ContentPosts />} />
+              <Route path="/content/instagram" element={<ContentInstagram />} />
               {/* Redirects de compatibilidade */}
               <Route path="/site-tracking" element={<Navigate to="/construction/tracking" replace />} />
               <Route path="/suppliers" element={<Navigate to="/construction/suppliers" replace />} />

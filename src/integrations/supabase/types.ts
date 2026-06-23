@@ -14,6 +14,122 @@ export type Database = {
   }
   public: {
     Tables: {
+      instagram_profiles: {
+        Row: {
+          created_at: string
+          handle: string
+          id: string
+          is_active: boolean
+          kind: string
+          label: string | null
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          handle: string
+          id?: string
+          is_active?: boolean
+          kind?: string
+          label?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          handle?: string
+          id?: string
+          is_active?: boolean
+          kind?: string
+          label?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      instagram_metrics: {
+        Row: {
+          avg_comments: number | null
+          avg_likes: number | null
+          avg_reach: number | null
+          avg_saves: number | null
+          created_at: string
+          engagement_rate: number | null
+          followers: number | null
+          id: string
+          notes: string | null
+          palette_dominant: string | null
+          palette_quaternary: string | null
+          palette_secondary: string | null
+          palette_tertiary: string | null
+          period_end: string
+          period_start: string
+          post_count: number | null
+          profile_id: string
+          reel_count: number | null
+          story_count: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avg_comments?: number | null
+          avg_likes?: number | null
+          avg_reach?: number | null
+          avg_saves?: number | null
+          created_at?: string
+          engagement_rate?: number | null
+          followers?: number | null
+          id?: string
+          notes?: string | null
+          palette_dominant?: string | null
+          palette_quaternary?: string | null
+          palette_secondary?: string | null
+          palette_tertiary?: string | null
+          period_end: string
+          period_start: string
+          post_count?: number | null
+          profile_id: string
+          reel_count?: number | null
+          story_count?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avg_comments?: number | null
+          avg_likes?: number | null
+          avg_reach?: number | null
+          avg_saves?: number | null
+          created_at?: string
+          engagement_rate?: number | null
+          followers?: number | null
+          id?: string
+          notes?: string | null
+          palette_dominant?: string | null
+          palette_quaternary?: string | null
+          palette_secondary?: string | null
+          palette_tertiary?: string | null
+          period_end?: string
+          period_start?: string
+          post_count?: number | null
+          profile_id?: string
+          reel_count?: number | null
+          story_count?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_metrics_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_templates: {
         Row: {
           created_at: string
