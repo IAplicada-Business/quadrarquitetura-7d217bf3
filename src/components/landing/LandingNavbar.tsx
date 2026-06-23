@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import logoLight from "@/assets/logo-light.png";
-import logoDark from "@/assets/logo-dark.png";
+import logoBege from "@/assets/logo-bege.png";
+import logoAzul from "@/assets/logo-azul.png";
 
 const links = [
   { href: "#sobre", label: "Sobre" },
@@ -44,9 +44,9 @@ export function LandingNavbar() {
           aria-label="Quadra Arquitetura"
         >
           <img
-            src={scrolled ? logoDark : logoLight}
+            src={scrolled ? logoAzul : logoBege}
             alt="Quadra Arquitetura"
-            className="h-12 md:h-16 w-auto transition-opacity duration-300"
+            className="h-16 md:h-20 w-auto transition-opacity duration-300"
           />
         </button>
 

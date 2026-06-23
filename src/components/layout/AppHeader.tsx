@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { NotificationsPanel } from "@/components/layout/NotificationsPanel";
 import { VoiceAgentDialog } from "@/components/layout/VoiceAgentDialog";
-import logoLight from "@/assets/logo-light.png";
+import logoAzul from "@/assets/logo-azul.png";
 
 interface AppHeaderProps {
   onMenuClick?: () => void;
@@ -119,11 +119,11 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
 
         {/* Logo só aparece no mobile/sidebar colapsada */}
         {(sidebarCollapsed && !showMenuButton) || showMenuButton ? (
-          <div className="h-10 overflow-hidden">
+          <div className="h-12 overflow-hidden">
             <img
-              src={logoLight}
+              src={logoAzul}
               alt="Quadra Arquitetura"
-              className="h-16 -mt-3 object-contain object-left animate-fade-in"
+              className="h-12 w-auto object-contain object-left animate-fade-in"
             />
           </div>
         ) : null}
