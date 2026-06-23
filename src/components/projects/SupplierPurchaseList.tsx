@@ -30,9 +30,9 @@ export function SupplierPurchaseList({ open, onOpenChange, items }: SupplierPurc
   }, {});
 
   const generateText = () => {
-    let text = "📋 LISTA DE COMPRAS POR FORNECEDOR\n\n";
+    let text = " LISTA DE COMPRAS POR FORNECEDOR\n\n";
     Object.entries(grouped).forEach(([supplier, items]) => {
-      text += `🏪 ${supplier}\n`;
+      text += ` ${supplier}\n`;
       items.forEach((item) => {
         text += `  • ${item.name}`;
         if (item.specifications) text += ` — ${item.specifications}`;

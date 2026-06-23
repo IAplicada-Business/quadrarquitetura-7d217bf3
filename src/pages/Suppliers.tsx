@@ -158,7 +158,7 @@ export default function Suppliers() {
               )}
               {s.email && (
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <span className="text-xs">✉️</span> {s.email}
+                  <span className="text-xs">✉</span> {s.email}
                 </div>
               )}
               {s.payment_conditions && (

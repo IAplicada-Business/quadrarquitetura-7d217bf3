@@ -139,41 +139,69 @@ export default function DashboardEscritorio() {
       {/* ═══════════════════ ABA COMERCIAL ═══════════════════ */}
       {tab === "comercial" && cm && (
         <div className="space-y-4">
-          {/* BLOCO 1 — Funil comercial */}
-          <Card className="bg-secondary/50">
-            <CardContent className="pt-5 pb-4">
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-4">
-                Funil comercial — {capMonth}
-              </p>
-              <div className="flex items-center justify-between gap-1 flex-wrap">
-                {cm.funil.map((stage, i) => (
-                  <div key={stage.label} className="flex items-center gap-1">
-                    {/* Stage card */}
-                    <div
-                      className="rounded-lg px-4 py-3 text-center min-w-[80px]"
-                      style={{ backgroundColor: stage.color + "18" }}
-                    >
-                      <p className="text-[22px] font-medium" style={{ color: stage.color }}>
-                        {stage.count}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">{stage.label}</p>
-                    </div>
-                    {/* Arrow + rate */}
-                    {i < cm.funil.length - 1 && (
-                      <div className="flex flex-col items-center px-1">
-                        <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
-                        <span className="text-[10px] text-muted-foreground">
-                          {cm.funnelRates[i]}%
-                        </span>
-                      </div>
-                    )}
+          {/* BLOCO 1 — Funil comercial (redesign Sprint 7).
+              Barras horizontais proporcionais para mostrar volume e
+              perda entre etapas mesmo quando os números são pequenos.
+              Inclui métricas globais inline. */}
+          <Card>
+            <CardContent className="pt-5 pb-4 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                  Funil comercial — {capMonth}
+                </p>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span>
+                    Conversão total: <strong className="text-foreground tabular-nums">{cm.conversaoTotal}%</strong>
+                  </span>
+                  <span>
+                    Ticket médio: <strong className="text-foreground tabular-nums">{fmt(cm.ticketMedio)}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {(() => {
+                const maxCount = Math.max(...cm.funil.map((s) => s.count), 1);
+                return (
+                  <div className="space-y-2">
+                    {cm.funil.map((stage, i) => {
+                      const widthPct = Math.max(8, (stage.count / maxCount) * 100);
+                      const conversionFromPrev = i > 0 ? cm.funnelRates[i - 1] : null;
+                      return (
+                        <div key={stage.label} className="flex items-center gap-3">
+                          <div className="w-32 shrink-0 text-xs">
+                            <p className="font-medium text-foreground">{stage.label}</p>
+                            {conversionFromPrev != null && (
+                              <p className="text-[10px] text-muted-foreground">
+                                {conversionFromPrev}% da etapa anterior
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex-1 relative h-9 rounded-md overflow-hidden bg-muted/40">
+                            <div
+                              className="absolute inset-y-0 left-0 transition-all"
+                              style={{
+                                width: `${widthPct}%`,
+                                background: `linear-gradient(90deg, ${stage.color}25 0%, ${stage.color}40 100%)`,
+                                borderLeft: `3px solid ${stage.color}`,
+                              }}
+                            />
+                            <div className="absolute inset-0 flex items-center px-3 gap-2">
+                              <span className="text-lg font-display tabular-nums" style={{ color: stage.color }}>
+                                {stage.count}
+                              </span>
+                              {stage.count > 0 && cm.funil[0].count > 0 && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  ({Math.round((stage.count / cm.funil[0].count) * 100)}% do topo)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-              <div className="flex justify-end gap-4 mt-3 text-[11px] text-muted-foreground">
-                <span>Conversão total: {cm.conversaoTotal}%</span>
-                <span>Ticket médio: {fmt(cm.ticketMedio)}</span>
-              </div>
+                );
+              })()}
             </CardContent>
           </Card>
 

@@ -56,7 +56,7 @@ export function AppLayout() {
           onToggleSidebar={toggleSidebar}
         />
         <main className="flex-1 overflow-y-auto scrollbar-elegant">
-          <div className="mx-auto w-full max-w-[1480px] px-6 py-8 lg:px-10 lg:py-10 animate-fade-in">
+          <div className="w-full px-6 py-6 lg:px-8 lg:py-8 animate-fade-in">
             <Outlet />
           </div>
         </main>

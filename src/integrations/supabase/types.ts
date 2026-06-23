@@ -626,6 +626,13 @@ export type Database = {
       }
       clients: {
         Row: {
+          address_city: string | null
+          address_complement: string | null
+          address_neighborhood: string | null
+          address_number: string | null
+          address_state: string | null
+          address_street: string | null
+          address_zip: string | null
           client_type: Database["public"]["Enums"]["client_type"] | null
           converted_at: string | null
           cpf_cnpj: string | null
@@ -642,6 +649,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
           client_type?: Database["public"]["Enums"]["client_type"] | null
           converted_at?: string | null
           cpf_cnpj?: string | null
@@ -658,6 +672,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
           client_type?: Database["public"]["Enums"]["client_type"] | null
           converted_at?: string | null
           cpf_cnpj?: string | null

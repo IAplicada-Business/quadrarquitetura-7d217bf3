@@ -58,6 +58,9 @@ const iconMap: Record<string, LucideIcon> = {
   "Tarefas": CheckSquare,
   "Tarefas por Obra": CheckSquare,
   "Tarefas Quadra": ListChecks,
+  "Kanban": ListChecks,
+  "Kanban Projetos": Building2,
+  "Kanban Quadra": ListChecks,
   "Histórico de Voz": ListChecks,
   "Fornecedores": Truck,
   "Calendário": CalendarRange,
@@ -75,7 +78,16 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Dashboard Escritório", url: "/dashboard/escritorio" },
       { title: "Dashboard Obras", url: "/dashboard/obras" },
-      { title: "Tarefas Quadra", url: "/tasks" },
+      // Sprint 7 — submenu Kanban (Projetos + Quadra). "Tarefas por
+      // Obra" foi removida (redundância com Kanban Quadra + cronograma).
+      {
+        title: "Kanban",
+        url: "/tasks/projetos",
+        subItems: [
+          { title: "Kanban Projetos", url: "/tasks/projetos" },
+          { title: "Kanban Quadra", url: "/tasks/quadra" },
+        ],
+      },
       { title: "Relatórios", url: "/construction/reports" },
     ],
   },
@@ -100,14 +112,7 @@ const menuGroups: MenuGroup[] = [
       { title: "Obras", url: "/projects" },
       { title: "Kanban", url: "/projects/kanban" },
       { title: "Acompanhamento", url: "/construction/tracking" },
-      {
-        title: "Tarefas",
-        url: "/construction/tasks",
-        subItems: [
-          { title: "Tarefas por Obra", url: "/construction/tasks" },
-          { title: "Histórico de Voz", url: "/construction/voice-tasks" },
-        ],
-      },
+      { title: "Histórico de Voz", url: "/construction/voice-tasks" },
       { title: "Fornecedores", url: "/construction/suppliers" },
     ],
   },

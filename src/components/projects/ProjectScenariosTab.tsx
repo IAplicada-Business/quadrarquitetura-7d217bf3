@@ -410,9 +410,9 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
   };
 
   const priceStatusIcon = (status: PriceStatus) => {
-    if (status === "green") return <span className="cursor-pointer" title="Pesquisado há menos de 7 dias">🟢</span>;
-    if (status === "yellow") return <span className="cursor-pointer" title="Pesquisado entre 7 e 30 dias">🟡</span>;
-    return <span className="cursor-pointer" title="Sem pesquisa ou > 30 dias">🔴</span>;
+    if (status === "green") return <span className="cursor-pointer" title="Pesquisado há menos de 7 dias"></span>;
+    if (status === "yellow") return <span className="cursor-pointer" title="Pesquisado entre 7 e 30 dias"></span>;
+    return <span className="cursor-pointer" title="Sem pesquisa ou > 30 dias"></span>;
   };
 
   if (isLoading) {
@@ -614,8 +614,8 @@ export function ProjectScenariosTab({ projectId, onTabChange }: ProjectScenarios
                     {clientBudget != null && (
                       <span className={overBudget ? "text-destructive" : "text-muted-foreground"}>
                         {overBudget
-                          ? `⚠️ +${formatCurrency(totalIncluded - clientBudget)}`
-                          : `✅ -${formatCurrency(clientBudget - totalIncluded)}`}
+                          ? ` +${formatCurrency(totalIncluded - clientBudget)}`
+                          : ` -${formatCurrency(clientBudget - totalIncluded)}`}
                       </span>
                     )}
                   </div>
