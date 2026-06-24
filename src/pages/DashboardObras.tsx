@@ -15,7 +15,7 @@ import {
   Bell,
   ChevronRight,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -63,14 +63,16 @@ export default function DashboardObras() {
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
 
-  // ── Queries ──
+  // ── Queries — dados ao vivo, refetch ao focar a aba ──
+  const liveOpts = { enabled: !!user, staleTime: 30 * 1000, refetchOnWindowFocus: true, refetchOnMount: true };
+
   const { data: projects = [] } = useQuery({
     queryKey: ["dash-obras-projects"],
     queryFn: async () => {
       const { data } = await supabase.from("projects").select("id, name, status, estimated_budget, project_number");
       return data ?? [];
     },
-    enabled: !!user,
+    ...liveOpts,
   });
 
   const { data: scheduleTasks = [] } = useQuery({
@@ -79,7 +81,7 @@ export default function DashboardObras() {
       const { data } = await supabase.from("schedule_tasks").select("id, task_name, start_date, end_date, status, discipline, project_id, supplier_name, projects(name)");
       return data ?? [];
     },
-    enabled: !!user,
+    ...liveOpts,
   });
 
   const { data: materials = [] } = useQuery({
@@ -88,7 +90,7 @@ export default function DashboardObras() {
       const { data } = await supabase.from("material_tracking").select("id, material_name, quantity_purchased, delivery_date, purchase_date, project_id, projects(name)");
       return data ?? [];
     },
-    enabled: !!user,
+    ...liveOpts,
   });
 
   const { data: payments = [] } = useQuery({
@@ -97,7 +99,7 @@ export default function DashboardObras() {
       const { data } = await supabase.from("payments").select("id, value, due_date, status, supplier_name, description, project_id, source, projects(name)");
       return (data ?? []).filter((p: any) => p.source !== "escritorio");
     },
-    enabled: !!user,
+    ...liveOpts,
   });
 
   // ── BLOCO 1 — Visão Geral de Projetos ──
@@ -266,38 +268,30 @@ export default function DashboardObras() {
   const [activeTab, setActiveTab] = useState<"geral" | "multiobras">("geral");
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold font-display mb-1">Obras</h1>
-        <p className="text-muted-foreground">Visão operacional de campo</p>
-      </div>
-
-      {/* Tabs internas */}
-      <div className="border-b">
-        <div className="flex gap-0">
-          {(["geral", "multiobras"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setActiveTab(t)}
-              className={`bg-transparent border-none px-6 py-2.5 text-sm font-medium cursor-pointer transition-colors ${
-                activeTab === t
-                  ? "border-b-2 border-primary text-primary"
-                  : "border-b-2 border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t === "geral" ? "Visão Geral" : "Multi-Obras"}
-            </button>
-          ))}
-        </div>
+    <div className="space-y-5">
+      {/* Segmented tabs — sem h1 redundante (a sidebar já rotula a página) */}
+      <div className="inline-flex p-1 bg-muted/50 rounded-lg">
+        {(["geral", "multiobras"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setActiveTab(t)}
+            className={`px-5 py-1.5 text-sm font-medium rounded-md transition-all ${
+              activeTab === t
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t === "geral" ? "Visão Geral" : "Multi-Obras"}
+          </button>
+        ))}
       </div>
 
       {activeTab === "geral" && (<>
 
       {/* ═══ BLOCO 1 — VISÃO GERAL DOS PROJETOS ═══ */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-display">Projetos Ativos</CardTitle>
-          <CardDescription>Progresso e próxima atividade</CardDescription>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-display">Projetos Ativos</CardTitle>
         </CardHeader>
         <CardContent>
           {projectCards.length > 0 ? (
@@ -425,9 +419,8 @@ export default function DashboardObras() {
 
       {/* ═══ BLOCO 3 — FINANCEIRO DE OBRAS ═══ */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-display">Orçado vs Gasto por Projeto</CardTitle>
-          <CardDescription>Execução financeira das obras ativas</CardDescription>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-display">Orçado (comprometido) vs Gasto por Projeto</CardTitle>
         </CardHeader>
         <CardContent>
           {finChartData.length > 0 ? (
@@ -454,19 +447,14 @@ export default function DashboardObras() {
 
       {/* ═══ ABA MULTI-OBRAS ═══ */}
       {activeTab === "multiobras" && (<>
-      <div className="pt-2">
-        <h2 className="text-xl font-bold font-display mb-1" style={{ color: AZUL.textoDestaque }}>Visão Multi-Obras</h2>
-        <p className="text-sm text-muted-foreground mb-4">Panorama consolidado de todas as obras ativas</p>
-      </div>
 
       {/* Mapa de Fornecedores */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5" style={{ color: AZUL.destaque }} />
-            <CardTitle className="text-lg font-display">Mapa de Fornecedores por Obra</CardTitle>
-          </div>
-          <CardDescription>Alocação semanal de fornecedores nas obras ativas</CardDescription>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-display flex items-center gap-2">
+            <Users className="h-4 w-4" style={{ color: AZUL.destaque }} />
+            Mapa de Fornecedores por Obra
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {multiObras.supplierMatrix.suppliers.length > 0 ? (
@@ -513,12 +501,11 @@ export default function DashboardObras() {
 
       {/* Timeline Comparativa */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" style={{ color: AZUL.destaque }} />
-            <CardTitle className="text-lg font-display">Timeline Comparativa</CardTitle>
-          </div>
-          <CardDescription>Gantt simplificado das obras ativas</CardDescription>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-display flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" style={{ color: AZUL.destaque }} />
+            Timeline Comparativa
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {multiObras.timeline.items.length > 0 ? (

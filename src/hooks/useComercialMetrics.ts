@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, subMonths, differenceInDays, parseISO, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { C } from "@/lib/chartColors";
 
 interface LeadRow {
   id: string;
@@ -73,7 +74,9 @@ export function useComercialMetrics() {
       };
     },
     enabled: !!user,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   const computed = useMemo(() => {
@@ -102,11 +105,11 @@ export function useComercialMetrics() {
     const funnelFechado = thisMonthLeads.filter((l) => l.status === "fechado").length;
 
     const funil: FunilStage[] = [
-      { label: "Leads", count: funnelLeads, color: "#3B82F6" },
-      { label: "Contato", count: funnelContato, color: "#1D9E75" },
-      { label: "Reunião", count: funnelReuniao, color: "#EF9F27" },
-      { label: "Proposta", count: funnelProposta, color: "#C4556E" },
-      { label: "Fechado", count: funnelFechado, color: "#1B2A4A" },
+      { label: "Leads",    count: funnelLeads,    color: C.navyFaint },
+      { label: "Contato",  count: funnelContato,  color: C.navyMid   },
+      { label: "Reunião",  count: funnelReuniao,  color: C.terra     },
+      { label: "Proposta", count: funnelProposta, color: C.warning   },
+      { label: "Fechado",  count: funnelFechado,  color: C.success   },
     ];
 
     const convRate = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
