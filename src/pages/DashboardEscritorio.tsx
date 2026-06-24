@@ -82,11 +82,8 @@ export default function DashboardEscritorio() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold font-display mb-1">Escritório</h1>
-          <p className="text-muted-foreground">Carregando dados...</p>
-        </div>
+      <div className="space-y-5">
+        <SegmentedTabs tab={tab} onChange={setTab} />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i} className="animate-pulse">
@@ -104,38 +101,8 @@ export default function DashboardEscritorio() {
   const fm = financeiro.data;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold font-display mb-1">Escritório</h1>
-        <p className="text-muted-foreground">Visão administrativa e financeira</p>
-      </div>
-
-      {/* Tabs */}
-      <div className="border-b">
-        <div className="flex gap-0">
-          <button
-            onClick={() => setTab("comercial")}
-            className={`bg-transparent border-none px-6 py-2.5 text-sm font-medium cursor-pointer transition-colors ${
-              tab === "comercial"
-                ? "border-b-2 border-primary text-primary"
-                : "border-b-2 border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Comercial
-          </button>
-          <button
-            onClick={() => setTab("financeiro")}
-            className={`bg-transparent border-none px-6 py-2.5 text-sm font-medium cursor-pointer transition-colors ${
-              tab === "financeiro"
-                ? "border-b-2 border-primary text-primary"
-                : "border-b-2 border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Financeiro
-          </button>
-        </div>
-      </div>
+    <div className="space-y-5">
+      <SegmentedTabs tab={tab} onChange={setTab} />
 
       {/* ═══════════════════ ABA COMERCIAL ═══════════════════ */}
       {tab === "comercial" && cm && (
@@ -206,65 +173,32 @@ export default function DashboardEscritorio() {
             </CardContent>
           </Card>
 
-          {/* BLOCO 2 — 4 KPI cards */}
+          {/* BLOCO 2 — KPI cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {/* Leads este mês */}
-            <Card>
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <Users className="h-4 w-4" />
-                  <span className="text-xs font-medium">Leads este mês</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold">{cm.kpis.leadsThisMonth}</span>
-                  <VariationBadge value={cm.kpis.leadsVariation} />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Taxa de conversão */}
-            <Card>
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <TrendingUp className="h-4 w-4" />
-                  <span className="text-xs font-medium">Taxa de conversão</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold">{cm.kpis.taxaConversao}%</span>
-                  <VariationBadge value={cm.kpis.taxaVariation} suffix="pp" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Tempo médio fechamento */}
-            <Card>
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <Clock className="h-4 w-4" />
-                  <span className="text-xs font-medium">Tempo médio fechamento</span>
-                </div>
-                <span className="text-2xl font-bold">{cm.kpis.tempoMedioFechamento}d</span>
-              </CardContent>
-            </Card>
-
-            {/* Propostas aguardando */}
-            <Card>
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <Send className="h-4 w-4" />
-                  <span className="text-xs font-medium">Propostas aguardando</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold">{cm.kpis.proposalsAguardando}</span>
-                  {cm.kpis.hasUrgent && (
-                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                      <AlertTriangle className="h-3 w-3 mr-0.5" />
-                      +7d
-                    </Badge>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <KpiCard
+              icon={<Users className="h-4 w-4" />}
+              label="Leads este mês"
+              value={String(cm.kpis.leadsThisMonth)}
+              variation={cm.kpis.leadsVariation}
+            />
+            <KpiCard
+              icon={<TrendingUp className="h-4 w-4" />}
+              label="Taxa de conversão"
+              value={`${cm.kpis.taxaConversao}%`}
+              variation={cm.kpis.taxaVariation}
+              variationSuffix="pp"
+            />
+            <KpiCard
+              icon={<Clock className="h-4 w-4" />}
+              label="Tempo médio fechamento"
+              value={`${cm.kpis.tempoMedioFechamento}d`}
+            />
+            <KpiCard
+              icon={<Send className="h-4 w-4" />}
+              label="Propostas aguardando"
+              value={String(cm.kpis.proposalsAguardando)}
+              badge={cm.kpis.hasUrgent ? { label: "+7d", variant: "destructive" } : undefined}
+            />
           </div>
 
           {/* BLOCO 3 — Oportunidades + Propostas */}
@@ -357,11 +291,8 @@ export default function DashboardEscritorio() {
           {/* BLOCO 4 — Pipeline 6 meses */}
           <Card>
             <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base font-display">Pipeline — últimos 6 meses</CardTitle>
-                  <p className="text-[11px] text-muted-foreground mt-1">Leads por estágio</p>
-                </div>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="text-base font-display">Pipeline — últimos 6 meses</CardTitle>
                 <div className="flex items-center gap-3">
                   {[
                     { label: "Fechados",     color: C.navy      },
@@ -396,74 +327,54 @@ export default function DashboardEscritorio() {
       {/* ═══════════════════ ABA FINANCEIRO ═══════════════════ */}
       {tab === "financeiro" && fm && (
         <div className="space-y-4">
-          {/* BLOCO 1 — 4 KPI cards */}
+          {/* BLOCO 1 — KPI cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {/* Receita escritório */}
-            <Card style={{ borderLeft: `3px solid ${C.navy}` }}>
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <Wallet className="h-4 w-4" />
-                  <span className="text-xs font-medium">Receita — {capMonth}</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold tabular-nums">{fmt(fm.kpis.receitaMes)}</span>
-                  <VariationBadge value={fm.kpis.receitaVariation} />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* A receber 30d */}
-            <Card style={{ borderLeft: `3px solid ${C.success}` }}>
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <Calendar className="h-4 w-4" />
-                  <span className="text-xs font-medium">A receber (30 dias)</span>
-                </div>
-                <span className="text-2xl font-bold tabular-nums">{fmt(fm.kpis.aReceber30d)}</span>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  {fm.kpis.aReceber30dCount} pagamento(s) pendente(s)
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Despesas do mês */}
-            <Card style={{ borderLeft: `3px solid ${C.terra}` }}>
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <ArrowDown className="h-4 w-4" />
-                  <span className="text-xs font-medium">Despesas — {capMonth}</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold tabular-nums">{fmt(fm.kpis.despesasMes)}</span>
-                  <VariationBadge value={fm.kpis.despesaVariation} invert />
-                </div>
-                {fm.pendingNFs > 0 && (
-                  <Badge variant="outline" className="mt-2 text-[10px] text-amber-600 border-amber-300">
-                    <FileText className="h-3 w-3 mr-0.5" />
+            <KpiCard
+              icon={<Wallet className="h-4 w-4" />}
+              label={`Receita — ${capMonth}`}
+              value={fmt(fm.kpis.receitaMes)}
+              variation={fm.kpis.receitaVariation}
+              accent={C.navy}
+            />
+            <KpiCard
+              icon={<Calendar className="h-4 w-4" />}
+              label="A receber (30 dias)"
+              value={fmt(fm.kpis.aReceber30d)}
+              accent={C.success}
+              hint={`${fm.kpis.aReceber30dCount} pagamento(s) pendente(s)`}
+            />
+            <KpiCard
+              icon={<ArrowDown className="h-4 w-4" />}
+              label={`Despesas — ${capMonth}`}
+              value={fmt(fm.kpis.despesasMes)}
+              variation={fm.kpis.despesaVariation}
+              variationInvert
+              accent={C.terra}
+              hint={
+                fm.pendingNFs > 0 ? (
+                  <span className="inline-flex items-center gap-1 text-amber-600">
+                    <FileText className="h-3 w-3" />
                     {fm.pendingNFs} NF(s) pendente(s)
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Margem líquida */}
-            <Card style={{ borderLeft: `3px solid ${C.success}` }}>
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <Target className="h-4 w-4" />
-                  <span className="text-xs font-medium">Margem líquida</span>
-                </div>
-                <span className="text-2xl font-bold tabular-nums">{fm.kpis.margemLiquida}%</span>
-                <p className="text-[11px] mt-1">
-                  <span className="text-muted-foreground">Meta: 60% · </span>
+                  </span>
+                ) : undefined
+              }
+            />
+            <KpiCard
+              icon={<Target className="h-4 w-4" />}
+              label="Margem líquida"
+              value={`${fm.kpis.margemLiquida}%`}
+              accent={C.success}
+              hint={
+                <span>
+                  Meta: 60% ·{" "}
                   {fm.kpis.margemLiquida >= 60 ? (
                     <span className="text-emerald-600 font-medium">superada</span>
                   ) : (
                     <span className="text-red-500 font-medium">abaixo da meta</span>
                   )}
-                </p>
-              </CardContent>
-            </Card>
+                </span>
+              }
+            />
           </div>
 
           {/* BLOCO 2 — Recebimentos + DRE */}
@@ -548,11 +459,8 @@ export default function DashboardEscritorio() {
           {/* BLOCO 3 — Gráfico receita vs despesa */}
           <Card>
             <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base font-display">Receita vs Despesa</CardTitle>
-                  <p className="text-[11px] text-muted-foreground mt-1">Últimos 6 meses</p>
-                </div>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="text-base font-display">Receita vs Despesa — últimos 6 meses</CardTitle>
                 <div className="flex items-center gap-3">
                   {[
                     { label: "Receita", color: C.navy    },
@@ -613,6 +521,84 @@ export default function DashboardEscritorio() {
 }
 
 /* ── helpers ── */
+
+function SegmentedTabs({
+  tab,
+  onChange,
+}: {
+  tab: "comercial" | "financeiro";
+  onChange: (t: "comercial" | "financeiro") => void;
+}) {
+  return (
+    <div className="inline-flex p-1 bg-muted/50 rounded-lg">
+      {(["comercial", "financeiro"] as const).map((t) => (
+        <button
+          key={t}
+          onClick={() => onChange(t)}
+          className={`px-5 py-1.5 text-sm font-medium rounded-md transition-all ${
+            tab === t
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {t === "comercial" ? "Comercial" : "Financeiro"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function KpiCard({
+  icon,
+  label,
+  value,
+  variation,
+  variationSuffix = "%",
+  variationInvert = false,
+  accent,
+  badge,
+  hint,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  variation?: number;
+  variationSuffix?: string;
+  variationInvert?: boolean;
+  accent?: string;
+  badge?: { label: string; variant?: "default" | "destructive" | "outline" };
+  hint?: React.ReactNode;
+}) {
+  return (
+    <Card className="relative overflow-hidden">
+      {accent && (
+        <span
+          aria-hidden
+          className="absolute inset-y-0 left-0 w-[3px]"
+          style={{ background: accent }}
+        />
+      )}
+      <CardContent className="pt-5 pb-4">
+        <div className="flex items-center gap-2 text-muted-foreground mb-2">
+          {icon}
+          <span className="text-[11px] font-medium uppercase tracking-wide">{label}</span>
+        </div>
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="text-2xl font-bold tabular-nums">{value}</span>
+          {variation !== undefined && (
+            <VariationBadge value={variation} suffix={variationSuffix} invert={variationInvert} />
+          )}
+          {badge && (
+            <Badge variant={badge.variant ?? "outline"} className="text-[10px] px-1.5 py-0">
+              {badge.label}
+            </Badge>
+          )}
+        </div>
+        {hint && <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>}
+      </CardContent>
+    </Card>
+  );
+}
 
 function VariationBadge({
   value,
