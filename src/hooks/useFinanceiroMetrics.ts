@@ -2,8 +2,20 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, subMonths, differenceInDays, parseISO } from "date-fns";
+import { format, subMonths, addMonths, differenceInDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+function inferExpenseCategory(description: string | null, supplierName: string | null): string {
+  const text = `${description ?? ""} ${supplierName ?? ""}`.toLowerCase();
+  if (/equipe|salário|salario|funcionário|socio|sócio|prolabore|pró.labore/.test(text)) return "Equipe";
+  if (/prestador|freelance|terceiro|honorário|honorario/.test(text)) return "Prestadores";
+  if (/admin|contabil|contador|imposto|taxa|aluguel|energia|internet/.test(text)) return "Administrativo";
+  if (/curso|treinamento|capacitação|capacitacao|evento|formação|formacao/.test(text)) return "Treinamentos";
+  if (/equipamento|hardware|software|licença|licenca|notebook|computador/.test(text)) return "Equipamentos";
+  if (/assinatura|subscription|mensal|plano/.test(text)) return "Assinaturas";
+  if (supplierName) return supplierName.split(" ")[0];
+  return "Outros";
+}
 
 interface PaymentRow {
   id: string;
@@ -50,6 +62,24 @@ export interface GraficoMonth {
   receita: number;
   despesa: number;
   margem: number;
+}
+
+export interface GrupoValor {
+  name: string;
+  realizado: number;
+  previsto: number;
+}
+
+export interface LucroMes {
+  month: string;
+  lucro: number;
+}
+
+export interface ProjecaoMes {
+  month: string;
+  receita: number;
+  despesa: number;
+  lucro: number;
 }
 
 /**
@@ -220,6 +250,62 @@ export function useFinanceiroMetrics({
       periodLabel = lbl.charAt(0).toUpperCase() + lbl.slice(1);
     }
 
+    // ── Gráficos extras ────────────────────────────────────────────────────
+
+    // Receita por projeto (realizado + previsto) — top 6
+    const receitaMap = new Map<string, { realizado: number; previsto: number }>();
+    allActive.filter(isReceita).forEach((p) => {
+      const name = (p.projects as any)?.name ?? "Escritório";
+      if (!receitaMap.has(name)) receitaMap.set(name, { realizado: 0, previsto: 0 });
+      const e = receitaMap.get(name)!;
+      if (p.status === "pago" && matchesPeriod(p.paid_date)) e.realizado += p.value;
+      else if ((p.status === "pendente" || p.status === "atrasado") && matchesPeriod(p.due_date)) e.previsto += p.value;
+    });
+    const receitaPorProjeto: GrupoValor[] = Array.from(receitaMap.entries())
+      .map(([name, v]) => ({ name, ...v }))
+      .filter((e) => e.realizado + e.previsto > 0)
+      .sort((a, b) => b.realizado + b.previsto - (a.realizado + a.previsto))
+      .slice(0, 6);
+
+    // Despesa por categoria (realizado + previsto) — top 6
+    const despesaMap = new Map<string, { realizado: number; previsto: number }>();
+    escritorioActive.filter(isDespesa).forEach((p) => {
+      const cat = inferExpenseCategory(p.description, p.supplier_name);
+      if (!despesaMap.has(cat)) despesaMap.set(cat, { realizado: 0, previsto: 0 });
+      const e = despesaMap.get(cat)!;
+      if (p.status === "pago" && matchesPeriod(p.paid_date)) e.realizado += p.value;
+      else if ((p.status === "pendente" || p.status === "atrasado") && matchesPeriod(p.due_date)) e.previsto += p.value;
+    });
+    const despesaPorCategoria: GrupoValor[] = Array.from(despesaMap.entries())
+      .map(([name, v]) => ({ name, ...v }))
+      .filter((e) => e.realizado + e.previsto > 0)
+      .sort((a, b) => b.realizado + b.previsto - (a.realizado + a.previsto))
+      .slice(0, 6);
+
+    // Histórico de lucro — últimos 12 meses
+    const historicoLucro: LucroMes[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const m = subMonths(todayDate, i);
+      const mStr = format(m, "yyyy-MM");
+      const lbl = format(m, "MMM/yy", { locale: ptBR });
+      const rec = allActive.filter((p) => p.status === "pago" && isReceita(p) && p.paid_date?.startsWith(mStr)).reduce((s, p) => s + p.value, 0);
+      const desp = escritorioActive.filter((p) => p.status === "pago" && isDespesa(p) && p.paid_date?.startsWith(mStr)).reduce((s, p) => s + p.value, 0);
+      const lucro = rec - desp - rec * (taxRate / 100);
+      historicoLucro.push({ month: lbl.charAt(0).toUpperCase() + lbl.slice(1), lucro: Math.round(lucro) });
+    }
+
+    // Projeção — próximos 6 meses (pagamentos pendentes)
+    const projecaoLucro: ProjecaoMes[] = [];
+    for (let i = 1; i <= 6; i++) {
+      const m = addMonths(todayDate, i);
+      const mStr = format(m, "yyyy-MM");
+      const lbl = format(m, "MMM/yy", { locale: ptBR });
+      const rec = allActive.filter((p) => p.status === "pendente" && isReceita(p) && p.due_date?.startsWith(mStr)).reduce((s, p) => s + p.value, 0);
+      const desp = escritorioActive.filter((p) => p.status === "pendente" && isDespesa(p) && p.due_date?.startsWith(mStr)).reduce((s, p) => s + p.value, 0);
+      const lucro = rec - desp - rec * (taxRate / 100);
+      projecaoLucro.push({ month: lbl.charAt(0).toUpperCase() + lbl.slice(1), receita: Math.round(rec), despesa: Math.round(desp), lucro: Math.round(lucro) });
+    }
+
     return {
       kpis: {
         receitaMes: receitaThis,
@@ -238,6 +324,10 @@ export function useFinanceiroMetrics({
       grafico6m,
       pendingNFs,
       periodLabel,
+      receitaPorProjeto,
+      despesaPorCategoria,
+      historicoLucro,
+      projecaoLucro,
     };
   }, [query.data, todayDate, todayStr, period]);
 
