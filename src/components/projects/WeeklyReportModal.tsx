@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { startOfWeek, endOfWeek, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Camera } from "lucide-react";
+import { Camera, Mic, MicOff } from "lucide-react";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 
 interface Props {
   open: boolean;
@@ -24,6 +25,33 @@ interface Props {
   prefill?: { summary: string; next_steps: string; client_pending?: string };
 }
 
+// Mic button wired to a single field setter
+function MicButton({
+  onTranscript,
+  fieldLabel,
+}: {
+  onTranscript: (t: string) => void;
+  fieldLabel: string;
+}) {
+  const { isRecording, isSupported, toggle } = useVoiceInput({ onTranscript });
+  if (!isSupported) return null;
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      title={isRecording ? "Parar gravação" : `Ditar ${fieldLabel}`}
+      className={`flex items-center gap-1 text-xs rounded px-1.5 py-0.5 transition-colors
+        ${isRecording
+          ? "text-destructive bg-destructive/10 animate-pulse"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+        }`}
+    >
+      {isRecording ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+      {isRecording ? "Parar" : "Áudio"}
+    </button>
+  );
+}
+
 export function WeeklyReportModal({ open, onOpenChange, avgProgress, onSubmit, isPending, prefill }: Props) {
   const today = new Date();
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
@@ -35,7 +63,6 @@ export function WeeklyReportModal({ open, onOpenChange, avgProgress, onSubmit, i
   const [clientPending, setClientPending] = useState(prefill?.client_pending || "");
   const [photos, setPhotos] = useState<File[]>([]);
 
-  // Update fields when prefill changes
   useEffect(() => {
     if (prefill) {
       setSummary(prefill.summary || "");
@@ -47,8 +74,13 @@ export function WeeklyReportModal({ open, onOpenChange, avgProgress, onSubmit, i
   const weekLabel = useMemo(
     () =>
       `Semana de ${format(weekStart, "dd", { locale: ptBR })} a ${format(weekEnd, "dd 'de' MMMM", { locale: ptBR })}`,
-    [weekStart, weekEnd]
+    [weekStart, weekEnd],
   );
+
+  // Append transcribed text to the existing value
+  const appendSummary = useCallback((t: string) => setSummary((v) => v ? `${v} ${t}` : t), []);
+  const appendNextSteps = useCallback((t: string) => setNextSteps((v) => v ? `${v} ${t}` : t), []);
+  const appendClientPending = useCallback((t: string) => setClientPending((v) => v ? `${v} ${t}` : t), []);
 
   const handlePhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []).slice(0, 6);
@@ -85,7 +117,10 @@ export function WeeklyReportModal({ open, onOpenChange, avgProgress, onSubmit, i
           </div>
 
           <div>
-            <Label>Resumo do período *</Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label>Resumo do período *</Label>
+              <MicButton onTranscript={appendSummary} fieldLabel="resumo" />
+            </div>
             <Textarea
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
@@ -96,7 +131,10 @@ export function WeeklyReportModal({ open, onOpenChange, avgProgress, onSubmit, i
           </div>
 
           <div>
-            <Label>Próximas etapas *</Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label>Próximas etapas *</Label>
+              <MicButton onTranscript={appendNextSteps} fieldLabel="próximas etapas" />
+            </div>
             <Textarea
               value={nextSteps}
               onChange={(e) => setNextSteps(e.target.value)}
@@ -137,7 +175,10 @@ export function WeeklyReportModal({ open, onOpenChange, avgProgress, onSubmit, i
           </div>
 
           <div>
-            <Label>Pendências do cliente (opcional)</Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label>Pendências do cliente (opcional)</Label>
+              <MicButton onTranscript={appendClientPending} fieldLabel="pendências" />
+            </div>
             <Textarea
               value={clientPending}
               onChange={(e) => setClientPending(e.target.value)}
