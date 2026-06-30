@@ -120,6 +120,7 @@ const menuGroups: MenuGroup[] = [
     label: "Comercial",
     items: [
       { title: "Leads", url: "/leads/pipeline" },
+      { title: "Clientes", url: "/clients" },
       {
         title: "Documentos",
         url: "/leads/proposals",
@@ -128,7 +129,6 @@ const menuGroups: MenuGroup[] = [
           { title: "Contratos", url: "/leads/contracts" },
         ],
       },
-      { title: "Clientes", url: "/clients" },
     ],
   },
   {
