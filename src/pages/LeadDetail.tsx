@@ -21,6 +21,7 @@ import { generateProposalPdf, waitForFonts } from "@/lib/generateProposalPdf";
 import ReactDOM from "react-dom/client";
 import { flushSync } from "react-dom";
 import { SendMessageModal } from "@/components/messages/SendMessageModal";
+import { C } from "@/lib/chartColors";
 
 const originLabels: Record<string, string> = {
   indicacao: "Indicação", instagram: "Instagram", google: "Google", site: "Site", outro: "Outro",
@@ -39,7 +40,7 @@ const statusColors: Record<string, string> = {
 
 const proposalStatusColors: Record<string, string> = {
   rascunho: "bg-secondary text-secondary-foreground",
-  enviada: "bg-[#1B2A4A] text-white",
+  enviada: "",
   aprovada: "bg-emerald-100 text-emerald-800",
   rejeitada: "bg-destructive text-destructive-foreground",
 };
@@ -303,7 +304,10 @@ export default function LeadDetail() {
                     </TableCell>
                     <TableCell className="text-sm">{formatCurrency(p.price_full)}</TableCell>
                     <TableCell>
-                      <Badge className={`text-xs ${proposalStatusColors[p.status] || ""}`}>
+                      <Badge
+                        className={`text-xs ${proposalStatusColors[p.status] || ""}`}
+                        style={p.status === "enviada" ? { backgroundColor: C.navy, color: "white" } : {}}
+                      >
                         {p.status === "rascunho" ? "Rascunho" : p.status === "enviada" ? "Enviada" : p.status === "aprovada" ? "Aprovada" : p.status === "rejeitada" ? "Rejeitada" : p.status}
                       </Badge>
                     </TableCell>
@@ -390,12 +394,14 @@ export default function LeadDetail() {
                       {format(new Date(c.created_at), "dd/MM/yyyy")}
                     </TableCell>
                     <TableCell>
-                      <Badge className={`text-xs ${
-                        c.status === "rascunho" ? "bg-secondary text-secondary-foreground" :
-                        c.status === "enviado" ? "bg-[#1B2A4A] text-white" :
-                        c.status === "assinado" ? "bg-emerald-100 text-emerald-800" :
-                        c.status === "cancelado" ? "bg-destructive text-destructive-foreground" : ""
-                      }`}>
+                      <Badge
+                        className={`text-xs ${
+                          c.status === "rascunho" ? "bg-secondary text-secondary-foreground" :
+                          c.status === "assinado" ? "bg-emerald-100 text-emerald-800" :
+                          c.status === "cancelado" ? "bg-destructive text-destructive-foreground" : ""
+                        }`}
+                        style={c.status === "enviado" ? { backgroundColor: C.navy, color: "white" } : {}}
+                      >
                         {c.status === "rascunho" ? "Rascunho" : c.status === "enviado" ? "Enviado" : c.status === "assinado" ? "Assinado" : c.status === "cancelado" ? "Cancelado" : c.status}
                       </Badge>
                     </TableCell>

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { C } from "@/lib/chartColors";
 
 export interface ContentPost {
   id: string;
@@ -28,11 +29,11 @@ export const POST_PLATFORMS = ["instagram", "linkedin", "tiktok"] as const;
 export const POST_TONES = ["especialista", "inspiracional", "educativo", "bastidor", "pessoal"] as const;
 
 export const TYPE_COLORS: Record<string, string> = {
-  reels: "#1B2A4A",
-  carrossel: "#8B4557",
-  story: "#9B6B7B",
-  feed: "#3B6D11",
-  live: "#E24B4A",
+  reels:     C.navy,
+  carrossel: C.terra,
+  story:     C.navyMid,
+  feed:      C.success,
+  live:      C.danger,
 };
 
 export const STATUS_LABELS: Record<string, string> = {

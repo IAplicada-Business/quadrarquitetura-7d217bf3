@@ -4,6 +4,11 @@
 // Recharts não aceita `hsl(var(--primary))` diretamente em fill/stroke,
 // por isso os valores são strings HSL concretas que espelham o index.css.
 
+// Hex equivalents for contexts that require CSS hex (e.g. <input type="color">)
+export const BRAND_HEX = {
+  navy: "#1B2A4A",
+} as const;
+
 export const C = {
   // Brand primários (navy + terracota)
   navy:      "hsl(220, 47%, 22%)",   // --primary
