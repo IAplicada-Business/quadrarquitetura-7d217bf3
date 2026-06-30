@@ -417,13 +417,15 @@ export default function LeadsContracts() {
               </div>
 
               <Tabs defaultValue="contratante" className="w-full">
-                <TabsList className="w-full grid grid-cols-5 h-8">
+                <div className="overflow-x-auto">
+                <TabsList className="grid grid-cols-5 h-8 min-w-[400px] w-full">
                   <TabsTrigger value="contratante" className="text-xs">Contratante</TabsTrigger>
                   <TabsTrigger value="servicos" className="text-xs">Servicos</TabsTrigger>
                   <TabsTrigger value="pagamento" className="text-xs">Pagamento</TabsTrigger>
                   <TabsTrigger value="cronograma" className="text-xs">Cronograma</TabsTrigger>
                   <TabsTrigger value="assinatura" className="text-xs">Assinatura</TabsTrigger>
                 </TabsList>
+                </div>
 
                 {/* TAB: Contratante */}
                 <TabsContent value="contratante" className="space-y-4 mt-3">
