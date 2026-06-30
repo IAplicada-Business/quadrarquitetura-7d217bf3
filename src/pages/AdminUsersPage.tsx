@@ -162,9 +162,24 @@ export default function AdminUsersPage() {
   const confirmDelete = async () => {
     if (!deleteUser) return;
     setDeleting(true);
-    await supabase.from("user_permissions").delete().eq("user_id", deleteUser.id);
-    await supabase.from("user_roles").delete().eq("user_id", deleteUser.id);
-    await supabase.from("profiles").delete().eq("user_id", deleteUser.id);
+    const { data, error } = await supabase.functions.invoke("delete-user", {
+      body: { user_id: deleteUser.id },
+    });
+    let errorMessage: string | null = null;
+    if (error) {
+      const ctx = (error as any)?.context;
+      if (ctx && typeof ctx.json === "function") {
+        try { const body = await ctx.json(); errorMessage = body?.error || null; } catch {}
+      }
+      errorMessage = errorMessage || error.message || "Erro ao remover usuário";
+    } else if (data?.error) {
+      errorMessage = data.error;
+    }
+    if (errorMessage) {
+      toast.error(errorMessage);
+      setDeleting(false);
+      return;
+    }
     toast.success("Usuário removido");
     setDeleting(false);
     setDeleteUser(null);
