@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Calendar as CalendarIcon, Clock, CheckCircle2, AlertTriangle, Hammer, MapPin, Plus, Pencil, Trash2, Eye } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, CheckCircle2, AlertTriangle, Hammer, HardHat, MapPin, Plus, Pencil, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +25,8 @@ export default function SiteTracking() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Record<string, unknown> | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const { data: projects = [] } = useQuery({
     queryKey: ["active_projects_tracking"],
@@ -148,6 +151,17 @@ export default function SiteTracking() {
     setFormOpen(true);
   };
 
+  const filtered = projects.filter(p => {
+    if (filterStatus !== "all" && p.status !== filterStatus) return false;
+    if (search && !p.name?.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    const order = { execucao: 0, mobilizacao: 1 };
+    return (order[a.status as keyof typeof order] ?? 2) - (order[b.status as keyof typeof order] ?? 2);
+  });
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
@@ -159,103 +173,110 @@ export default function SiteTracking() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-blue-50/50 border-blue-100">
+        <Card className="bg-primary/5 border-primary/20">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 bg-blue-100 rounded-full text-blue-600">
+            <div className="p-3 bg-primary/10 rounded-full text-primary">
               <Hammer className="h-6 w-6" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground font-medium">Obras Ativas</p>
-              <p className="text-2xl font-bold text-blue-700">{projects.length}</p>
+              <p className="text-2xl font-bold text-primary">{projects.length}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-amber-50/50 border-amber-100">
+        <Card className="bg-warning/5 border-warning/20">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 bg-amber-100 rounded-full text-amber-600">
+            <div className="p-3 bg-warning/10 rounded-full text-warning">
               <AlertTriangle className="h-6 w-6" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground font-medium">Pendências</p>
-              <p className="text-2xl font-bold text-amber-700">{pendingCount}</p>
+              <p className="text-2xl font-bold text-warning">{pendingCount}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-green-50/50 border-green-100">
+        <Card className="bg-success/5 border-success/20">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 bg-green-100 rounded-full text-green-600">
+            <div className="p-3 bg-success/10 rounded-full text-success">
               <CheckCircle2 className="h-6 w-6" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground font-medium">Entregas Hoje</p>
-              <p className="text-2xl font-bold text-green-700">{deliveriesToday}</p>
+              <p className="text-2xl font-bold text-success">{deliveriesToday}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-purple-50/50 border-purple-100">
+        <Card className="bg-accent/5 border-accent/20">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 bg-purple-100 rounded-full text-purple-600">
+            <div className="p-3 bg-accent/10 rounded-full text-accent">
               <CalendarIcon className="h-6 w-6" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground font-medium">Visitas Semana</p>
-              <p className="text-2xl font-bold text-purple-700">{visitsThisWeek}</p>
+              <p className="text-2xl font-bold text-accent">{visitsThisWeek}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
+      <div className="flex flex-wrap gap-3 items-center">
+        <Input placeholder="Buscar obra..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:w-56 h-9" />
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-full sm:w-[160px] h-9"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="execucao">Em Execução</SelectItem>
+            <SelectItem value="mobilizacao">Mobilização</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <h2 className="text-lg font-semibold text-display mt-8 mb-4">Progresso das Obras</h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projects.length === 0 ? (
-          <div className="col-span-full text-center py-12 border-2 border-dashed rounded-lg text-muted-foreground">
+
+      <div className="space-y-3">
+        {filtered.length === 0 ? (
+          <div className="text-center py-12 border-2 border-dashed rounded-lg text-muted-foreground">
             Nenhuma obra em fase de execução ou mobilização.
           </div>
         ) : (
-          projects.map((project) => (
+          sorted.map((project) => (
             <Card key={project.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-base font-bold">{project.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{(project.clients as any)?.name}</p>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  {/* Status indicator dot */}
+                  <div className="shrink-0 h-10 w-10 rounded-full flex items-center justify-center bg-primary/10">
+                    <HardHat className="h-5 w-5 text-primary" />
                   </div>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 capitalize">
-                    {project.status}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Progresso</span>
-                    <span className="font-bold">{project.finish_level || 0}%</span>
+                  {/* Main info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-semibold text-sm truncate">{project.name}</p>
+                      <Badge variant="secondary" className="capitalize shrink-0 text-xs">{project.status === "execucao" ? "Em Execução" : project.status === "mobilizacao" ? "Mobilização" : project.status}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">{(project.clients as any)?.name || "—"}</p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full" style={{ width: `${project.finish_level || 0}%` }} />
+                      </div>
+                      <span className="text-xs font-medium text-muted-foreground shrink-0">{project.finish_level || 0}%</span>
+                    </div>
                   </div>
-                  <Progress value={project.finish_level || 0} className="h-2" />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-sm pt-2">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>Início: {project.start_date ? format(new Date(project.start_date), "dd/MM") : "—"}</span>
+                  {/* Right side: date + city + actions */}
+                  <div className="hidden sm:flex flex-col items-end gap-1 text-xs text-muted-foreground shrink-0">
+                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{project.start_date ? format(new Date(project.start_date), "dd/MM/yy") : "—"}</span>
+                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{project.city || "—"}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    <span className="truncate">{project.city || "—"}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button variant="outline" size="sm" className="h-8" onClick={() => navigate(`/projects/${project.id}`)}>
+                      <Eye className="h-3.5 w-3.5 mr-1" />Ver
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(project)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(project.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
-                </div>
-
-                <div className="flex gap-2 pt-1">
-                  <Button className="flex-1" variant="outline" size="sm" onClick={() => navigate(`/projects/${project.id}`)}>
-                    <Eye className="h-4 w-4 mr-1" />Ver
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(project)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteId(project.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
               </CardContent>
             </Card>
