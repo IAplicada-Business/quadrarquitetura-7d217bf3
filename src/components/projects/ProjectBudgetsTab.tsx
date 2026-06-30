@@ -324,6 +324,39 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
                 );
               })}
 
+              {/* Cotações sem disciplina vinculada (ex: estimativas de IA importadas) */}
+              {(groupedQuotes["sem_disciplina"] ?? []).length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base text-display">Estimativas de IA (sem disciplina vinculada)</CardTitle>
+                        <Badge variant="secondary" className="text-[10px]">Sem disciplina</Badge>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => handleAddQuote(null)}>
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Cotação
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Estas cotações foram geradas pela IA. Edite os valores e vincule cada uma a uma disciplina do escopo se quiser incluí-las no total.
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {(groupedQuotes["sem_disciplina"] ?? []).map((q) => (
+                        <BudgetQuoteCard
+                          key={q.id}
+                          quote={q as Record<string, unknown>}
+                          onEdit={() => handleEditQuote(q as Record<string, unknown>)}
+                          onDelete={() => remove.mutate(q.id)}
+                          onApprove={() => handleApprove(q.id, q.scope_item_id)}
+                        />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card className="bg-primary/5 border-primary/20 sticky bottom-4 shadow-lg">
                 <CardContent className="py-4">
                   <div className="flex items-center justify-between">

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Plus, Sparkles, GripVertical, Pencil, Trash2, Link2, Users, ChevronDown, ChevronRight, Wand2, Check, X, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Plus, Sparkles, GripVertical, Pencil, Trash2, Link2, Users, ChevronDown, ChevronRight, Wand2, Check, X, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -121,6 +122,7 @@ function ActivityRow({
 
 export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
   const { activities, isLoading, create, update, remove } = useProjectActivities(projectId);
+  const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Partial<ProjectActivity> | null>(null);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
@@ -202,6 +204,20 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
     allActivities: activities,
   };
 
+  const hasDependencies = useMemo(() => activities.some(a => a.depends_on?.length > 0), [activities]);
+
+  const handleClearSequence = async () => {
+    const withDeps = activities.filter(a => a.depends_on?.length > 0);
+    if (withDeps.length === 0) return;
+    await Promise.all(
+      withDeps.map(a =>
+        supabase.from("project_activities").update({ depends_on: [] } as any).eq("id", a.id)
+      )
+    );
+    queryClient.invalidateQueries({ queryKey: ["project_activities", projectId] });
+    toast.success("Dependências de sequenciamento removidas.");
+  };
+
   const handleSuggestSequence = async () => {
     if (activities.length < 2) { toast.error("Adicione pelo menos 2 atividades"); return; }
     setSequenceLoading(true);
@@ -274,6 +290,11 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
           <Button variant="outline" size="sm" onClick={handleSuggestSequence} disabled={sequenceLoading}>
             <Wand2 className="h-4 w-4 mr-1" /> Sugerir Sequenciamento
           </Button>
+          {hasDependencies && (
+            <Button variant="ghost" size="sm" className="text-destructive" onClick={handleClearSequence} title="Remover todas as dependências entre atividades">
+              <RotateCcw className="h-4 w-4 mr-1" /> Limpar Sequenciamento
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => setAiDialogOpen(true)}>
             <Sparkles className="h-4 w-4 mr-1" /> Gerar com IA
           </Button>

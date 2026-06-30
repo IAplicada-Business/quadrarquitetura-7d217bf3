@@ -49,11 +49,13 @@ serve(async (req) => {
       const systemPrompt = `Você é um assistente especializado em análise de plantas de projetos de arquitetura e construção civil.
 
 Analise a planta baixa anexa de um projeto de ${obraLabel}.
-Identifique todos os ambientes presentes e gere uma lista de atividades sequenciais de obra necessárias para uma ${obraLabel} completa.
+IMPORTANTE: Todos os ambientes identificados fazem parte de UM ÚNICO projeto integrado. NÃO trate cada ambiente como um projeto independente. As estimativas de área e duração devem refletir as atividades dentro deste projeto único — o cálculo de materiais, mão de obra e prazos deve considerar o projeto como um todo, não como projetos separados por ambiente.
 ${ambientesExtra}
 
 Para cada ambiente identificado, estime a área em m² baseado nas proporções da planta.
 Para cada atividade, indique a disciplina (Demolição, Alvenaria, Elétrica, Hidráulica, Revestimento, Pintura, Piso, Forro, Marcenaria, Serralheria, Impermeabilização, Limpeza, etc.), a área em m², a duração estimada em dias e o ambiente de origem.
+
+Atividades de mesma disciplina que ocorrem em ambientes diferentes podem ser agrupadas (ex: "Pintura — Sala e Cozinha") para representar o projeto como um todo, em vez de listas repetidas por ambiente.
 
 Ordene as atividades pela sequência lógica de execução de obra.
 Se uma atividade depende de outra, indique pelo nome da atividade predecessora.`;
