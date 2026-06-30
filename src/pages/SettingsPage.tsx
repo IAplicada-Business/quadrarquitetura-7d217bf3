@@ -76,7 +76,7 @@ function ContentSeriesManager() {
   const { series, create, update, remove } = useContentSeries();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [color, setColor] = useState(BRAND_HEX.navy);
+  const [color, setColor] = useState<string>(BRAND_HEX.navy);
   const [editId, setEditId] = useState<string | null>(null);
 
   const handleSave = () => {
