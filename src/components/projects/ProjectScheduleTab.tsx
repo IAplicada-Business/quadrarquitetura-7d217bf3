@@ -884,6 +884,9 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
               }
             };
 
+            const today = new Date();
+            const daysToMove = moveInDate ? differenceInDays(parseISO(moveInDate), today) : null;
+
             return (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -895,6 +898,20 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
                     <Plus className="h-4 w-4 mr-1" /> Adicionar Item
                   </Button>
                 </div>
+
+                {moveInDate && (
+                  <div className={`rounded-lg border p-4 flex items-center gap-4 ${daysToMove !== null && daysToMove < 0 ? "bg-destructive/5 border-destructive/30" : daysToMove !== null && daysToMove <= 14 ? "bg-warning/5 border-warning/30" : "bg-success/5 border-success/30"}`}>
+                    <Home className={`h-6 w-6 shrink-0 ${daysToMove !== null && daysToMove < 0 ? "text-destructive" : daysToMove !== null && daysToMove <= 14 ? "text-warning" : "text-success"}`} />
+                    <div>
+                      <p className="text-sm font-semibold">
+                        {daysToMove === null ? "—" : daysToMove < 0 ? `Mudança há ${Math.abs(daysToMove)} dias` : daysToMove === 0 ? "Mudança hoje!" : `Faltam ${daysToMove} dias para a mudança`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Data prevista: {new Date(moveInDate + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {closingLoading ? (
                   <div className="flex justify-center py-8"><div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" /></div>
