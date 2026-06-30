@@ -473,7 +473,7 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
     <div className="space-y-4 animate-fade-in">
       <Tabs defaultValue="gantt">
         <TabsList>
-          <TabsTrigger value="gantt">Gantt (Interno)</TabsTrigger>
+          <TabsTrigger value="gantt">Gantt</TabsTrigger>
           <TabsTrigger value="lista_cliente">Lista Cliente</TabsTrigger>
           <TabsTrigger value="fechamento">Fechamento Cliente</TabsTrigger>
         </TabsList>
