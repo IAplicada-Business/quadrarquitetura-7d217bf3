@@ -52,6 +52,8 @@ const PATH_LABELS: Record<string, string> = {
   "users": "Usuários",
   "invoices": "Notas Fiscais",
   "notifications": "Notificações",
+  "financeiro": "Financeiro",
+  "lancamentos": "Lançamentos",
 };
 
 function humanize(segment: string): string {
@@ -117,8 +119,8 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
           )
         )}
 
-        {/* Logo só aparece no mobile/sidebar colapsada */}
-        {(sidebarCollapsed && !showMenuButton) || showMenuButton ? (
+        {/* Logo só no mobile (quando sidebar está oculta) */}
+        {showMenuButton ? (
           <div className="h-12 overflow-hidden">
             <img
               src={logoAzul}

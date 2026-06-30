@@ -41,6 +41,11 @@ function formatDate(d: string | null | undefined) {
   return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
 }
 
+interface Project {
+  id: string;
+  name: string;
+}
+
 interface Lancamento {
   id: string;
   description: string | null;
@@ -50,6 +55,8 @@ interface Lancamento {
   due_date: string | null;
   paid_date: string | null;
   supplier_name: string | null;
+  project_id: string | null;
+  projects: { name: string } | null;
 }
 
 interface LancamentoForm {
@@ -60,6 +67,7 @@ interface LancamentoForm {
   due_date: string;
   paid_date: string;
   status: string;
+  project_id: string;
 }
 
 const emptyForm = (): LancamentoForm => ({
@@ -70,6 +78,7 @@ const emptyForm = (): LancamentoForm => ({
   due_date: "",
   paid_date: "",
   status: "pendente",
+  project_id: "",
 });
 
 export default function Lancamentos() {
@@ -82,13 +91,22 @@ export default function Lancamentos() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<LancamentoForm>(emptyForm());
 
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects-list-lancamentos"],
+    queryFn: async () => {
+      const { data } = await supabase.from("projects").select("id, name").order("name");
+      return (data ?? []) as Project[];
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ["lancamentos-escritorio"],
+    queryKey: ["lancamentos-escritorio", filterType, filterStatus],
     queryFn: async () => {
       let q = supabase
         .from("payments")
-        .select("id, description, value, payment_type, status, due_date, paid_date, supplier_name")
-        .is("project_id", null)
+        .select("id, description, value, payment_type, status, due_date, paid_date, supplier_name, project_id, projects(name)")
         .eq("source", "escritorio")
         .order("due_date", { ascending: false });
 
@@ -97,7 +115,7 @@ export default function Lancamentos() {
 
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as Lancamento[];
+      return (data ?? []) as unknown as Lancamento[];
     },
     enabled: !!user,
   });
@@ -111,7 +129,7 @@ export default function Lancamentos() {
     mutationFn: async (data: Omit<LancamentoForm, "value"> & { value: number }) => {
       const { error } = await supabase.from("payments").insert({
         user_id: user!.id,
-        project_id: null,
+        project_id: data.project_id || null,
         source: "escritorio",
         payment_type: data.payment_type,
         description: `${data.category ? `[${data.category}] ` : ""}${data.description}`.trim() || null,
@@ -136,6 +154,7 @@ export default function Lancamentos() {
   const update = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Omit<LancamentoForm, "value"> & { value: number } }) => {
       const { error } = await supabase.from("payments").update({
+        project_id: data.project_id || null,
         payment_type: data.payment_type,
         description: `${data.category ? `[${data.category}] ` : ""}${data.description}`.trim() || null,
         supplier_name: data.payment_type === "despesa" ? (data.description || data.category || "Despesa") : "Receita Escritório",
@@ -193,6 +212,7 @@ export default function Lancamentos() {
       due_date: item.due_date ?? "",
       paid_date: item.paid_date ?? "",
       status: item.status ?? "pendente",
+      project_id: item.project_id ?? "",
     });
     setEditingId(item.id);
     setFormOpen(true);
@@ -201,11 +221,11 @@ export default function Lancamentos() {
   const categories = form.payment_type === "receita" ? CATEGORIES_RECEITA : CATEGORIES_DESPESA;
 
   return (
-    <div className="space-y-5 p-6 max-w-5xl mx-auto">
+    <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-display font-bold">Lançamentos do Escritório</h1>
-          <p className="text-sm text-muted-foreground">Receitas e despesas não vinculadas a projetos</p>
+          <p className="text-sm text-muted-foreground">Receitas e despesas do escritório, com ou sem projeto vinculado</p>
         </div>
         <Button onClick={() => { setForm(emptyForm()); setEditingId(null); setFormOpen(true); }}>
           <Plus className="h-4 w-4 mr-1" /> Novo Lançamento
@@ -213,7 +233,7 @@ export default function Lancamentos() {
       </div>
 
       {/* Resumo */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="rounded-lg border p-4">
           <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Receitas recebidas</p>
           <p className="text-xl font-bold text-success">{fmt(totalReceitas)}</p>
@@ -234,7 +254,7 @@ export default function Lancamentos() {
 
       {/* Filtros */}
       <div className="flex gap-2 flex-wrap">
-        <Select value={filterType} onValueChange={(v) => { setFilterType(v); queryClient.invalidateQueries({ queryKey: ["lancamentos-escritorio"] }); }}>
+        <Select value={filterType} onValueChange={setFilterType}>
           <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos tipos</SelectItem>
@@ -242,7 +262,7 @@ export default function Lancamentos() {
             <SelectItem value="despesa">Despesa</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); queryClient.invalidateQueries({ queryKey: ["lancamentos-escritorio"] }); }}>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
@@ -255,75 +275,81 @@ export default function Lancamentos() {
       </div>
 
       {/* Lista */}
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
-        </div>
-      ) : items.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg">
-          <p>Nenhum lançamento encontrado.</p>
-          <Button variant="link" onClick={() => { setForm(emptyForm()); setEditingId(null); setFormOpen(true); }}>
-            Adicionar primeiro lançamento →
-          </Button>
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead className="text-right">Valor</TableHead>
-              <TableHead>Vencimento</TableHead>
-              <TableHead>Recebido/Pago</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-20" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.description || "—"}</TableCell>
-                <TableCell>
-                  {item.payment_type === "receita" ? (
-                    <Badge variant="outline" className="bg-success/10 text-success border-success/30 gap-1">
-                      <TrendingUp className="h-3 w-3" /> Receita
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30 gap-1">
-                      <TrendingDown className="h-3 w-3" /> Despesa
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right font-semibold">{fmt(item.value)}</TableCell>
-                <TableCell>{formatDate(item.due_date)}</TableCell>
-                <TableCell>{formatDate(item.paid_date)}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={
-                    item.status === "pago" ? "bg-success/10 text-success border-success/30" :
-                    item.status === "atrasado" ? "bg-destructive/10 text-destructive border-destructive/30" :
-                    item.status === "cancelado" ? "bg-muted text-muted-foreground" :
-                    "bg-warning/10 text-warning border-warning/30"
-                  }>
-                    {item.status === "pago" ? "Pago/Recebido" :
-                     item.status === "atrasado" ? "Atrasado" :
-                     item.status === "cancelado" ? "Cancelado" : "Pendente"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(item)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove.mutate(item.id)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </TableCell>
+      <div className="overflow-auto rounded-lg border min-h-[calc(100vh-26rem)]">
+        {isLoading ? (
+          <div className="flex justify-center items-center h-full py-16">
+            <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+          </div>
+        ) : items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+            <p>Nenhum lançamento encontrado.</p>
+            <Button variant="link" onClick={() => { setForm(emptyForm()); setEditingId(null); setFormOpen(true); }}>
+              Adicionar primeiro lançamento →
+            </Button>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Descrição</TableHead>
+                <TableHead>Projeto</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead className="text-right">Valor</TableHead>
+                <TableHead>Vencimento</TableHead>
+                <TableHead>Recebido/Pago</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-20" />
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+            </TableHeader>
+            <TableBody>
+              {items.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="font-medium">{item.description || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {item.projects?.name ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    {item.payment_type === "receita" ? (
+                      <Badge variant="outline" className="bg-success/10 text-success border-success/30 gap-1">
+                        <TrendingUp className="h-3 w-3" /> Receita
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30 gap-1">
+                        <TrendingDown className="h-3 w-3" /> Despesa
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold">{fmt(item.value)}</TableCell>
+                  <TableCell>{formatDate(item.due_date)}</TableCell>
+                  <TableCell>{formatDate(item.paid_date)}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={
+                      item.status === "pago" ? "bg-success/10 text-success border-success/30" :
+                      item.status === "atrasado" ? "bg-destructive/10 text-destructive border-destructive/30" :
+                      item.status === "cancelado" ? "bg-muted text-muted-foreground" :
+                      "bg-warning/10 text-warning border-warning/30"
+                    }>
+                      {item.status === "pago" ? "Pago/Recebido" :
+                       item.status === "atrasado" ? "Atrasado" :
+                       item.status === "cancelado" ? "Cancelado" : "Pendente"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(item)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove.mutate(item.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
 
       {/* Form dialog */}
       <Dialog open={formOpen} onOpenChange={(o) => { setFormOpen(o); if (!o) { setEditingId(null); setForm(emptyForm()); } }}>
@@ -356,6 +382,16 @@ export default function Lancamentos() {
             <div>
               <Label>Descrição</Label>
               <Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Ex: Aluguel sala — Julho" />
+            </div>
+            <div>
+              <Label>Projeto (opcional)</Label>
+              <Select value={form.project_id || "none"} onValueChange={(v) => setForm(f => ({ ...f, project_id: v === "none" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {projects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
