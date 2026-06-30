@@ -1,6 +1,9 @@
 import { useState, useMemo } from "react";
-import { differenceInDays, isBefore, addDays, format } from "date-fns";
-import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown, RefreshCw, FileDown, Sparkles, Loader2, CalendarCheck, FileSpreadsheet, FlaskConical } from "lucide-react";
+import { differenceInDays, isBefore, addDays, format, parseISO, startOfMonth } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Plus, Pencil, Trash2, Download, AlertTriangle, ChevronDown, RefreshCw, FileDown, Sparkles, Loader2, CalendarCheck, FileSpreadsheet, FlaskConical, Home, ShoppingBag, Check } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useClientClosingSchedule, type ClosingScheduleItem } from "@/hooks/useClientClosingSchedule";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,6 +68,36 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
   const [projectStartDate, setProjectStartDate] = useState<string | null>(null);
   const [scenariosDialogOpen, setScenariosDialogOpen] = useState(false);
+
+  // Fechamento Cliente — form state
+  const { items: closingItems, isLoading: closingLoading, create: closingCreate, update: closingUpdate, remove: closingRemove } = useClientClosingSchedule(projectId);
+  const [closingFormOpen, setClosingFormOpen] = useState(false);
+  const [closingEditing, setClosingEditing] = useState<ClosingScheduleItem | null>(null);
+  const [closingDraft, setClosingDraft] = useState({ description: "", delivery_date: "", closing_date: "", delivery_time: "", estimated_value: "", status: "em_cotacao" as ClosingScheduleItem["status"] });
+
+  // client_move_in_date — for Lista Cliente countdown
+  const { data: projectMeta } = useQuery({
+    queryKey: ["project_meta_move_in", projectId],
+    queryFn: async () => {
+      const { data } = await supabase.from("projects").select("client_move_in_date, name").eq("id", projectId).maybeSingle();
+      return data;
+    },
+    enabled: !!projectId,
+  });
+  const moveInDate: string | null = (projectMeta as any)?.client_move_in_date ?? null;
+
+  // Fechamento Cliente — group items by month of closing_date (must be at component level, not inside JSX IIFE)
+  const closingGrouped = useMemo(() => {
+    const map = new Map<string, ClosingScheduleItem[]>();
+    closingItems.forEach(item => {
+      const key = item.closing_date
+        ? format(parseISO(item.closing_date), "MMMM/yyyy", { locale: ptBR }).toUpperCase()
+        : "SEM DATA";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(item);
+    });
+    return Array.from(map.entries());
+  }, [closingItems]);
 
   // Disciplinas canônicas vêm do escopo (useProjectDisciplines), mesclando
   // com o que já existe em schedule_tasks para não perder dados antigos.
@@ -441,9 +474,8 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
       <Tabs defaultValue="gantt">
         <TabsList>
           <TabsTrigger value="gantt">Gantt (Interno)</TabsTrigger>
-          <TabsTrigger value="lista">Lista</TabsTrigger>
-          <TabsTrigger value="cliente">Visão Cliente</TabsTrigger>
-          <TabsTrigger value="pendencias">Pendências</TabsTrigger>
+          <TabsTrigger value="lista_cliente">Lista Cliente</TabsTrigger>
+          <TabsTrigger value="fechamento">Fechamento Cliente</TabsTrigger>
         </TabsList>
 
         <TabsContent value="gantt" className="space-y-4 mt-4">
@@ -622,82 +654,309 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
           )}
         </TabsContent>
 
-        <TabsContent value="lista" className="space-y-4 mt-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-display">Lista de Etapas</h3>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={handleImportFromScope} disabled={importing}>
-                <Download className="h-4 w-4 mr-1" /> Importar do Escopo
-              </Button>
-              <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}>
-                <Plus className="h-4 w-4 mr-1" /> Nova Etapa
-              </Button>
-            </div>
-          </div>
+        {/* ===== LISTA CLIENTE (Cronograma Reverso) ===== */}
+        <TabsContent value="lista_cliente" className="space-y-4 mt-4">
+          {(() => {
+            const today = new Date();
 
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
-            </div>
-          ) : items.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-              Nenhuma etapa cadastrada. Use "Importar do Escopo" para começar.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">#</TableHead>
-                  <TableHead>Etapa</TableHead>
-                  <TableHead>Disciplina</TableHead>
-                  <TableHead>Responsável</TableHead>
-                  <TableHead>Início</TableHead>
-                  <TableHead>Fim</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-center">%</TableHead>
-                  <TableHead className="w-20" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((task: any) => {
-                  const st = statusConfig[task.status || "planejado"];
-                  const disc = task.discipline || (task.scope_items as any)?.discipline;
-                  return (
-                    <TableRow key={task.id}>
-                      <TableCell className="text-muted-foreground">{task.order_index || "—"}</TableCell>
-                      <TableCell className="font-medium">{task.task_name}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{disc || "—"}</TableCell>
-                      <TableCell className="text-xs">{task.supplier_name || "—"}</TableCell>
-                      <TableCell>{formatDate(task.start_date)}</TableCell>
-                      <TableCell>{formatDate(task.end_date)}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={st?.className}>{st?.label || task.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-center text-xs">{task.progress_percentage ?? 0}%</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleEdit(task)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove.mutate(task.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+            // Build rows: activities sorted by start_date DESC (reverse chronological)
+            const actRows = (useActivitiesSource ? activities : items.map((t: any) => ({
+              id: t.id,
+              name: t.task_name,
+              start_date: t.start_date,
+              end_date: t.end_date,
+              duration_days: t.estimated_days ?? null,
+            })))
+              .filter((a: any) => a.start_date || a.end_date)
+              .sort((a: any, b: any) => {
+                const aDate = a.start_date ?? a.end_date ?? "";
+                const bDate = b.start_date ?? b.end_date ?? "";
+                return bDate.localeCompare(aDate);
+              });
+
+            // Days to move-in
+            const daysToMove = moveInDate
+              ? differenceInDays(parseISO(moveInDate), today)
+              : null;
+
+            return (
+              <div className="space-y-4">
+                {/* Countdown banner */}
+                {moveInDate && (
+                  <div className={`rounded-lg border p-4 flex items-center gap-4 ${daysToMove !== null && daysToMove < 0 ? "bg-destructive/5 border-destructive/30" : daysToMove !== null && daysToMove <= 14 ? "bg-warning/5 border-warning/30" : "bg-success/5 border-success/30"}`}>
+                    <Home className={`h-6 w-6 shrink-0 ${daysToMove !== null && daysToMove < 0 ? "text-destructive" : daysToMove !== null && daysToMove <= 14 ? "text-warning" : "text-success"}`} />
+                    <div>
+                      <p className="text-sm font-semibold">
+                        {daysToMove === null ? "—" : daysToMove < 0 ? `Mudança há ${Math.abs(daysToMove)} dias` : daysToMove === 0 ? "Mudança hoje!" : `Faltam ${daysToMove} dias para a mudança`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Data prevista: {new Date(moveInDate + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {actRows.length === 0 && !moveInDate ? (
+                  <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                    Aplique o calendário no Gantt para gerar datas e exibir a lista do cliente.
+                  </div>
+                ) : (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead>COMEÇO</TableHead>
+                          <TableHead>TÉRMINO</TableHead>
+                          <TableHead className="flex-1">SERVIÇO EXECUTADO</TableHead>
+                          <TableHead className="text-center">PRAZO (DIAS ÚTEIS)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {/* Inject MUDANÇA row in correct chronological position */}
+                        {(() => {
+                          const rows: React.ReactNode[] = [];
+                          let mudancaInserted = !moveInDate;
+
+                          for (const a of actRows) {
+                            // Insert MUDANÇA before the first row whose start_date < moveInDate
+                            if (!mudancaInserted && moveInDate && (a as any).start_date < moveInDate) {
+                              mudancaInserted = true;
+                              rows.push(
+                                <TableRow key="mudanca" className="bg-green-100 dark:bg-green-900/30 font-bold">
+                                  <TableCell className="font-bold">{new Date(moveInDate + "T00:00:00").toLocaleDateString("pt-BR")}</TableCell>
+                                  <TableCell className="font-bold">{new Date(moveInDate + "T00:00:00").toLocaleDateString("pt-BR")}</TableCell>
+                                  <TableCell className="font-bold flex items-center gap-2">
+                                    <Home className="h-4 w-4 text-green-700 dark:text-green-400" />
+                                    MUDANÇA
+                                  </TableCell>
+                                  <TableCell className="text-center font-bold">0</TableCell>
+                                </TableRow>
+                              );
+                            }
+                            rows.push(
+                              <TableRow key={(a as any).id}>
+                                <TableCell className="text-sm">{formatDate((a as any).start_date)}</TableCell>
+                                <TableCell className="text-sm">{formatDate((a as any).end_date)}</TableCell>
+                                <TableCell className="text-sm font-medium">{(a as any).name ?? (a as any).task_name}</TableCell>
+                                <TableCell className="text-center text-sm">{(a as any).duration_days ?? "—"}</TableCell>
+                              </TableRow>
+                            );
+                          }
+                          // If moveInDate is later than all activities
+                          if (!mudancaInserted && moveInDate) {
+                            rows.unshift(
+                              <TableRow key="mudanca" className="bg-green-100 dark:bg-green-900/30 font-bold">
+                                <TableCell className="font-bold">{new Date(moveInDate + "T00:00:00").toLocaleDateString("pt-BR")}</TableCell>
+                                <TableCell className="font-bold">{new Date(moveInDate + "T00:00:00").toLocaleDateString("pt-BR")}</TableCell>
+                                <TableCell className="font-bold flex items-center gap-2">
+                                  <Home className="h-4 w-4 text-green-700 dark:text-green-400" />
+                                  MUDANÇA
+                                </TableCell>
+                                <TableCell className="text-center font-bold">0</TableCell>
+                              </TableRow>
+                            );
+                          }
+                          return rows;
+                        })()}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </TabsContent>
+
+        {/* ===== FECHAMENTO CLIENTE ===== */}
+        <TabsContent value="fechamento" className="space-y-4 mt-4">
+          {(() => {
+            const statusLabel: Record<string, string> = {
+              em_cotacao: "Em cotação",
+              aprovado: "Aprovado",
+              comprado: "Comprado",
+              entregue: "Entregue",
+            };
+            const statusClass: Record<string, string> = {
+              em_cotacao: "bg-yellow-100 text-yellow-800 border-yellow-300",
+              aprovado: "bg-primary/10 text-primary border-primary/30",
+              comprado: "bg-blue-100 text-blue-800 border-blue-300",
+              entregue: "bg-success/15 text-success border-success/30",
+            };
+
+            // Group by month of closing_date (computed at component level as closingGrouped)
+            const grouped = closingGrouped;
+
+            const openForm = (item?: ClosingScheduleItem) => {
+              if (item) {
+                setClosingEditing(item);
+                setClosingDraft({
+                  description: item.description,
+                  delivery_date: item.delivery_date ?? "",
+                  closing_date: item.closing_date ?? "",
+                  delivery_time: item.delivery_time ?? "",
+                  estimated_value: item.estimated_value?.toString() ?? "",
+                  status: item.status,
+                });
+              } else {
+                setClosingEditing(null);
+                setClosingDraft({ description: "", delivery_date: "", closing_date: "", delivery_time: "", estimated_value: "", status: "em_cotacao" });
+              }
+              setClosingFormOpen(true);
+            };
+
+            const saveClosing = () => {
+              const payload = {
+                description: closingDraft.description,
+                delivery_date: closingDraft.delivery_date || null,
+                closing_date: closingDraft.closing_date || null,
+                delivery_time: closingDraft.delivery_time || null,
+                estimated_value: closingDraft.estimated_value ? Number(closingDraft.estimated_value) : null,
+                status: closingDraft.status,
+                display_order: 0,
+              };
+              if (closingEditing) {
+                closingUpdate.mutate({ id: closingEditing.id, ...payload }, { onSuccess: () => setClosingFormOpen(false) });
+              } else {
+                closingCreate.mutate(payload as any, { onSuccess: () => setClosingFormOpen(false) });
+              }
+            };
+
+            return (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-semibold">Cronograma de Fechamento do Cliente</h3>
+                    <p className="text-xs text-muted-foreground">Obrigações que o cliente precisa cumprir para o cronograma ser executado</p>
+                  </div>
+                  <Button size="sm" onClick={() => openForm()}>
+                    <Plus className="h-4 w-4 mr-1" /> Adicionar Item
+                  </Button>
+                </div>
+
+                {closingLoading ? (
+                  <div className="flex justify-center py-8"><div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" /></div>
+                ) : closingItems.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                    <ShoppingBag className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                    Nenhuma obrigação cadastrada.<br />
+                    Adicione itens que o cliente precisa fechar (marcenaria, mármores, eletros, etc.).
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {grouped.map(([monthLabel, monthItems]) => {
+                      const monthTotal = monthItems.reduce((s, i) => s + (i.estimated_value ?? 0), 0);
+                      return (
+                        <div key={monthLabel}>
+                          <div className="flex items-center justify-between px-1 mb-2">
+                            <span className="text-xs font-bold tracking-widest text-muted-foreground">{monthLabel}</span>
+                            {monthTotal > 0 && (
+                              <span className="text-xs font-semibold text-primary">
+                                Total: {monthTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                              </span>
+                            )}
+                          </div>
+                          <div className="border rounded-lg overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-muted/30">
+                                  <TableHead>DATA DE ENTREGA</TableHead>
+                                  <TableHead>DATA LIMITE DE FECHAMENTO</TableHead>
+                                  <TableHead className="flex-1">DESCRIÇÃO</TableHead>
+                                  <TableHead>PRAZO DE ENTREGA</TableHead>
+                                  <TableHead className="text-right">VALOR PREVISTO</TableHead>
+                                  <TableHead>STATUS</TableHead>
+                                  <TableHead className="w-16" />
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {monthItems.map(item => (
+                                  <TableRow key={item.id}>
+                                    <TableCell className="text-sm">{item.delivery_date ? new Date(item.delivery_date + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</TableCell>
+                                    <TableCell className="text-sm">{item.closing_date ? new Date(item.closing_date + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</TableCell>
+                                    <TableCell className="text-sm font-medium">{item.description}</TableCell>
+                                    <TableCell className="text-sm text-muted-foreground">{item.delivery_time ?? "—"}</TableCell>
+                                    <TableCell className="text-sm text-right">
+                                      {item.estimated_value != null ? item.estimated_value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge variant="outline" className={`text-[10px] px-1.5 ${statusClass[item.status]}`}>
+                                        {statusLabel[item.status]}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex gap-1">
+                                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openForm(item)}>
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => closingRemove.mutate(item.id)}>
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </TabsContent>
+                      );
+                    })}
+                  </div>
+                )}
 
-        <TabsContent value="cliente" className="mt-4">
-          <ClientScheduleView tasks={clientTasks} />
-        </TabsContent>
-
-        <TabsContent value="pendencias" className="mt-4">
-          <ProjectPendingTab projectId={projectId} />
+                {/* Add/Edit Dialog */}
+                <Dialog open={closingFormOpen} onOpenChange={setClosingFormOpen}>
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>{closingEditing ? "Editar Item" : "Novo Item de Fechamento"}</DialogTitle>
+                      <DialogDescription>Obrigação que o cliente deve cumprir para a obra prosseguir no prazo.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-medium">Descrição *</label>
+                        <input className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm" value={closingDraft.description} onChange={e => setClosingDraft(d => ({ ...d, description: e.target.value }))} placeholder="Ex: Marcenaria — armários da cozinha" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-medium">Data limite de fechamento</label>
+                          <input type="date" className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm" value={closingDraft.closing_date} onChange={e => setClosingDraft(d => ({ ...d, closing_date: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium">Data de entrega no site</label>
+                          <input type="date" className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm" value={closingDraft.delivery_date} onChange={e => setClosingDraft(d => ({ ...d, delivery_date: e.target.value }))} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-medium">Prazo de entrega</label>
+                          <input className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm" value={closingDraft.delivery_time} onChange={e => setClosingDraft(d => ({ ...d, delivery_time: e.target.value }))} placeholder="Ex: 60 dias úteis" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium">Valor previsto (R$)</label>
+                          <input type="number" className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm" value={closingDraft.estimated_value} onChange={e => setClosingDraft(d => ({ ...d, estimated_value: e.target.value }))} placeholder="0" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium">Status</label>
+                        <select className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm" value={closingDraft.status} onChange={e => setClosingDraft(d => ({ ...d, status: e.target.value as ClosingScheduleItem["status"] }))}>
+                          <option value="em_cotacao">Em cotação</option>
+                          <option value="aprovado">Aprovado</option>
+                          <option value="comprado">Comprado</option>
+                          <option value="entregue">Entregue</option>
+                        </select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setClosingFormOpen(false)}>Cancelar</Button>
+                      <Button onClick={saveClosing} disabled={!closingDraft.description.trim() || closingCreate.isPending || closingUpdate.isPending}>
+                        {closingEditing ? "Salvar" : "Adicionar"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            );
+          })()}
         </TabsContent>
       </Tabs>
 
