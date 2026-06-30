@@ -32,3 +32,9 @@ verify_jwt = false
 
 [functions.generate-checkpoints]
 verify_jwt = false
+
+[functions.content-ai-assistant]
+verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false
