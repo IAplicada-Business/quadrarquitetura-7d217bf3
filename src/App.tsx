@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import DashboardEscritorio from "./pages/DashboardEscritorio";
+import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import DashboardObras from "./pages/DashboardObras";
 import Clients from "./pages/Clients";
 import Projects from "./pages/Projects";
@@ -77,6 +78,7 @@ const App = () => (
             >
               <Route path="/dashboard" element={<Navigate to="/dashboard/escritorio" replace />} />
               <Route path="/dashboard/escritorio" element={<DashboardEscritorio />} />
+              <Route path="/dashboard/financeiro" element={<DashboardFinanceiro />} />
               <Route path="/dashboard/obras" element={<DashboardObras />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/projects" element={<Projects />} />
