@@ -127,7 +127,7 @@ export default function Lancamentos() {
         .order("due_date", { ascending: false });
 
       if (filterType !== "all") q = q.eq("payment_type", filterType);
-      if (filterStatus !== "all") q = q.eq("status", filterStatus);
+      if (filterStatus !== "all") q = q.eq("status", filterStatus as any);
       if (datePrefix) q = q.like("due_date", `${datePrefix}%`);
 
       const { data, error } = await q;
