@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Sparkles } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { TYPE_COLORS, STATUS_LABELS } from "@/hooks/useContentPosts";
 import type { ContentPost } from "@/hooks/useContentPosts";
@@ -9,10 +9,9 @@ interface ContentPostCardProps {
   post: ContentPost;
   seriesColor?: string;
   onEdit: (post: ContentPost) => void;
-  onGenerateAI?: (post: ContentPost) => void;
 }
 
-export default function ContentPostCard({ post, seriesColor, onEdit, onGenerateAI }: ContentPostCardProps) {
+export default function ContentPostCard({ post, seriesColor, onEdit }: ContentPostCardProps) {
   return (
     <div
       className="bg-card border rounded-lg p-3 space-y-2 cursor-grab active:cursor-grabbing"
@@ -45,11 +44,6 @@ export default function ContentPostCard({ post, seriesColor, onEdit, onGenerateA
         <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onEdit(post)}>
           <Pencil className="h-3 w-3" />
         </Button>
-        {onGenerateAI && (
-          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onGenerateAI(post)}>
-            <Sparkles className="h-3 w-3" />
-          </Button>
-        )}
       </div>
     </div>
   );

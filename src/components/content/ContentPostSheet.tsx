@@ -118,7 +118,10 @@ export default function ContentPostSheet({ open, onOpenChange, post, series, onS
           }),
         }
       );
-      if (!res.ok) throw new Error("Erro ao gerar roteiro");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Erro ${res.status} ao gerar roteiro`);
+      }
       const result = await res.json();
       if (result.hook) setHook(result.hook);
       if (result.script) setScript(result.script);

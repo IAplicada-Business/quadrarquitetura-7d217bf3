@@ -5,20 +5,9 @@ import { useContentSeries } from "@/hooks/useContentSeries";
 import ContentPostCard from "@/components/content/ContentPostCard";
 import ContentPostSheet from "@/components/content/ContentPostSheet";
 import type { ContentPost } from "@/hooks/useContentPosts";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 const COLUMN_STYLES: Record<string, { header: string; border: string }> = {
   ideia:      { header: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-700", border: "border-slate-200 dark:border-slate-700" },
@@ -36,7 +25,6 @@ export default function ContentScripts() {
   const { series } = useContentSeries();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<ContentPost | null>(null);
-  const [aiPreview, setAiPreview] = useState<{ post: ContentPost; hook: string; script: string; hashtags: string[] } | null>(null);
 
   const seriesMap = Object.fromEntries(series.map((s) => [s.id, s]));
 
@@ -56,39 +44,6 @@ export default function ContentScripts() {
   const handleEdit = (post: ContentPost) => {
     setSelectedPost(post);
     setSheetOpen(true);
-  };
-
-  const handleGenerateAI = async (post: ContentPost) => {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      if (!token) throw new Error("Não autenticado");
-
-      toast({ title: "Gerando roteiro..." });
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/content-ai-assistant`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "generate_script",
-          objective: post.objective || post.title,
-          type: post.type,
-          platform: post.platform,
-          target_audience: post.target_audience || "",
-          tone: post.tone || "especialista",
-        }),
-      });
-      if (!res.ok) throw new Error("Erro ao gerar");
-      const result = await res.json();
-
-      setAiPreview({
-        post,
-        hook: result.hook || "",
-        script: result.script || "",
-        hashtags: result.hashtags || [],
-      });
-    } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
-    }
   };
 
   const handleSave = (values: any) => {
@@ -138,7 +93,6 @@ export default function ContentScripts() {
                                 post={post}
                                 seriesColor={post.series_id ? seriesMap[post.series_id]?.color : undefined}
                                 onEdit={handleEdit}
-                                onGenerateAI={handleGenerateAI}
                               />
                             </div>
                           )}
@@ -153,53 +107,6 @@ export default function ContentScripts() {
           })}
         </div>
       </DragDropContext>
-
-      <Dialog open={!!aiPreview} onOpenChange={(open) => { if (!open) setAiPreview(null); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Roteiro Gerado pela IA</DialogTitle>
-            <DialogDescription>Revise o conteúdo gerado antes de aplicar ao post.</DialogDescription>
-          </DialogHeader>
-          {aiPreview && (
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Hook</p>
-                <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">{aiPreview.hook}</div>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Roteiro</p>
-                <ScrollArea className="h-48 rounded-md border bg-muted/40">
-                  <div className="px-3 py-2 text-sm whitespace-pre-wrap">{aiPreview.script}</div>
-                </ScrollArea>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Hashtags</p>
-                <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">{aiPreview.hashtags.join(", ")}</div>
-              </div>
-            </div>
-          )}
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setAiPreview(null)}>Descartar</Button>
-            <Button
-              onClick={() => {
-                if (!aiPreview) return;
-                const updatedPost: ContentPost = {
-                  ...aiPreview.post,
-                  hook: aiPreview.hook || aiPreview.post.hook,
-                  script: aiPreview.script || aiPreview.post.script,
-                  hashtags: aiPreview.hashtags.length > 0 ? aiPreview.hashtags : aiPreview.post.hashtags,
-                };
-                setSelectedPost(updatedPost);
-                setSheetOpen(true);
-                setAiPreview(null);
-                toast({ title: "Roteiro aplicado!" });
-              }}
-            >
-              Aplicar ao Post
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <ContentPostSheet
         open={sheetOpen}
