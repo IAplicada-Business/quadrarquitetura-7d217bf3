@@ -184,10 +184,10 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
     <div className="space-y-4 animate-fade-in">
       <Tabs defaultValue="rastreamento">
         <TabsList>
-          <TabsTrigger value="rastreamento">Rastreamento</TabsTrigger>
+          <TabsTrigger value="rastreamento">Materiais de Obra</TabsTrigger>
           <TabsTrigger value="inventario">Inventário</TabsTrigger>
           <TabsTrigger value="atividades">Por Atividade (Cronograma)</TabsTrigger>
-          <TabsTrigger value="compras">Compras</TabsTrigger>
+          <TabsTrigger value="compras">Lista da Casa</TabsTrigger>
         </TabsList>
 
         {/* ===== INVENTÁRIO (3 colunas) ===== */}
@@ -195,8 +195,11 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
           <ProjectMaterialsInventory projectId={projectId} />
         </TabsContent>
 
-        {/* ===== RASTREAMENTO ===== */}
+        {/* ===== MATERIAIS DE OBRA ===== */}
         <TabsContent value="rastreamento" className="space-y-4 mt-4">
+          <p className="text-xs text-muted-foreground">
+            Insumos de construção: cimento, tinta, piso, revestimento, tubulações, fios e demais materiais de obra.
+          </p>
           {/* Action buttons - prominent at top */}
           <div className="flex items-center gap-2 flex-wrap">
             <Button
@@ -643,6 +646,9 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
         </TabsContent>
 
         <TabsContent value="compras" className="space-y-4 mt-4">
+          <p className="text-xs text-muted-foreground">
+            Itens da casa: eletrodomésticos, móveis e equipamentos (coifa, forno, cooktop, geladeira, chuveiro, etc.) — não são insumos de obra.
+          </p>
           <div className="flex justify-end mb-2">
             <Button size="sm" variant="outline" onClick={() => setSupplierListOpen(true)} disabled={purchases.items.length === 0}>
               <Package className="h-4 w-4 mr-1" /> Lista por Fornecedor
