@@ -28,6 +28,7 @@ import NotificationsPage from "./pages/NotificationsPage";
 import NotFound from "./pages/NotFound";
 import ClientPortal from "./pages/ClientPortal";
 import InvoicesPage from "./pages/InvoicesPage";
+import Lancamentos from "./pages/Lancamentos";
 import ContentCalendar from "./pages/ContentCalendar";
 import ContentScripts from "./pages/ContentScripts";
 import ContentPosts from "./pages/ContentPosts";
@@ -110,6 +111,7 @@ const App = () => (
               <Route path="/admin/settings" element={<SettingsPage />} />
               <Route path="/admin/users" element={<AdminUsersPage />} />
               <Route path="/admin/invoices" element={<InvoicesPage />} />
+              <Route path="/financeiro/lancamentos" element={<Lancamentos />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               {/* Gestão de Conteúdo */}
               <Route path="/content/calendar" element={<ContentCalendar />} />

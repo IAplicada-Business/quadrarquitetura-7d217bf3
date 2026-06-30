@@ -1,0 +1,399 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, Pencil, Trash2, TrendingUp, TrendingDown } from "lucide-react";
+
+const CATEGORIES_RECEITA = [
+  "Honorários",
+  "Consultoria",
+  "Assessoria",
+  "Reembolso",
+  "Outro",
+];
+
+const CATEGORIES_DESPESA = [
+  "Aluguel",
+  "Salários",
+  "Software",
+  "Marketing",
+  "Material de escritório",
+  "Contador",
+  "Impostos",
+  "Serviços terceiros",
+  "Outro",
+];
+
+function fmt(v: number) {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+}
+
+function formatDate(d: string | null | undefined) {
+  if (!d) return "—";
+  return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
+}
+
+interface Lancamento {
+  id: string;
+  description: string | null;
+  value: number;
+  payment_type: string;
+  status: string | null;
+  due_date: string | null;
+  paid_date: string | null;
+  supplier_name: string | null;
+}
+
+interface LancamentoForm {
+  description: string;
+  value: string;
+  payment_type: "receita" | "despesa";
+  category: string;
+  due_date: string;
+  paid_date: string;
+  status: string;
+}
+
+const emptyForm = (): LancamentoForm => ({
+  description: "",
+  value: "",
+  payment_type: "receita",
+  category: "",
+  due_date: "",
+  paid_date: "",
+  status: "pendente",
+});
+
+export default function Lancamentos() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const [filterType, setFilterType] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<LancamentoForm>(emptyForm());
+
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ["lancamentos-escritorio"],
+    queryFn: async () => {
+      let q = supabase
+        .from("payments")
+        .select("id, description, value, payment_type, status, due_date, paid_date, supplier_name")
+        .is("project_id", null)
+        .eq("source", "escritorio")
+        .order("due_date", { ascending: false });
+
+      if (filterType !== "all") q = q.eq("payment_type", filterType);
+      if (filterStatus !== "all") q = q.eq("status", filterStatus);
+
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as Lancamento[];
+    },
+    enabled: !!user,
+  });
+
+  const totalReceitas = items.filter(i => i.payment_type === "receita" && i.status === "pago").reduce((s, i) => s + i.value, 0);
+  const totalDespesas = items.filter(i => i.payment_type === "despesa" && i.status === "pago").reduce((s, i) => s + i.value, 0);
+  const totalPendReceita = items.filter(i => i.payment_type === "receita" && i.status !== "pago" && i.status !== "cancelado").reduce((s, i) => s + i.value, 0);
+  const totalPendDespesa = items.filter(i => i.payment_type === "despesa" && i.status !== "pago" && i.status !== "cancelado").reduce((s, i) => s + i.value, 0);
+
+  const create = useMutation({
+    mutationFn: async (data: Omit<LancamentoForm, "value"> & { value: number }) => {
+      const { error } = await supabase.from("payments").insert({
+        user_id: user!.id,
+        project_id: null,
+        source: "escritorio",
+        payment_type: data.payment_type,
+        description: `${data.category ? `[${data.category}] ` : ""}${data.description}`.trim() || null,
+        supplier_name: data.payment_type === "despesa" ? (data.description || data.category || "Despesa") : "Receita Escritório",
+        value: data.value,
+        due_date: data.due_date || null,
+        paid_date: data.paid_date || null,
+        status: data.status,
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lancamentos-escritorio"] });
+      queryClient.invalidateQueries({ queryKey: ["financeiro-metrics"] });
+      toast({ title: "Lançamento adicionado" });
+      setFormOpen(false);
+      setForm(emptyForm());
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const update = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Omit<LancamentoForm, "value"> & { value: number } }) => {
+      const { error } = await supabase.from("payments").update({
+        payment_type: data.payment_type,
+        description: `${data.category ? `[${data.category}] ` : ""}${data.description}`.trim() || null,
+        supplier_name: data.payment_type === "despesa" ? (data.description || data.category || "Despesa") : "Receita Escritório",
+        value: data.value,
+        due_date: data.due_date || null,
+        paid_date: data.paid_date || null,
+        status: data.status,
+      } as never).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lancamentos-escritorio"] });
+      queryClient.invalidateQueries({ queryKey: ["financeiro-metrics"] });
+      toast({ title: "Lançamento atualizado" });
+      setFormOpen(false);
+      setEditingId(null);
+      setForm(emptyForm());
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("payments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lancamentos-escritorio"] });
+      queryClient.invalidateQueries({ queryKey: ["financeiro-metrics"] });
+      toast({ title: "Lançamento removido" });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const v = Number(form.value);
+    if (!v || v <= 0) return;
+    const payload = { ...form, value: v };
+    if (editingId) {
+      update.mutate({ id: editingId, data: payload });
+    } else {
+      create.mutate(payload);
+    }
+  };
+
+  const openEdit = (item: Lancamento) => {
+    const desc = item.description?.replace(/^\[.*?\]\s*/, "") ?? "";
+    const categoryMatch = item.description?.match(/^\[(.*?)\]/);
+    setForm({
+      description: desc,
+      value: String(item.value),
+      payment_type: (item.payment_type as "receita" | "despesa") || "receita",
+      category: categoryMatch?.[1] ?? "",
+      due_date: item.due_date ?? "",
+      paid_date: item.paid_date ?? "",
+      status: item.status ?? "pendente",
+    });
+    setEditingId(item.id);
+    setFormOpen(true);
+  };
+
+  const categories = form.payment_type === "receita" ? CATEGORIES_RECEITA : CATEGORIES_DESPESA;
+
+  return (
+    <div className="space-y-5 p-6 max-w-5xl mx-auto">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-display font-bold">Lançamentos do Escritório</h1>
+          <p className="text-sm text-muted-foreground">Receitas e despesas não vinculadas a projetos</p>
+        </div>
+        <Button onClick={() => { setForm(emptyForm()); setEditingId(null); setFormOpen(true); }}>
+          <Plus className="h-4 w-4 mr-1" /> Novo Lançamento
+        </Button>
+      </div>
+
+      {/* Resumo */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="rounded-lg border p-4">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Receitas recebidas</p>
+          <p className="text-xl font-bold text-success">{fmt(totalReceitas)}</p>
+        </div>
+        <div className="rounded-lg border p-4">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Despesas pagas</p>
+          <p className="text-xl font-bold text-destructive">{fmt(totalDespesas)}</p>
+        </div>
+        <div className="rounded-lg border p-4">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">A receber</p>
+          <p className="text-xl font-bold">{fmt(totalPendReceita)}</p>
+        </div>
+        <div className="rounded-lg border p-4">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">A pagar</p>
+          <p className="text-xl font-bold">{fmt(totalPendDespesa)}</p>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex gap-2 flex-wrap">
+        <Select value={filterType} onValueChange={(v) => { setFilterType(v); queryClient.invalidateQueries({ queryKey: ["lancamentos-escritorio"] }); }}>
+          <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos tipos</SelectItem>
+            <SelectItem value="receita">Receita</SelectItem>
+            <SelectItem value="despesa">Despesa</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); queryClient.invalidateQueries({ queryKey: ["lancamentos-escritorio"] }); }}>
+          <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="pendente">Pendente</SelectItem>
+            <SelectItem value="pago">Pago/Recebido</SelectItem>
+            <SelectItem value="atrasado">Atrasado</SelectItem>
+            <SelectItem value="cancelado">Cancelado</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Lista */}
+      {isLoading ? (
+        <div className="flex justify-center py-12">
+          <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+        </div>
+      ) : items.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg">
+          <p>Nenhum lançamento encontrado.</p>
+          <Button variant="link" onClick={() => { setForm(emptyForm()); setEditingId(null); setFormOpen(true); }}>
+            Adicionar primeiro lançamento →
+          </Button>
+        </div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Descrição</TableHead>
+              <TableHead>Tipo</TableHead>
+              <TableHead className="text-right">Valor</TableHead>
+              <TableHead>Vencimento</TableHead>
+              <TableHead>Recebido/Pago</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-20" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell className="font-medium">{item.description || "—"}</TableCell>
+                <TableCell>
+                  {item.payment_type === "receita" ? (
+                    <Badge variant="outline" className="bg-success/10 text-success border-success/30 gap-1">
+                      <TrendingUp className="h-3 w-3" /> Receita
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30 gap-1">
+                      <TrendingDown className="h-3 w-3" /> Despesa
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell className="text-right font-semibold">{fmt(item.value)}</TableCell>
+                <TableCell>{formatDate(item.due_date)}</TableCell>
+                <TableCell>{formatDate(item.paid_date)}</TableCell>
+                <TableCell>
+                  <Badge variant="outline" className={
+                    item.status === "pago" ? "bg-success/10 text-success border-success/30" :
+                    item.status === "atrasado" ? "bg-destructive/10 text-destructive border-destructive/30" :
+                    item.status === "cancelado" ? "bg-muted text-muted-foreground" :
+                    "bg-warning/10 text-warning border-warning/30"
+                  }>
+                    {item.status === "pago" ? "Pago/Recebido" :
+                     item.status === "atrasado" ? "Atrasado" :
+                     item.status === "cancelado" ? "Cancelado" : "Pendente"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-1">
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(item)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove.mutate(item.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
+      {/* Form dialog */}
+      <Dialog open={formOpen} onOpenChange={(o) => { setFormOpen(o); if (!o) { setEditingId(null); setForm(emptyForm()); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingId ? "Editar Lançamento" : "Novo Lançamento"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Tipo *</Label>
+                <Select value={form.payment_type} onValueChange={(v) => setForm(f => ({ ...f, payment_type: v as "receita" | "despesa", category: "" }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="receita">Receita (entrada)</SelectItem>
+                    <SelectItem value="despesa">Despesa (saída)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Categoria</Label>
+                <Select value={form.category} onValueChange={(v) => setForm(f => ({ ...f, category: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label>Descrição</Label>
+              <Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Ex: Aluguel sala — Julho" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Valor (R$) *</Label>
+                <Input type="number" step="0.01" min="0.01" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} required />
+              </div>
+              <div>
+                <Label>Status</Label>
+                <Select value={form.status} onValueChange={(v) => setForm(f => ({ ...f, status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pendente">Pendente</SelectItem>
+                    <SelectItem value="pago">{form.payment_type === "receita" ? "Recebido" : "Pago"}</SelectItem>
+                    <SelectItem value="atrasado">Atrasado</SelectItem>
+                    <SelectItem value="cancelado">Cancelado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Vencimento</Label>
+                <Input type="date" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
+              </div>
+              <div>
+                <Label>{form.payment_type === "receita" ? "Data recebimento" : "Data pagamento"}</Label>
+                <Input type="date" value={form.paid_date} onChange={e => setForm(f => ({ ...f, paid_date: e.target.value }))} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={create.isPending || update.isPending}>
+                {editingId ? "Salvar" : "Adicionar"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

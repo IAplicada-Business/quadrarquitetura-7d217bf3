@@ -110,9 +110,15 @@ export function useFinanceiroMetrics({
     const isEscritorio = (p: PaymentRow) =>
       p.source === "escritorio" || (!p.source && !p.project_id);
     const isCancelado = (p: PaymentRow) => p.status === "cancelado";
+    // payment_type nunca é salvo via UI → usamos supplier_name como discriminador:
+    // pagamentos A fornecedores (supplier_name ≠ "Receita Escritório") = despesa
+    // pagamentos DE clientes (sem supplier_name, ou = "Receita Escritório") = receita
+    const isDespesa = (p: PaymentRow) =>
+      p.payment_type === "despesa" ||
+      (!p.payment_type && !!p.supplier_name && p.supplier_name !== "Receita Escritório");
     const isReceita = (p: PaymentRow) =>
-      p.payment_type === "receita" || (!p.payment_type && p.source !== "obra");
-    const isDespesa = (p: PaymentRow) => p.payment_type === "despesa";
+      p.payment_type === "receita" ||
+      (!p.payment_type && (!p.supplier_name || p.supplier_name === "Receita Escritório"));
 
     // Receita: TODOS os pagamentos recebidos (escritório + clientes de obra).
     // Despesa: apenas pagamentos do escritório (custos operacionais).
@@ -151,6 +157,12 @@ export function useFinanceiroMetrics({
       (p) => p.status === "pendente" && isReceita(p) && p.due_date && p.due_date >= todayStr && p.due_date <= thirtyDaysLater
     );
     const aReceber30d = pendentes30d.reduce((s, p) => s + p.value, 0);
+
+    // Vencidos — receitas pendentes com due_date < hoje (não marcadas como pagas)
+    const vencidos = allActive.filter(
+      (p) => (p.status === "pendente" || p.status === "atrasado") && isReceita(p) && p.due_date && p.due_date < todayStr
+    );
+    const aReceberVencido = vencidos.reduce((s, p) => s + p.value, 0);
 
     // Próximos recebimentos — inclui pagamentos de clientes de obra
     const proximosRecebimentos: ProximoRecebimento[] = allActive
@@ -215,6 +227,8 @@ export function useFinanceiroMetrics({
         receitaContratada,
         aReceber30d,
         aReceber30dCount: pendentes30d.length,
+        aReceberVencido,
+        aReceberVencidoCount: vencidos.length,
         despesasMes: despesaThis,
         despesaVariation,
         margemLiquida,

@@ -440,7 +440,14 @@ export default function DashboardEscritorio() {
               icon={<Calendar className="h-4 w-4" />}
               label="A receber (30 dias)"
               value={fmt(fm.kpis.aReceber30d)}
-              hint={`${fm.kpis.aReceber30dCount} pagamento(s) pendente(s)`}
+              hint={
+                fm.kpis.aReceberVencidoCount > 0 ? (
+                  <span className="inline-flex items-center gap-1 text-red-500">
+                    <ArrowDownRight className="h-3 w-3" />
+                    {fmt(fm.kpis.aReceberVencido)} vencido{fm.kpis.aReceberVencidoCount > 1 ? "s" : ""} ({fm.kpis.aReceberVencidoCount})
+                  </span>
+                ) : `${fm.kpis.aReceber30dCount} pagamento(s) pendente(s)`
+              }
             />
             <KpiCard
               icon={<ArrowDown className="h-4 w-4" />}
