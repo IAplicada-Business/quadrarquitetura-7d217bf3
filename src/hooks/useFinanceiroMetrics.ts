@@ -114,19 +114,26 @@ export function useFinanceiroMetrics({
       p.payment_type === "receita" || (!p.payment_type && p.source !== "obra");
     const isDespesa = (p: PaymentRow) => p.payment_type === "despesa";
 
-    const escritorioPayments = payments.filter((p) => isEscritorio(p) && !isCancelado(p));
+    // Receita: TODOS os pagamentos recebidos (escritório + clientes de obra).
+    // Despesa: apenas pagamentos do escritório (custos operacionais).
+    const allActive = payments.filter((p) => !isCancelado(p));
+    const escritorioActive = allActive.filter(isEscritorio);
 
-    const paidInPeriod = escritorioPayments.filter((p) => p.status === "pago" && matchesPeriod(p.paid_date));
-    const paidPrevPeriod = prevPeriod
-      ? escritorioPayments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(prevPeriod))
+    const receitaPaidInPeriod = allActive.filter((p) => p.status === "pago" && isReceita(p) && matchesPeriod(p.paid_date));
+    const receitaPaidPrev = prevPeriod
+      ? allActive.filter((p) => p.status === "pago" && isReceita(p) && p.paid_date?.startsWith(prevPeriod))
+      : [];
+    const despesaPaidInPeriod = escritorioActive.filter((p) => p.status === "pago" && isDespesa(p) && matchesPeriod(p.paid_date));
+    const despesaPaidPrev = prevPeriod
+      ? escritorioActive.filter((p) => p.status === "pago" && isDespesa(p) && p.paid_date?.startsWith(prevPeriod))
       : [];
 
-    const receitaThis = paidInPeriod.filter(isReceita).reduce((s, p) => s + p.value, 0);
-    const receitaPrev = paidPrevPeriod.filter(isReceita).reduce((s, p) => s + p.value, 0);
+    const receitaThis = receitaPaidInPeriod.reduce((s, p) => s + p.value, 0);
+    const receitaPrev = receitaPaidPrev.reduce((s, p) => s + p.value, 0);
     const receitaVariation = receitaPrev > 0 ? Math.round(((receitaThis - receitaPrev) / receitaPrev) * 100) : 0;
 
-    const despesaThis = paidInPeriod.filter(isDespesa).reduce((s, p) => s + p.value, 0);
-    const despesaPrev = paidPrevPeriod.filter(isDespesa).reduce((s, p) => s + p.value, 0);
+    const despesaThis = despesaPaidInPeriod.reduce((s, p) => s + p.value, 0);
+    const despesaPrev = despesaPaidPrev.reduce((s, p) => s + p.value, 0);
     const despesaVariation = despesaPrev > 0 ? Math.round(((despesaThis - despesaPrev) / despesaPrev) * 100) : 0;
 
     const impostos = receitaThis * (taxRate / 100);
@@ -138,16 +145,16 @@ export function useFinanceiroMetrics({
       .filter((p) => p.status === "aprovada" && matchesPeriod(p.approved_at))
       .reduce((s, p) => s + (p.price_full ?? p.final_value ?? 0), 0);
 
-    // A receber 30 dias (sempre a partir de hoje)
+    // A receber 30 dias — inclui receitas pendentes de obra e escritório
     const thirtyDaysLater = format(new Date(todayDate.getTime() + 30 * 86400000), "yyyy-MM-dd");
-    const pendentes30d = escritorioPayments.filter(
-      (p) => p.status === "pendente" && p.due_date && p.due_date >= todayStr && p.due_date <= thirtyDaysLater
+    const pendentes30d = allActive.filter(
+      (p) => p.status === "pendente" && isReceita(p) && p.due_date && p.due_date >= todayStr && p.due_date <= thirtyDaysLater
     );
     const aReceber30d = pendentes30d.reduce((s, p) => s + p.value, 0);
 
-    // Próximos recebimentos
-    const proximosRecebimentos: ProximoRecebimento[] = escritorioPayments
-      .filter((p) => p.status === "pendente" && p.due_date && p.due_date >= todayStr)
+    // Próximos recebimentos — inclui pagamentos de clientes de obra
+    const proximosRecebimentos: ProximoRecebimento[] = allActive
+      .filter((p) => p.status === "pendente" && isReceita(p) && p.due_date && p.due_date >= todayStr)
       .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))
       .slice(0, 4)
       .map((p) => ({
@@ -181,9 +188,8 @@ export function useFinanceiroMetrics({
       const label = format(m, "MMM", { locale: ptBR });
       const capLabel = label.charAt(0).toUpperCase() + label.slice(1);
 
-      const monthPaid = escritorioPayments.filter((p) => p.status === "pago" && p.paid_date?.startsWith(mStr));
-      const rec = monthPaid.filter(isReceita).reduce((s, p) => s + p.value, 0);
-      const desp = monthPaid.filter(isDespesa).reduce((s, p) => s + p.value, 0);
+      const rec = allActive.filter((p) => p.status === "pago" && isReceita(p) && p.paid_date?.startsWith(mStr)).reduce((s, p) => s + p.value, 0);
+      const desp = escritorioActive.filter((p) => p.status === "pago" && isDespesa(p) && p.paid_date?.startsWith(mStr)).reduce((s, p) => s + p.value, 0);
       const imp = rec * (taxRate / 100);
       const liq = rec - desp - imp;
       const marg = rec > 0 ? Math.round((liq / rec) * 100) : 0;

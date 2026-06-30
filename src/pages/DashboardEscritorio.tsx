@@ -1,5 +1,9 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { InvoiceNFList } from "@/components/projects/InvoiceNFList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -71,32 +75,29 @@ function oportBorderColor(days: number) {
   return C.success;
 }
 
-/* ── Month option list (last 13 months + year options) ── */
-function useMonthOptions() {
-  return useMemo(() => {
-    const opts: { label: string; value: string }[] = [];
-    const now = new Date();
-    for (let i = 0; i < 13; i++) {
-      const d = subMonths(now, i);
-      const value = format(d, "yyyy-MM");
-      const label = format(d, "MMMM 'de' yyyy", { locale: ptBR });
-      opts.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) });
-    }
-    const thisYear = String(now.getFullYear());
-    const lastYear = String(now.getFullYear() - 1);
-    opts.push({ value: thisYear, label: `Ano ${thisYear}` });
-    opts.push({ value: lastYear, label: `Ano ${lastYear}` });
-    opts.push({ value: "all", label: "Todo o período" });
-    return opts;
-  }, []);
-}
+const FIN_MONTHS = Array.from({ length: 12 }, (_, i) => ({
+  value: String(i + 1).padStart(2, "0"),
+  label: format(new Date(2024, i, 1), "MMM", { locale: ptBR }),
+}));
+const FIN_YEARS = [String(new Date().getFullYear()), String(new Date().getFullYear() - 1), String(new Date().getFullYear() - 2)];
 
 export default function DashboardEscritorio() {
-  const [tab, setTab] = useState<"comercial" | "financeiro">("comercial");
+  const { user } = useAuth();
+  const [tab, setTab] = useState<"comercial" | "financeiro" | "notas_fiscais">("comercial");
 
   // Financeiro filters
-  const [finPeriod, setFinPeriod] = useState<string>(format(new Date(), "yyyy-MM"));
-  const monthOptions = useMonthOptions();
+  const [finYear, setFinYear] = useState<string>(String(new Date().getFullYear()));
+  const [finMonth, setFinMonth] = useState<string>(String(new Date().getMonth() + 1).padStart(2, "0"));
+  const finPeriod = finYear === "all" ? "all" : finMonth === "all" ? finYear : `${finYear}-${finMonth}`;
+
+  const { data: nfProjects = [] } = useQuery({
+    queryKey: ["projects-list-nf"],
+    queryFn: async () => {
+      const { data } = await supabase.from("projects").select("id, name").order("name");
+      return (data ?? []) as { id: string; name: string }[];
+    },
+    enabled: !!user,
+  });
 
   // Comercial filters
   const [cmPeriod, setCmPeriod]     = useState<ComercialPeriod>("mes_atual");
@@ -399,19 +400,24 @@ export default function DashboardEscritorio() {
           {/* Filtro período financeiro */}
           <div className="flex items-center gap-2 flex-wrap">
             <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
-            <Select value={finPeriod} onValueChange={setFinPeriod}>
-              <SelectTrigger className="h-8 w-full sm:w-[200px] text-xs">
-                <SelectValue />
-              </SelectTrigger>
+            <Select value={finYear} onValueChange={(v) => { setFinYear(v); if (v === "all") setFinMonth("all"); }}>
+              <SelectTrigger className="h-8 w-full sm:w-[90px] text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {monthOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                <SelectItem value="all">Todo período</SelectItem>
+                {FIN_YEARS.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={finMonth} onValueChange={setFinMonth} disabled={finYear === "all"}>
+              <SelectTrigger className="h-8 w-full sm:w-[110px] text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos meses</SelectItem>
+                {FIN_MONTHS.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.label.charAt(0).toUpperCase() + m.label.slice(1)}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <span className="text-xs text-muted-foreground hidden sm:inline">
-              Exibindo: {periodLabel}
-            </span>
           </div>
 
           {/* KPI cards financeiro — 5 cards */}
@@ -551,7 +557,7 @@ export default function DashboardEscritorio() {
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <CardTitle className="text-base font-display">Receita vs Despesa — 6 meses</CardTitle>
+                <CardTitle className="text-base font-display">Receita vs Despesa — {periodLabel}</CardTitle>
                 <div className="flex items-center gap-3">
                   {[
                     { label: "Receita", color: C.navy    },
@@ -604,22 +610,35 @@ export default function DashboardEscritorio() {
           </Card>
         </div>
       )}
+
+      {/* ═══════════════════ ABA NOTAS FISCAIS ═══════════════════ */}
+      {tab === "notas_fiscais" && (
+        <div className="space-y-4">
+          <InvoiceNFList showProjectColumn projects={nfProjects} />
+        </div>
+      )}
     </div>
   );
 }
 
 /* ── helpers ── */
 
+const TAB_LABELS: Record<"comercial" | "financeiro" | "notas_fiscais", string> = {
+  comercial: "Comercial",
+  financeiro: "Financeiro",
+  notas_fiscais: "Notas Fiscais",
+};
+
 function SegmentedTabs({
   tab,
   onChange,
 }: {
-  tab: "comercial" | "financeiro";
-  onChange: (t: "comercial" | "financeiro") => void;
+  tab: "comercial" | "financeiro" | "notas_fiscais";
+  onChange: (t: "comercial" | "financeiro" | "notas_fiscais") => void;
 }) {
   return (
     <div className="inline-flex p-1 bg-muted/50 rounded-lg">
-      {(["comercial", "financeiro"] as const).map((t) => (
+      {(["comercial", "financeiro", "notas_fiscais"] as const).map((t) => (
         <button
           key={t}
           onClick={() => onChange(t)}
@@ -629,7 +648,7 @@ function SegmentedTabs({
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          {t === "comercial" ? "Comercial" : "Financeiro"}
+          {TAB_LABELS[t]}
         </button>
       ))}
     </div>

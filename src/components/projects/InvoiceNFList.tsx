@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Plus, Pencil, Trash2, Send, FileText } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -46,17 +48,30 @@ interface InvoiceNFListProps {
   projects?: { id: string; name: string }[];
 }
 
+const MONTHS = Array.from({ length: 12 }, (_, i) => ({
+  value: String(i + 1).padStart(2, "0"),
+  label: format(new Date(2024, i, 1), "MMMM", { locale: ptBR }),
+}));
+const YEARS = ["2026", "2025", "2024", "2023"];
+
 export function InvoiceNFList({ projectId, showProjectColumn, projects }: InvoiceNFListProps) {
   const { user } = useAuth();
   const [filterType, setFilterType] = useState<string>("");
-  const [filterMonth, setFilterMonth] = useState<string>("");
+  const [filterYear, setFilterYear] = useState<string>("");
+  const [filterMonthNum, setFilterMonthNum] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [filterProject, setFilterProject] = useState<string>(projectId || "");
+
+  const competenceMonth = useMemo(() => {
+    if (!filterYear || filterYear === "all") return undefined;
+    if (!filterMonthNum || filterMonthNum === "all") return filterYear;
+    return `${filterYear}-${filterMonthNum}`;
+  }, [filterYear, filterMonthNum]);
 
   const filters = {
     projectId: filterProject && filterProject !== "all" ? filterProject : undefined,
     nfType: filterType && filterType !== "all" ? filterType : undefined,
-    competenceMonth: filterMonth || undefined,
+    competenceMonth,
     status: filterStatus && filterStatus !== "all" ? filterStatus : undefined,
   };
   const { items, isLoading, create, update, remove } = useInvoicesNF(filters);
@@ -103,7 +118,7 @@ export function InvoiceNFList({ projectId, showProjectColumn, projects }: Invoic
     csv += "NOTAS FISCAIS RECEBIDAS\n" + header;
     recebidas.forEach((i: any) => { csv += toRow(i); });
     csv += csvRow(["", "", "", "Total Recebidas", csvBrl(totalRecebidas)]);
-    downloadCsv(`relatorio_nf_${filterMonth || "geral"}.csv`, csv);
+    downloadCsv(`relatorio_nf_${competenceMonth || "geral"}.csv`, csv);
   };
 
   return (
@@ -112,7 +127,7 @@ export function InvoiceNFList({ projectId, showProjectColumn, projects }: Invoic
       <div className="flex flex-wrap items-center gap-3">
         {showProjectColumn && projects && (
           <Select value={filterProject} onValueChange={setFilterProject}>
-            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Projeto" /></SelectTrigger>
+            <SelectTrigger className="h-9 w-[170px]"><SelectValue placeholder="Projeto" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               {projects.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
@@ -120,16 +135,31 @@ export function InvoiceNFList({ projectId, showProjectColumn, projects }: Invoic
           </Select>
         )}
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
+          <SelectTrigger className="h-9 w-[130px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="all">Todos tipos</SelectItem>
             <SelectItem value="emitida">Emitida</SelectItem>
             <SelectItem value="recebida">Recebida</SelectItem>
           </SelectContent>
         </Select>
-        <Input type="month" className="w-[160px]" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} placeholder="Competência" />
+        <Select value={filterYear} onValueChange={(v) => { setFilterYear(v); if (v === "all") setFilterMonthNum(""); }}>
+          <SelectTrigger className="h-9 w-[90px]"><SelectValue placeholder="Ano" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Ano</SelectItem>
+            {YEARS.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterMonthNum} onValueChange={setFilterMonthNum} disabled={!filterYear || filterYear === "all"}>
+          <SelectTrigger className="h-9 w-[130px]"><SelectValue placeholder="Mês" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos meses</SelectItem>
+            {MONTHS.map((m) => (
+              <SelectItem key={m.value} value={m.value}>{m.label.charAt(0).toUpperCase() + m.label.slice(1)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="pendente">Pendente</SelectItem>
