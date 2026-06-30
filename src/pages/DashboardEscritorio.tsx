@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ChartContainer,
   ChartTooltip,
@@ -26,18 +27,19 @@ import {
   TrendingUp,
   Clock,
   Send,
-  AlertTriangle,
   Wallet,
   ArrowDown,
-  ArrowUp,
   Target,
   FileText,
   Calendar,
+  HandCoins,
+  XCircle,
+  Filter,
 } from "lucide-react";
-import { useComercialMetrics } from "@/hooks/useComercialMetrics";
+import { useComercialMetrics, PERIOD_LABELS, ORIGIN_OPTIONS, PROJECT_TYPE_OPTIONS, type ComercialPeriod } from "@/hooks/useComercialMetrics";
 import { useFinanceiroMetrics } from "@/hooks/useFinanceiroMetrics";
 import { C } from "@/lib/chartColors";
-import { format, parseISO } from "date-fns";
+import { format, subMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 /* ── formatters ── */
@@ -52,9 +54,9 @@ const yFmt = (v: number) =>
   v >= 1000 ? `R$${Math.round(v / 1000)}k` : `R$${v}`;
 
 const pipelineConfig: ChartConfig = {
-  fechados:    { label: "Fechados",     color: C.navy      },
-  propostas:   { label: "Propostas",    color: C.terra     },
-  em_andamento:{ label: "Em andamento", color: C.navyFaint },
+  fechados:     { label: "Fechados",     color: C.navy      },
+  propostas:    { label: "Propostas",    color: C.terra     },
+  em_andamento: { label: "Em andamento", color: C.navyFaint },
 };
 
 const financeiroConfig: ChartConfig = {
@@ -63,20 +65,46 @@ const financeiroConfig: ChartConfig = {
   margem:  { label: "Margem",  color: C.success },
 };
 
-/* ── border-left color getter for oportunidades ── */
 function oportBorderColor(days: number) {
   if (days >= 7) return C.danger;
   if (days >= 3) return C.warning;
   return C.success;
 }
 
+/* ── Month option list (last 13 months + year options) ── */
+function useMonthOptions() {
+  return useMemo(() => {
+    const opts: { label: string; value: string }[] = [];
+    const now = new Date();
+    for (let i = 0; i < 13; i++) {
+      const d = subMonths(now, i);
+      const value = format(d, "yyyy-MM");
+      const label = format(d, "MMMM 'de' yyyy", { locale: ptBR });
+      opts.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) });
+    }
+    const thisYear = String(now.getFullYear());
+    const lastYear = String(now.getFullYear() - 1);
+    opts.push({ value: thisYear, label: `Ano ${thisYear}` });
+    opts.push({ value: lastYear, label: `Ano ${lastYear}` });
+    opts.push({ value: "all", label: "Todo o período" });
+    return opts;
+  }, []);
+}
+
 export default function DashboardEscritorio() {
   const [tab, setTab] = useState<"comercial" | "financeiro">("comercial");
-  const comercial = useComercialMetrics();
-  const financeiro = useFinanceiroMetrics();
 
-  const currentMonthLabel = format(new Date(), "MMMM", { locale: ptBR });
-  const capMonth = currentMonthLabel.charAt(0).toUpperCase() + currentMonthLabel.slice(1);
+  // Financeiro filters
+  const [finPeriod, setFinPeriod] = useState<string>(format(new Date(), "yyyy-MM"));
+  const monthOptions = useMonthOptions();
+
+  // Comercial filters
+  const [cmPeriod, setCmPeriod]     = useState<ComercialPeriod>("mes_atual");
+  const [cmOrigin, setCmOrigin]     = useState("todos");
+  const [cmType,   setCmType]       = useState("todos");
+
+  const comercial = useComercialMetrics({ period: cmPeriod, origin: cmOrigin, projectType: cmType });
+  const financeiro = useFinanceiroMetrics({ period: finPeriod });
 
   const isLoading = comercial.isLoading || financeiro.isLoading;
 
@@ -100,6 +128,8 @@ export default function DashboardEscritorio() {
   const cm = comercial.data;
   const fm = financeiro.data;
 
+  const periodLabel = fm?.periodLabel ?? "";
+
   return (
     <div className="space-y-5">
       <SegmentedTabs tab={tab} onChange={setTab} />
@@ -107,15 +137,48 @@ export default function DashboardEscritorio() {
       {/* ═══════════════════ ABA COMERCIAL ═══════════════════ */}
       {tab === "comercial" && cm && (
         <div className="space-y-4">
-          {/* BLOCO 1 — Funil comercial (redesign Sprint 7).
-              Barras horizontais proporcionais para mostrar volume e
-              perda entre etapas mesmo quando os números são pequenos.
-              Inclui métricas globais inline. */}
+
+          {/* Filtros comercial */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Select value={cmPeriod} onValueChange={(v) => setCmPeriod(v as ComercialPeriod)}>
+              <SelectTrigger className="h-8 w-full sm:w-[160px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.entries(PERIOD_LABELS) as [ComercialPeriod, string][]).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={cmOrigin} onValueChange={setCmOrigin}>
+              <SelectTrigger className="h-8 w-full sm:w-[150px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ORIGIN_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={cmType} onValueChange={setCmType}>
+              <SelectTrigger className="h-8 w-full sm:w-[150px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PROJECT_TYPE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Funil comercial */}
           <Card>
             <CardContent className="pt-5 pb-4 space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                  Funil comercial — {capMonth}
+                  Funil comercial — {PERIOD_LABELS[cmPeriod]}
                 </p>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <span>
@@ -136,7 +199,7 @@ export default function DashboardEscritorio() {
                       const conversionFromPrev = i > 0 ? cm.funnelRates[i - 1] : null;
                       return (
                         <div key={stage.label} className="flex items-center gap-3">
-                          <div className="w-32 shrink-0 text-xs">
+                          <div className="w-28 sm:w-32 shrink-0 text-xs">
                             <p className="font-medium text-foreground">{stage.label}</p>
                             {conversionFromPrev != null && (
                               <p className="text-[10px] text-muted-foreground">
@@ -173,20 +236,26 @@ export default function DashboardEscritorio() {
             </CardContent>
           </Card>
 
-          {/* BLOCO 2 — KPI cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* KPI cards comercial */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <KpiCard
               icon={<Users className="h-4 w-4" />}
-              label="Leads este mês"
+              label="Leads no período"
               value={String(cm.kpis.leadsThisMonth)}
-              variation={cm.kpis.leadsVariation}
+              variation={cmPeriod === "mes_atual" ? cm.kpis.leadsVariation : undefined}
             />
             <KpiCard
               icon={<TrendingUp className="h-4 w-4" />}
               label="Taxa de conversão"
               value={`${cm.kpis.taxaConversao}%`}
-              variation={cm.kpis.taxaVariation}
+              variation={cmPeriod === "mes_atual" ? cm.kpis.taxaVariation : undefined}
               variationSuffix="pp"
+            />
+            <KpiCard
+              icon={<HandCoins className="h-4 w-4" />}
+              label="Receita fechada"
+              value={fmt(cm.kpis.receitaFechada)}
+              accent={C.success}
             />
             <KpiCard
               icon={<Clock className="h-4 w-4" />}
@@ -199,11 +268,16 @@ export default function DashboardEscritorio() {
               value={String(cm.kpis.proposalsAguardando)}
               badge={cm.kpis.hasUrgent ? { label: "+7d", variant: "destructive" } : undefined}
             />
+            <KpiCard
+              icon={<XCircle className="h-4 w-4" />}
+              label="Perdidos no período"
+              value={String(cm.kpis.leadsPerdidos)}
+              accent={cm.kpis.leadsPerdidos > 0 ? C.danger : undefined}
+            />
           </div>
 
-          {/* BLOCO 3 — Oportunidades + Propostas */}
+          {/* Oportunidades + Propostas */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Oportunidades quentes */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-display">Oportunidades quentes</CardTitle>
@@ -217,9 +291,7 @@ export default function DashboardEscritorio() {
                         className="flex items-center justify-between p-3 rounded-lg border"
                         style={{ borderLeftWidth: 3, borderLeftColor: oportBorderColor(o.daysSinceContact) }}
                       >
-                        <div>
-                          <p className="text-sm font-medium">{o.leadName}</p>
-                        </div>
+                        <p className="text-sm font-medium">{o.leadName}</p>
                         <div className="flex items-center gap-2">
                           <Badge
                             variant="outline"
@@ -245,7 +317,6 @@ export default function DashboardEscritorio() {
               </CardContent>
             </Card>
 
-            {/* Propostas em aberto */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-display">Propostas em aberto</CardTitle>
@@ -263,10 +334,7 @@ export default function DashboardEscritorio() {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-semibold tabular-nums">{fmt(p.value)}</span>
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] ${p.urgencyColor}`}
-                          >
+                          <Badge variant="outline" className={`text-[10px] ${p.urgencyColor}`}>
                             {p.urgencyLabel}
                           </Badge>
                         </div>
@@ -288,7 +356,7 @@ export default function DashboardEscritorio() {
             </Card>
           </div>
 
-          {/* BLOCO 4 — Pipeline 6 meses */}
+          {/* Pipeline 6 meses */}
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -315,7 +383,7 @@ export default function DashboardEscritorio() {
                   <YAxis allowDecimals={false} className="text-xs" />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Bar dataKey="fechados"     stackId="a" fill={C.navy}      radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="propostas"   stackId="a" fill={C.terra}     />
+                  <Bar dataKey="propostas"    stackId="a" fill={C.terra}     />
                   <Bar dataKey="em_andamento" stackId="a" fill={C.navyFaint} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ChartContainer>
@@ -327,25 +395,50 @@ export default function DashboardEscritorio() {
       {/* ═══════════════════ ABA FINANCEIRO ═══════════════════ */}
       {tab === "financeiro" && fm && (
         <div className="space-y-4">
-          {/* BLOCO 1 — KPI cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+
+          {/* Filtro período financeiro */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Select value={finPeriod} onValueChange={setFinPeriod}>
+              <SelectTrigger className="h-8 w-full sm:w-[200px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              Exibindo: {periodLabel}
+            </span>
+          </div>
+
+          {/* KPI cards financeiro — 5 cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             <KpiCard
               icon={<Wallet className="h-4 w-4" />}
-              label={`Receita — ${capMonth}`}
+              label={`Receita recebida`}
               value={fmt(fm.kpis.receitaMes)}
               variation={fm.kpis.receitaVariation}
               accent={C.navy}
             />
             <KpiCard
+              icon={<HandCoins className="h-4 w-4" />}
+              label="Receita contratada"
+              value={fmt(fm.kpis.receitaContratada)}
+              accent={C.success}
+              hint="Propostas aprovadas no período"
+            />
+            <KpiCard
               icon={<Calendar className="h-4 w-4" />}
               label="A receber (30 dias)"
               value={fmt(fm.kpis.aReceber30d)}
-              accent={C.success}
               hint={`${fm.kpis.aReceber30dCount} pagamento(s) pendente(s)`}
             />
             <KpiCard
               icon={<ArrowDown className="h-4 w-4" />}
-              label={`Despesas — ${capMonth}`}
+              label="Despesas"
               value={fmt(fm.kpis.despesasMes)}
               variation={fm.kpis.despesaVariation}
               variationInvert
@@ -377,9 +470,8 @@ export default function DashboardEscritorio() {
             />
           </div>
 
-          {/* BLOCO 2 — Recebimentos + DRE */}
+          {/* Próximos recebimentos + DRE */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Próximos recebimentos */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-display">Próximos recebimentos</CardTitle>
@@ -421,10 +513,9 @@ export default function DashboardEscritorio() {
               </CardContent>
             </Card>
 
-            {/* DRE resumido */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base font-display">DRE resumido — {capMonth}</CardTitle>
+                <CardTitle className="text-base font-display">DRE resumido — {periodLabel}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-0">
@@ -456,11 +547,11 @@ export default function DashboardEscritorio() {
             </Card>
           </div>
 
-          {/* BLOCO 3 — Gráfico receita vs despesa */}
+          {/* Gráfico receita vs despesa */}
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <CardTitle className="text-base font-display">Receita vs Despesa — últimos 6 meses</CardTitle>
+                <CardTitle className="text-base font-display">Receita vs Despesa — 6 meses</CardTitle>
                 <div className="flex items-center gap-3">
                   {[
                     { label: "Receita", color: C.navy    },
@@ -468,10 +559,7 @@ export default function DashboardEscritorio() {
                     { label: "Margem",  color: C.success },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center gap-1">
-                      <div
-                        className="w-2.5 h-2.5 rounded-sm"
-                        style={{ backgroundColor: item.color }}
-                      />
+                      <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: item.color }} />
                       <span className="text-[10px] text-muted-foreground">{item.label}</span>
                     </div>
                   ))}
@@ -500,8 +588,8 @@ export default function DashboardEscritorio() {
                       />
                     }
                   />
-                  <Bar yAxisId="left" dataKey="receita" fill={C.navy}    radius={[4, 4, 0, 0]} barSize={20} />
-                  <Bar yAxisId="left" dataKey="despesa" fill={C.terra}   radius={[4, 4, 0, 0]} barSize={20} />
+                  <Bar yAxisId="left" dataKey="receita" fill={C.navy}  radius={[4, 4, 0, 0]} barSize={20} />
+                  <Bar yAxisId="left" dataKey="despesa" fill={C.terra} radius={[4, 4, 0, 0]} barSize={20} />
                   <Line
                     yAxisId="right"
                     type="monotone"
@@ -572,11 +660,7 @@ function KpiCard({
   return (
     <Card className="relative overflow-hidden">
       {accent && (
-        <span
-          aria-hidden
-          className="absolute inset-y-0 left-0 w-[3px]"
-          style={{ background: accent }}
-        />
+        <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: accent }} />
       )}
       <CardContent className="pt-5 pb-4">
         <div className="flex items-center gap-2 text-muted-foreground mb-2">
