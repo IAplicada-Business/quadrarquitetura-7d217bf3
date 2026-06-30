@@ -30,7 +30,7 @@ const fallbackProjects = [
 export function PortfolioSection() {
   const { portfolio } = useProposalAssets();
   const activePortfolio = portfolio?.filter((p) => p.is_active !== false) || [];
-  const projects = activePortfolio.length > 0 ? activePortfolio.slice(0, 6) : fallbackProjects;
+  const projects = activePortfolio.length > 0 ? activePortfolio.slice(0, 3) : fallbackProjects;
 
   return (
     <section id="projetos" className="relative py-24 md:py-32 bg-[#F5E0D0]">

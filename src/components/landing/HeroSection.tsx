@@ -48,18 +48,6 @@ export function HeroSection() {
           transition={{ duration: 1.2, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
           className="max-w-4xl"
         >
-          {/* Kicker */}
-          <p
-            className="text-[#F0DCC8] text-xs md:text-sm mb-6 md:mb-8"
-            style={{
-              fontFamily: "'Jost', sans-serif",
-              letterSpacing: "8px",
-              fontWeight: 300,
-            }}
-          >
-            RESIDENCIAL &nbsp;&middot;&nbsp; CORPORATIVO &nbsp;&middot;&nbsp; HEALTH CARE
-          </p>
-
           {/* Decorative line */}
           <div className="w-16 h-px bg-[#C4756E] mb-8 md:mb-10" />
 
