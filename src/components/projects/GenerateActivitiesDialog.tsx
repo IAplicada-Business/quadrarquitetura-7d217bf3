@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Sparkles, Mic, MicOff, ImagePlus, Loader2, X, Map, Building2, LayoutTemplate } from "lucide-react";
+import { Sparkles, Mic, MicOff, ImagePlus, Loader2, X, Map as MapIcon, Building2, LayoutTemplate } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
