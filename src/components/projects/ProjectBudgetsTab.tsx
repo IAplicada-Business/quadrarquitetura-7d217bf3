@@ -271,7 +271,7 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
             <div className="flex justify-center py-12">
               <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
             </div>
-          ) : contractedScopeItems.length === 0 ? (
+          ) : contractedScopeItems.length === 0 && (groupedQuotes["sem_disciplina"] ?? []).length === 0 ? (
             <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
               Cadastre disciplinas contratadas na aba "Escopo" para começar a adicionar cotações.
             </div>
