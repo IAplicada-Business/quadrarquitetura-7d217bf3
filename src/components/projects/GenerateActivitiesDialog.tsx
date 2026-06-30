@@ -605,7 +605,7 @@ export function GenerateActivitiesDialog({
                 <TabsTrigger value="audio" className="flex-1">Áudio</TabsTrigger>
                 <TabsTrigger value="foto" className="flex-1">Foto</TabsTrigger>
                 <TabsTrigger value="planta" className="flex-1">
-                  <Map className="h-3.5 w-3.5 mr-1" />
+                  <MapIcon className="h-3.5 w-3.5 mr-1" />
                   Planta Baixa
                 </TabsTrigger>
                 <TabsTrigger value="template" className="flex-1">
@@ -712,7 +712,7 @@ export function GenerateActivitiesDialog({
                   </div>
                 ) : (
                   <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg py-6 cursor-pointer hover:bg-muted/30 transition-colors">
-                    <Map className="h-8 w-8 text-muted-foreground mb-2" />
+                    <MapIcon className="h-8 w-8 text-muted-foreground mb-2" />
                     <span className="text-sm text-muted-foreground">Clique para selecionar planta</span>
                     <span className="text-xs text-muted-foreground mt-1">PNG, JPG ou PDF, até 20MB</span>
                     <input
@@ -853,7 +853,7 @@ export function GenerateActivitiesDialog({
                   </>
                 ) : (
                   <>
-                    <Map className="h-4 w-4 mr-2" />
+                    <MapIcon className="h-4 w-4 mr-2" />
                     Analisar Planta e Gerar Atividades
                   </>
                 )}
