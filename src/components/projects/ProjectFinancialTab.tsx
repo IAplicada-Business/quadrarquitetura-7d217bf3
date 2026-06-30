@@ -278,8 +278,7 @@ export function ProjectFinancialTab({ projectId, projectName, clientName, client
       <Tabs defaultValue="pagamentos">
         <TabsList>
           <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
-          <TabsTrigger value="notas">Notas Fiscais (Compras)</TabsTrigger>
-          <TabsTrigger value="notas_nf">Notas Fiscais</TabsTrigger>
+          <TabsTrigger value="notas">NFs Compras</TabsTrigger>
           <TabsTrigger value="dre">DRE</TabsTrigger>
         </TabsList>
 
@@ -408,10 +407,6 @@ export function ProjectFinancialTab({ projectId, projectName, clientName, client
               </div>
             ))
           )}
-        </TabsContent>
-
-        <TabsContent value="notas_nf" className="space-y-4 mt-4">
-          <InvoiceNFList projectId={projectId} />
         </TabsContent>
 
         <TabsContent value="dre" className="space-y-4 mt-4">

@@ -186,7 +186,7 @@ export function ProjectMaterialsTab({ projectId, projectName = "" }: { projectId
         <TabsList>
           <TabsTrigger value="rastreamento">Materiais de Obra</TabsTrigger>
           <TabsTrigger value="inventario">Inventário</TabsTrigger>
-          <TabsTrigger value="atividades">Por Atividade (Cronograma)</TabsTrigger>
+          <TabsTrigger value="atividades">Cronograma</TabsTrigger>
           <TabsTrigger value="compras">Lista da Casa</TabsTrigger>
         </TabsList>
 
