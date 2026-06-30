@@ -57,6 +57,7 @@ const groupIcons: Record<string, LucideIcon> = {
 const iconMap: Record<string, LucideIcon> = {
   "Dashboard Escritório": LayoutDashboard,
   "Dashboard Obras": HardHat,
+  "Financeiro": Receipt,
   "Lançamentos": Receipt,
   "Relatórios": FileBarChart,
   "Leads": Users,
@@ -90,7 +91,13 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Dashboard Escritório", url: "/dashboard/escritorio" },
       { title: "Dashboard Obras", url: "/dashboard/obras" },
-      { title: "Lançamentos", url: "/financeiro/lancamentos" },
+      {
+        title: "Financeiro",
+        url: "/financeiro/lancamentos",
+        subItems: [
+          { title: "Lançamentos", url: "/financeiro/lancamentos" },
+        ],
+      },
       // Sprint 7 — submenu Kanban (Projetos + Quadra). "Tarefas por
       // Obra" foi removida (redundância com Kanban Quadra + cronograma).
       {
