@@ -256,7 +256,7 @@ export default function DashboardObras() {
         const elapsed = differenceInDays(today, minDate);
         expectedProgress = Math.min(100, Math.max(0, Math.round((elapsed / totalDays) * 100)));
       }
-      let barColor = C.success;
+      let barColor: string = C.success;
       if (progress < expectedProgress - 20) barColor = C.danger;
       else if (progress < expectedProgress - 5) barColor = C.warning;
 

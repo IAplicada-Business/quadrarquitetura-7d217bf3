@@ -29,7 +29,7 @@ export function useInstagramInspirations() {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as InstagramInspiration[];
+      return (data as unknown) as InstagramInspiration[];
     },
     enabled: !!user,
   });
