@@ -29,7 +29,13 @@ export function useInvoicesNF(filters: InvoiceNFFilters = {}) {
 
       if (filters.projectId) q = q.eq("project_id", filters.projectId);
       if (filters.nfType) q = q.eq("nf_type", filters.nfType);
-      if (filters.competenceMonth) q = q.eq("competence_month", filters.competenceMonth);
+      if (filters.competenceMonth) {
+        if (filters.competenceMonth.length === 4) {
+          q = q.like("competence_month", `${filters.competenceMonth}-%`);
+        } else {
+          q = q.eq("competence_month", filters.competenceMonth);
+        }
+      }
       if (filters.status) q = q.eq("status", filters.status);
 
       const { data, error } = await q;
