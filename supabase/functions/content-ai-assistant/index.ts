@@ -18,8 +18,8 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -92,18 +92,19 @@ Contexto: ${baseContext}
 Retorne JSON: {"hook": "novo hook impactante, máx 15 palavras", "alternatives": ["alternativa 1", "alternativa 2"]}`;
     }
 
-    const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const aiRes = await fetch("https://ai.lovable.dev/chat/completions", {
       method: "POST",
       headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
+        model: "openai/gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.8,
       }),
     });
 
@@ -113,7 +114,7 @@ Retorne JSON: {"hook": "novo hook impactante, máx 15 palavras", "alternatives":
     }
 
     const aiData = await aiRes.json();
-    const content = aiData.content?.[0]?.text || "{}";
+    const content = aiData.choices?.[0]?.message?.content || "{}";
 
     let parsed;
     try {
