@@ -54,6 +54,7 @@ const PATH_LABELS: Record<string, string> = {
   "notifications": "Notificações",
   "financeiro": "Financeiro",
   "lancamentos": "Lançamentos",
+  "comercial": "Comercial",
 };
 
 function humanize(segment: string): string {

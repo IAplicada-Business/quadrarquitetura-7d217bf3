@@ -56,6 +56,9 @@ const groupIcons: Record<string, LucideIcon> = {
 
 const iconMap: Record<string, LucideIcon> = {
   "Dashboard Escritório": LayoutDashboard,
+  "Dashboard Comercial": LayoutDashboard,
+  "Dashboard Financeiro": Receipt,
+  "Notas Fiscais": Receipt,
   "Dashboard Obras": HardHat,
   "Financeiro": Receipt,
   "Lançamentos": Receipt,
@@ -71,6 +74,7 @@ const iconMap: Record<string, LucideIcon> = {
   "Tarefas": CheckSquare,
   "Tarefas por Obra": CheckSquare,
   "Tarefas Quadra": ListChecks,
+  "Tarefas": ListChecks,
   "Kanban": ListChecks,
   "Kanban Projetos": Building2,
   "Kanban Quadra": ListChecks,
@@ -89,26 +93,27 @@ const menuGroups: MenuGroup[] = [
   {
     label: "Análises Quadra",
     items: [
-      { title: "Dashboard Escritório", url: "/dashboard/escritorio" },
+      { title: "Dashboard Comercial", url: "/dashboard/escritorio" },
       { title: "Dashboard Obras", url: "/dashboard/obras" },
       {
         title: "Financeiro",
-        url: "/financeiro/lancamentos",
+        url: "/dashboard/financeiro",
         subItems: [
           { title: "Lançamentos", url: "/financeiro/lancamentos" },
+          { title: "Dashboard Financeiro", url: "/dashboard/financeiro" },
+          { title: "Notas Fiscais", url: "/admin/invoices" },
         ],
       },
       // Sprint 7 — submenu Kanban (Projetos + Quadra). "Tarefas por
       // Obra" foi removida (redundância com Kanban Quadra + cronograma).
       {
-        title: "Kanban",
+        title: "Tarefas",
         url: "/tasks/projetos",
         subItems: [
           { title: "Kanban Projetos", url: "/tasks/projetos" },
           { title: "Kanban Quadra", url: "/tasks/quadra" },
         ],
       },
-      { title: "Relatórios", url: "/construction/reports" },
     ],
   },
   {

@@ -11,6 +11,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, TrendingUp, TrendingDown } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+const FIN_MONTHS = Array.from({ length: 12 }, (_, i) => ({
+  value: String(i + 1).padStart(2, "0"),
+  label: format(new Date(2024, i, 1), "MMM", { locale: ptBR }),
+}));
+const FIN_YEARS = [
+  String(new Date().getFullYear()),
+  String(new Date().getFullYear() - 1),
+  String(new Date().getFullYear() - 2),
+];
 
 const CATEGORIES_RECEITA = [
   "Honorários",
@@ -87,6 +99,8 @@ export default function Lancamentos() {
 
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterYear, setFilterYear] = useState<string>(String(new Date().getFullYear()));
+  const [filterMonth, setFilterMonth] = useState<string>(String(new Date().getMonth() + 1).padStart(2, "0"));
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<LancamentoForm>(emptyForm());
@@ -101,8 +115,10 @@ export default function Lancamentos() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const datePrefix = filterYear === "all" ? null : filterMonth === "all" ? filterYear : `${filterYear}-${filterMonth}`;
+
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ["lancamentos-escritorio", filterType, filterStatus],
+    queryKey: ["lancamentos-escritorio", filterType, filterStatus, filterYear, filterMonth],
     queryFn: async () => {
       let q = supabase
         .from("payments")
@@ -112,6 +128,7 @@ export default function Lancamentos() {
 
       if (filterType !== "all") q = q.eq("payment_type", filterType);
       if (filterStatus !== "all") q = q.eq("status", filterStatus);
+      if (datePrefix) q = q.like("due_date", `${datePrefix}%`);
 
       const { data, error } = await q;
       if (error) throw error;
@@ -254,8 +271,26 @@ export default function Lancamentos() {
 
       {/* Filtros */}
       <div className="flex gap-2 flex-wrap">
+        <Select value={filterYear} onValueChange={(v) => { setFilterYear(v); if (v === "all") setFilterMonth("all"); }}>
+          <SelectTrigger className="h-9 w-[100px]"><SelectValue placeholder="Ano" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos anos</SelectItem>
+            {FIN_YEARS.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterMonth} onValueChange={setFilterMonth} disabled={filterYear === "all"}>
+          <SelectTrigger className="h-9 w-[120px]"><SelectValue placeholder="Mês" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos meses</SelectItem>
+            {FIN_MONTHS.map((m) => (
+              <SelectItem key={m.value} value={m.value}>
+                {m.label.charAt(0).toUpperCase() + m.label.slice(1)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
+          <SelectTrigger className="h-9 w-[130px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos tipos</SelectItem>
             <SelectItem value="receita">Receita</SelectItem>
@@ -263,7 +298,7 @@ export default function Lancamentos() {
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="h-9 w-[130px]"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="pendente">Pendente</SelectItem>
