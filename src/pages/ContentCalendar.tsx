@@ -163,8 +163,8 @@ export default function ContentCalendar() {
       </div>
 
       {/* Calendar Grid - full width */}
-      <div>
-        <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden">
+      <div className="overflow-x-auto">
+        <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden min-w-[420px]">
           {WEEKDAYS.map((w) => (
             <div key={w} className="bg-muted p-2 text-center text-xs font-medium text-muted-foreground">{w}</div>
           ))}

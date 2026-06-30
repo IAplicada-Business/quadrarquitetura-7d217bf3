@@ -464,7 +464,7 @@ export default function ContentInstagram() {
             <DialogTitle>{editingMetric ? "Editar Métricas" : "Novas Métricas"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <Label>Perfil *</Label>
                 <Select
@@ -496,7 +496,7 @@ export default function ContentInstagram() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { label: "Seguidores", key: "followers" as const },
                 { label: "Posts", key: "post_count" as const },
@@ -521,7 +521,7 @@ export default function ContentInstagram() {
                 </div>
               ))}
             </div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { label: "Cor dominante", key: "palette_dominant" as const },
                 { label: "Cor secundária", key: "palette_secondary" as const },

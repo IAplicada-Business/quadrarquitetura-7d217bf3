@@ -240,7 +240,7 @@ export default function LeadsPipeline() {
             <Input placeholder="Buscar por nome, telefone ou email…" className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <Filter className="h-4 w-4 mr-1 text-muted-foreground" />
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -252,7 +252,7 @@ export default function LeadsPipeline() {
             </SelectContent>
           </Select>
           <Select value={filterOrigin} onValueChange={setFilterOrigin}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full sm:w-[160px]">
               <SelectValue placeholder="Origem" />
             </SelectTrigger>
             <SelectContent>
@@ -263,7 +263,7 @@ export default function LeadsPipeline() {
             </SelectContent>
           </Select>
           <Select value={filterPeriod} onValueChange={setFilterPeriod}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full sm:w-[160px]">
               <SelectValue placeholder="Período" />
             </SelectTrigger>
             <SelectContent>

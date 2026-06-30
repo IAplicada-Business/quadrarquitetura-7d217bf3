@@ -181,9 +181,9 @@ export default function TasksHub({ mode = "all", title }: TasksHubProps) {
 
       {/* Filters + view switch */}
       <div className="flex flex-wrap items-center gap-3">
-        <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-48 h-9" />
+        <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:w-48 h-9" />
         <Select value={filterProject} onValueChange={setFilterProject}>
-          <SelectTrigger className="w-[220px] h-9"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[220px] h-9"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value={PROJECT_ALL}>Todas as obras + pessoais</SelectItem>
             <SelectItem value={PROJECT_NONE}>Só tarefas pessoais (sem obra)</SelectItem>
@@ -193,7 +193,7 @@ export default function TasksHub({ mode = "all", title }: TasksHubProps) {
           </SelectContent>
         </Select>
         <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-[150px] h-9"><SelectValue placeholder="Categoria" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[150px] h-9"><SelectValue placeholder="Categoria" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas categorias</SelectItem>
             <SelectItem value="cronograma">Cronograma</SelectItem>
@@ -207,7 +207,7 @@ export default function TasksHub({ mode = "all", title }: TasksHubProps) {
           </SelectContent>
         </Select>
         <Select value={filterPriority} onValueChange={setFilterPriority}>
-          <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="Prioridade" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[140px] h-9"><SelectValue placeholder="Prioridade" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas prioridades</SelectItem>
             <SelectItem value="baixa">Baixa</SelectItem>

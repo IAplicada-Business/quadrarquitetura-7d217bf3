@@ -127,16 +127,16 @@ export default function VoiceTasksPage() {
       </div>
 
       <div className="flex flex-wrap gap-3 items-center">
-        <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-48 h-9" />
+        <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:w-48 h-9" />
         <Select value={filterProject} onValueChange={setFilterProject}>
-          <SelectTrigger className="w-[180px] h-9"><SelectValue placeholder="Projeto" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[180px] h-9"><SelectValue placeholder="Projeto" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os projetos</SelectItem>
             {projects.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
           </SelectContent>
         </Select>
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-[150px] h-9"><SelectValue placeholder="Tipo" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[150px] h-9"><SelectValue placeholder="Tipo" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os tipos</SelectItem>
             <SelectItem value="projeto">Projeto</SelectItem>
@@ -149,7 +149,7 @@ export default function VoiceTasksPage() {
         </Select>
         {view === "lista" && (
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[150px] h-9"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[150px] h-9"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os status</SelectItem>
               <SelectItem value="pendente">Pendente</SelectItem>
