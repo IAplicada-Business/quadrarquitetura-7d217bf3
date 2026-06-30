@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as sbClient } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { buildTimeline, type ScheduleStep, type BusinessDayOptions } from "@/lib/businessCalendar";
-import type { Tables } from "@/integrations/supabase/types";
 
-export type ScheduleScenario = Tables<"schedule_scenarios">;
-export type ScheduleScenarioActivity = Tables<"schedule_scenario_activities">;
+const supabase: any = sbClient;
+
+export type ScheduleScenario = any;
+export type ScheduleScenarioActivity = any;
 
 export interface ScenarioWithActivities extends ScheduleScenario {
   activities: ScheduleScenarioActivity[];
