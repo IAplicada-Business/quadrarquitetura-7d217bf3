@@ -49,9 +49,17 @@ const INSPIRATION_CATEGORIES = [
   { value: "branding", label: "Branding" },
 ];
 
-const CLAUDE_PROMPT = `Você é um especialista em marketing digital para arquitetura e design de interiores. Estou compartilhando prints da tela do meu Instagram Insights. Leia as imagens diretamente e extraia as métricas — não preciso preencher nada manualmente.
+const CLAUDE_PROMPT = `Você é um especialista em marketing digital para arquitetura e design de interiores. Você tem acesso ao navegador com o Instagram já aberto.
 
-Identifique o período visível nas imagens (ou use o que eu informar abaixo) e retorne EXATAMENTE neste formato JSON, sem nenhum texto adicional antes ou depois:
+Navegue até o Instagram Insights da conta que está logada no navegador e colete as métricas da última semana completa. Faça isso:
+
+1. Acesse o perfil → toque em "Ver Insights" (ou acesse instagram.com → perfil → Insights)
+2. Defina o período: últimos 7 dias
+3. Colete da aba "Visão Geral": seguidores totais, alcance, impressões
+4. Colete da aba "Conteúdo": desempenho de posts, reels e stories (likes, comentários, alcance, salvamentos)
+5. Calcule as médias
+
+Depois de navegar e coletar tudo, retorne EXATAMENTE neste formato JSON (sem nenhum texto antes do JSON):
 
 {
   "followers": [número total de seguidores],
@@ -63,10 +71,10 @@ Identifique o período visível nas imagens (ou use o que eu informar abaixo) e 
   "avg_reach": [alcance médio por post],
   "avg_saves": [média de salvamentos por post],
   "engagement_rate": [taxa de engajamento em porcentagem, ex: 3.45],
-  "notes": "Observações sobre a semana: destaques, posts que mais engajaram, tendências observadas"
+  "notes": "Observações sobre a semana: destaques, posts que mais engajaram, tendências"
 }
 
-Use null para qualquer campo que não esteja visível nas imagens. Depois de retornar o JSON, adicione um parágrafo curto com sua análise e recomendações para a próxima semana.`;
+Após o JSON, adicione uma análise curta com 2-3 recomendações práticas para a próxima semana.`;
 
 export default function ContentInstagram() {
   const {
