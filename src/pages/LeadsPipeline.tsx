@@ -351,6 +351,8 @@ export default function LeadsPipeline() {
         <div className="flex gap-4 overflow-x-auto pb-4 flex-1 min-h-0 max-h-[calc(100vh-16rem)]">
           {LEAD_STATUSES.map((status) => {
             const columnLeads = filtered.filter((l) => l.status === status);
+            // Hide legacy "perdido" column when empty — it's a migration artifact
+            if (status === "perdido" && columnLeads.length === 0) return null;
             const isOver = dragOverStatus === status;
             const isCollapsed = collapsedColumns.has(status);
             // Coluna colapsada vira faixa vertical estreita que ainda
