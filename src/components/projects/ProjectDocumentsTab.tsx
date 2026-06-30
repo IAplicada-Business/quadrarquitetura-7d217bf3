@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Upload, FileText, Download, Sparkles, Loader2 } from "lucide-react";
+import { Upload, FileText, Download, Sparkles, Loader2, BookText, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { MemorialDescritivoDialog } from "./MemorialDescritivoDialog";
 
 const CATEGORIES = ["planta", "contrato", "laudo", "proposta", "relatorio", "orcamento"];
 const categoryLabels: Record<string, string> = {
@@ -37,6 +38,7 @@ export function ProjectDocumentsTab({ projectId }: { projectId: string }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
+  const [memorialOpen, setMemorialOpen] = useState(false);
   const [summarizingId, setSummarizingId] = useState<string | null>(null);
   const [summaryText, setSummaryText] = useState<string | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -130,9 +132,14 @@ export function ProjectDocumentsTab({ projectId }: { projectId: string }) {
           <h3 className="text-lg font-semibold text-display">Documentos do Projeto</h3>
           <p className="text-sm text-muted-foreground">{documents.length} documentos</p>
         </div>
-        <Button size="sm" onClick={() => setFormOpen(true)}>
-          <Upload className="h-4 w-4 mr-1" /> Upload
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setMemorialOpen(true)} disabled={documents.length === 0}>
+            <BookText className="h-4 w-4 mr-1" /> Gerar Memorial
+          </Button>
+          <Button size="sm" onClick={() => setFormOpen(true)}>
+            <Upload className="h-4 w-4 mr-1" /> Upload
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -258,6 +265,19 @@ export function ProjectDocumentsTab({ projectId }: { projectId: string }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Memorial Descritivo */}
+      <MemorialDescritivoDialog
+        open={memorialOpen}
+        onOpenChange={setMemorialOpen}
+        projectId={projectId}
+        documents={documents.map((d) => ({
+          id: d.id,
+          name: d.name,
+          file_url: d.file_url,
+          category: d.category,
+        }))}
+      />
     </div>
   );
 }
