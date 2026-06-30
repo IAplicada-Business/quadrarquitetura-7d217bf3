@@ -659,8 +659,25 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
           {(() => {
             const today = new Date();
 
-            // Build rows: activities sorted by start_date DESC (reverse chronological)
-            const actRows = (useActivitiesSource ? activities : items.map((t: any) => ({
+            const closingStatusLabel: Record<string, string> = {
+              em_cotacao: "Em cotação",
+              aprovado: "Aprovado",
+              comprado: "Comprado",
+              entregue: "Entregue",
+            };
+            const closingStatusClass: Record<string, string> = {
+              em_cotacao: "bg-yellow-100 text-yellow-800 border-yellow-300",
+              aprovado: "bg-primary/10 text-primary border-primary/30",
+              comprado: "bg-blue-100 text-blue-800 border-blue-300",
+              entregue: "bg-success/15 text-success border-success/30",
+            };
+
+            // Construction activity rows
+            type ActivityRow = { type: "activity"; id: string; name: string; start_date: string | null; end_date: string | null; duration_days: number | null; sortDate: string };
+            type ClosingRow = { type: "closing"; id: string; name: string; start_date: string | null; end_date: string | null; status: ClosingScheduleItem["status"]; delivery_time: string | null; estimated_value: number | null; sortDate: string };
+            type AnyRow = ActivityRow | ClosingRow;
+
+            const actRows: ActivityRow[] = (useActivitiesSource ? activities : items.map((t: any) => ({
               id: t.id,
               name: t.task_name,
               start_date: t.start_date,
@@ -668,11 +685,34 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
               duration_days: t.estimated_days ?? null,
             })))
               .filter((a: any) => a.start_date || a.end_date)
-              .sort((a: any, b: any) => {
-                const aDate = a.start_date ?? a.end_date ?? "";
-                const bDate = b.start_date ?? b.end_date ?? "";
-                return bDate.localeCompare(aDate);
-              });
+              .map((a: any) => ({
+                type: "activity" as const,
+                id: a.id,
+                name: a.name ?? a.task_name,
+                start_date: a.start_date ?? null,
+                end_date: a.end_date ?? null,
+                duration_days: a.duration_days ?? null,
+                sortDate: a.start_date ?? a.end_date ?? "",
+              }));
+
+            // Closing (procurement) rows — delivery_date is when item arrives on site
+            const closingRowsMapped: ClosingRow[] = closingItems
+              .filter(i => i.delivery_date || i.closing_date)
+              .map(i => ({
+                type: "closing" as const,
+                id: i.id,
+                name: i.description,
+                start_date: i.closing_date ?? null,
+                end_date: i.delivery_date ?? null,
+                status: i.status,
+                delivery_time: i.delivery_time ?? null,
+                estimated_value: i.estimated_value ?? null,
+                sortDate: i.delivery_date ?? i.closing_date ?? "",
+              }));
+
+            // Merge and sort DESC
+            const allRows: AnyRow[] = [...actRows, ...closingRowsMapped]
+              .sort((a, b) => b.sortDate.localeCompare(a.sortDate));
 
             // Days to move-in
             const daysToMove = moveInDate
@@ -696,7 +736,7 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
                   </div>
                 )}
 
-                {actRows.length === 0 && !moveInDate ? (
+                {allRows.length === 0 && !moveInDate ? (
                   <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
                     Aplique o calendário no Gantt para gerar datas e exibir a lista do cliente.
                   </div>
@@ -705,21 +745,20 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/50">
-                          <TableHead>COMEÇO</TableHead>
-                          <TableHead>TÉRMINO</TableHead>
-                          <TableHead className="flex-1">SERVIÇO EXECUTADO</TableHead>
-                          <TableHead className="text-center">PRAZO (DIAS ÚTEIS)</TableHead>
+                          <TableHead>COMEÇO / FECHAMENTO</TableHead>
+                          <TableHead>TÉRMINO / ENTREGA</TableHead>
+                          <TableHead className="flex-1">SERVIÇO / ITEM</TableHead>
+                          <TableHead className="text-center">PRAZO / STATUS</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {/* Inject MUDANÇA row in correct chronological position */}
                         {(() => {
                           const rows: React.ReactNode[] = [];
                           let mudancaInserted = !moveInDate;
 
-                          for (const a of actRows) {
-                            // Insert MUDANÇA before the first row whose start_date < moveInDate
-                            if (!mudancaInserted && moveInDate && (a as any).start_date < moveInDate) {
+                          for (const row of allRows) {
+                            // Insert MUDANÇA before the first row whose sortDate < moveInDate
+                            if (!mudancaInserted && moveInDate && row.sortDate < moveInDate) {
                               mudancaInserted = true;
                               rows.push(
                                 <TableRow key="mudanca" className="bg-green-100 dark:bg-green-900/30 font-bold">
@@ -733,16 +772,40 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
                                 </TableRow>
                               );
                             }
-                            rows.push(
-                              <TableRow key={(a as any).id}>
-                                <TableCell className="text-sm">{formatDate((a as any).start_date)}</TableCell>
-                                <TableCell className="text-sm">{formatDate((a as any).end_date)}</TableCell>
-                                <TableCell className="text-sm font-medium">{(a as any).name ?? (a as any).task_name}</TableCell>
-                                <TableCell className="text-center text-sm">{(a as any).duration_days ?? "—"}</TableCell>
-                              </TableRow>
-                            );
+
+                            if (row.type === "closing") {
+                              rows.push(
+                                <TableRow key={`closing-${row.id}`} className="bg-blue-50/60 dark:bg-blue-950/20">
+                                  <TableCell className="text-sm text-muted-foreground">{formatDate(row.start_date)}</TableCell>
+                                  <TableCell className="text-sm text-muted-foreground">{formatDate(row.end_date)}</TableCell>
+                                  <TableCell className="text-sm font-medium flex items-center gap-2">
+                                    <ShoppingBag className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                                    {row.name}
+                                    {row.estimated_value != null && (
+                                      <span className="text-xs text-muted-foreground ml-1">
+                                        · {row.estimated_value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <Badge variant="outline" className={`text-[10px] px-1.5 ${closingStatusClass[row.status]}`}>
+                                      {closingStatusLabel[row.status]}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            } else {
+                              rows.push(
+                                <TableRow key={row.id}>
+                                  <TableCell className="text-sm">{formatDate(row.start_date)}</TableCell>
+                                  <TableCell className="text-sm">{formatDate(row.end_date)}</TableCell>
+                                  <TableCell className="text-sm font-medium">{row.name}</TableCell>
+                                  <TableCell className="text-center text-sm">{row.duration_days ?? "—"}</TableCell>
+                                </TableRow>
+                              );
+                            }
                           }
-                          // If moveInDate is later than all activities
+                          // If moveInDate is later than all rows
                           if (!mudancaInserted && moveInDate) {
                             rows.unshift(
                               <TableRow key="mudanca" className="bg-green-100 dark:bg-green-900/30 font-bold">
