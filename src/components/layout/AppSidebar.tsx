@@ -76,7 +76,7 @@ const iconMap: Record<string, LucideIcon> = {
   "Calendário": CalendarRange,
   "Roteiros": Film,
   "Publicações": Send,
-  "Instagrams": Instagram,
+  "Social": Instagram,
   "Configurações": Settings,
   "Usuários": Shield,
   "Notas Fiscais": Receipt,
@@ -137,7 +137,7 @@ const menuGroups: MenuGroup[] = [
       { title: "Calendário", url: "/content/calendar" },
       { title: "Roteiros", url: "/content/scripts" },
       { title: "Publicações", url: "/content/posts" },
-      { title: "Instagrams", url: "/content/instagram" },
+      { title: "Social", url: "/content/instagram" },
     ],
   },
   {

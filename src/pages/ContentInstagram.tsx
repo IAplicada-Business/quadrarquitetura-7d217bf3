@@ -49,11 +49,9 @@ const INSPIRATION_CATEGORIES = [
   { value: "branding", label: "Branding" },
 ];
 
-const CLAUDE_PROMPT = `Você é um especialista em marketing digital para arquitetura e design de interiores. Analise o desempenho do meu Instagram para o período indicado e retorne um objeto JSON estruturado com as métricas da semana.
+const CLAUDE_PROMPT = `Você é um especialista em marketing digital para arquitetura e design de interiores. Estou compartilhando prints da tela do meu Instagram Insights. Leia as imagens diretamente e extraia as métricas — não preciso preencher nada manualmente.
 
-Período: [SEMANA: dd/mm/yyyy a dd/mm/yyyy]
-
-Por favor, analise os dados fornecidos abaixo e retorne EXATAMENTE neste formato JSON (sem nenhum texto adicional antes ou depois):
+Identifique o período visível nas imagens (ou use o que eu informar abaixo) e retorne EXATAMENTE neste formato JSON, sem nenhum texto adicional antes ou depois:
 
 {
   "followers": [número total de seguidores],
@@ -65,11 +63,10 @@ Por favor, analise os dados fornecidos abaixo e retorne EXATAMENTE neste formato
   "avg_reach": [alcance médio por post],
   "avg_saves": [média de salvamentos por post],
   "engagement_rate": [taxa de engajamento em porcentagem, ex: 3.45],
-  "notes": "Observações sobre a semana: destaques, posts que performaram melhor, tendências observadas"
+  "notes": "Observações sobre a semana: destaques, posts que mais engajaram, tendências observadas"
 }
 
-Dados do período (cole aqui as métricas do Instagram Insights):
-[COLE OS DADOS DO INSTAGRAM INSIGHTS AQUI]`;
+Use null para qualquer campo que não esteja visível nas imagens. Depois de retornar o JSON, adicione um parágrafo curto com sua análise e recomendações para a próxima semana.`;
 
 export default function ContentInstagram() {
   const {
