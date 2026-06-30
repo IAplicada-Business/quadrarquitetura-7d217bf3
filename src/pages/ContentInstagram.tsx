@@ -51,9 +51,9 @@ const INSPIRATION_CATEGORIES = [
 
 const CLAUDE_PROMPT = `Você é um especialista em marketing digital para arquitetura e design de interiores. Você tem acesso ao navegador com o Instagram já aberto.
 
-Navegue até o Instagram Insights da conta (@marimarquescb) e colete as métricas da última semana completa. Faça isso:
+Navegue até o Instagram Insights da conta que está logada no navegador e colete as métricas da última semana completa. Faça isso:
 
-1. Acesse instagram.com/marimarquescb → Insights (ou instagram.com/marimarquescb/insights)
+1. Acesse o perfil → toque em "Ver Insights" (ou acesse instagram.com → perfil → Insights)
 2. Defina o período: últimos 7 dias
 3. Colete da aba "Visão Geral": seguidores totais, alcance, impressões
 4. Colete da aba "Conteúdo": desempenho de posts, reels e stories (likes, comentários, alcance, salvamentos)
