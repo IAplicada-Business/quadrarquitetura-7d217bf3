@@ -28,6 +28,7 @@ import { useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import logoBege from "@/assets/logo-bege.png";
+import { InstallPwaButton } from "@/components/layout/InstallPwaButton";
 import {
   Tooltip,
   TooltipContent,
@@ -265,6 +266,9 @@ export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
               </div>
             ))}
           </nav>
+          <div className="py-2 border-t border-sidebar-border/40">
+            <InstallPwaButton variant="sidebar-collapsed" />
+          </div>
         </aside>
       </TooltipProvider>
     );
@@ -277,7 +281,7 @@ export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
         <img src={logoBege} alt="Quadra Arquitetura" className="h-10 w-auto object-contain object-left animate-fade-in" />
       </div>
 
-      <nav className="flex-1 py-3 px-2 overflow-y-auto scrollbar-sidebar">
+      <nav className="flex-1 py-3 px-2 overflow-y-auto scrollbar-sidebar min-h-0">
         {menuGroups.map((group) => {
           const GroupIcon = groupIcons[group.label];
           const isOpen = openGroups[group.label];
@@ -386,6 +390,9 @@ export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
           );
         })}
       </nav>
+      <div className="px-2 py-2 border-t border-sidebar-border/40 shrink-0">
+        <InstallPwaButton variant="sidebar" />
+      </div>
     </aside>
   );
 }
