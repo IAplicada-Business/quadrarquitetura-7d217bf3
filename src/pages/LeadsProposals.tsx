@@ -25,6 +25,7 @@ import ReactDOM from "react-dom/client";
 import { flushSync } from "react-dom";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { useContracts } from "@/hooks/useContracts";
+import { C } from "@/lib/chartColors";
 
 const statusLabels: Record<string, string> = {
   rascunho: "Rascunho", enviada: "Enviada", aprovada: "Aprovada", rejeitada: "Rejeitada",
@@ -393,13 +394,8 @@ export default function LeadsProposals() {
                       </div>
                       <Badge
                         variant={p.status === "rejeitada" ? "destructive" : "secondary"}
-                        className={
-                          p.status === "enviada"
-                            ? "bg-[#1B2A4A] text-white border-[#1B2A4A] hover:bg-[#1B2A4A]/90"
-                            : p.status === "aprovada"
-                            ? "bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100/90"
-                            : ""
-                        }
+                        className={p.status === "aprovada" ? "bg-emerald-100 text-emerald-800 border-emerald-200" : ""}
+                        style={p.status === "enviada" ? { backgroundColor: C.navy, color: "white", borderColor: C.navy } : {}}
                       >
                         {statusLabels[p.status] || p.status}
                       </Badge>

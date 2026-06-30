@@ -16,6 +16,7 @@ import { useContentSeries } from "@/hooks/useContentSeries";
 import SupplierCategoriesManager from "@/components/settings/SupplierCategoriesManager";
 import MessageTemplatesSettings from "@/components/settings/MessageTemplatesSettings";
 import ActivityTemplatesManager from "@/components/settings/ActivityTemplatesManager";
+import { BRAND_HEX } from "@/lib/chartColors";
 import {
   useCostReferenceTable,
   CONSTRUCTION_TYPE_LABELS,
@@ -75,7 +76,7 @@ function ContentSeriesManager() {
   const { series, create, update, remove } = useContentSeries();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [color, setColor] = useState("#1B2A4A");
+  const [color, setColor] = useState(BRAND_HEX.navy);
   const [editId, setEditId] = useState<string | null>(null);
 
   const handleSave = () => {
