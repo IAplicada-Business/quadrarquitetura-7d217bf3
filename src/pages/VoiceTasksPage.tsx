@@ -5,17 +5,18 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useVoiceTasks, VoiceTask } from "@/hooks/useVoiceTasks";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, CheckCircle2, Clock, Plus, ListChecks, LayoutGrid, List, Loader2 } from "lucide-react";
+import { Trash2, CheckCircle2, Clock, Plus, ListChecks, LayoutGrid, List, Loader2, Send } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { VoiceTaskForm } from "@/components/construction/VoiceTaskForm";
+import { toast } from "@/hooks/use-toast";
 
 const priorityColors: Record<string, string> = {
   baixa: "bg-muted text-muted-foreground",
@@ -48,6 +49,7 @@ const KANBAN_COLUMNS: Array<{ status: string; label: string; tone: string }> = [
 
 export default function VoiceTasksPage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [filterProject, setFilterProject] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -76,20 +78,19 @@ export default function VoiceTasksPage() {
     return true;
   });
 
-  // Group by project
+  // Group by project for list view — tasks without project go to "Pessoal"
   const grouped = filtered.reduce<Record<string, { name: string; tasks: VoiceTask[] }>>((acc, task) => {
-    const proj = projects.find((p) => p.id === task.project_id);
-    const name = proj?.name || "Projeto desconhecido";
-    if (!acc[task.project_id]) acc[task.project_id] = { name, tasks: [] };
-    acc[task.project_id].tasks.push(task);
+    const key = task.project_id ?? "__pessoal__";
+    if (!acc[key]) {
+      const proj = projects.find((p) => p.id === task.project_id);
+      acc[key] = { name: proj?.name || "Pessoal / Sem projeto", tasks: [] };
+    }
+    acc[key].tasks.push(task);
     return acc;
   }, {});
 
   const projectsMap = Object.fromEntries(projects.map((p) => [p.id, p.name]));
 
-  // Para o kanban, filtramos as tarefas top-level (sem parent_id) e
-  // separamos por status. Subtarefas continuam aparecendo embaixo do
-  // pai (compatível com voice_tasks gerada por áudio em batch).
   const topLevel = filtered.filter((t) => !t.parent_id);
   const byStatus: Record<string, VoiceTask[]> = {};
   for (const col of KANBAN_COLUMNS) byStatus[col.status] = [];
@@ -106,13 +107,31 @@ export default function VoiceTasksPage() {
     update({ id: result.draggableId, status: newStatus });
   };
 
+  const sendToKanbanQuadra = async (task: VoiceTask) => {
+    if (!task.project_id) {
+      toast({ title: "Tarefa já está no Kanban Quadra", description: "Esta tarefa não tem projeto vinculado." });
+      return;
+    }
+    const { error } = await supabase
+      .from("voice_tasks")
+      .update({ project_id: null } as any)
+      .eq("id", task.id);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["voice_tasks"] });
+    toast({ title: "Enviada para Kanban Quadra", description: `"${task.title}" agora aparece no Kanban Quadra.` });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-display">Tarefas Quadra</h1>
+          <h1 className="text-2xl font-bold text-display">Audio Tasks</h1>
           <p className="text-sm text-muted-foreground">
-            Tarefas criadas por voz, digitação ou geradas automaticamente. Arraste entre colunas para mudar o status.
+            Tarefas criadas por voz, digitação ou geradas automaticamente. Use{" "}
+            <Send className="h-3 w-3 inline-block" /> para enviar ao Kanban Quadra.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -216,9 +235,13 @@ export default function VoiceTasksPage() {
                                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{task.description}</p>
                                 )}
                                 <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
-                                    {projectsMap[task.project_id] ?? "—"}
-                                  </Badge>
+                                  {task.project_id ? (
+                                    <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
+                                      {projectsMap[task.project_id] ?? "—"}
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-[10px] h-4 px-1.5 text-success border-success/40">Kanban Quadra</Badge>
+                                  )}
                                   <Badge variant="outline" className="text-[10px] h-4 px-1.5">
                                     {categoryLabels[task.category] || task.category}
                                   </Badge>
@@ -235,6 +258,17 @@ export default function VoiceTasksPage() {
                                   )}
                                 </div>
                                 <div className="flex items-center justify-end gap-1 mt-2">
+                                  {task.project_id && (
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-6 w-6 text-primary"
+                                      title="Enviar para Kanban Quadra"
+                                      onClick={() => sendToKanbanQuadra(task)}
+                                    >
+                                      <Send className="h-3 w-3" />
+                                    </Button>
+                                  )}
                                   <Button
                                     size="icon"
                                     variant="ghost"
@@ -262,16 +296,18 @@ export default function VoiceTasksPage() {
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <ListChecks className="h-12 w-12 text-muted-foreground/30 mb-4" />
             <p className="text-muted-foreground">Nenhuma tarefa encontrada.</p>
-            <p className="text-sm text-muted-foreground">
-              Use o botão <strong>Nova Tarefa</strong> ou o assistente de voz no header.
-            </p>
           </CardContent>
         </Card>
       ) : (
-        Object.entries(grouped).map(([projectId, group]) => (
-          <Card key={projectId}>
+        Object.entries(grouped).map(([key, group]) => (
+          <Card key={key}>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">{group.name}</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                {group.name}
+                {key === "__pessoal__" && (
+                  <Badge variant="outline" className="text-[10px] text-success border-success/40">Kanban Quadra</Badge>
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {group.tasks
@@ -294,7 +330,18 @@ export default function VoiceTasksPage() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 shrink-0">
+                          {task.project_id && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-primary"
+                              title="Enviar para Kanban Quadra"
+                              onClick={() => sendToKanbanQuadra(task)}
+                            >
+                              <Send className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                           {task.status === "pendente" && (
                             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => update({ id: task.id, status: "concluido" })}>
                               <CheckCircle2 className="h-3.5 w-3.5 text-success" />

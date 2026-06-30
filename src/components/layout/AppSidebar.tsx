@@ -21,6 +21,7 @@ import {
   Settings,
   Shield,
   Receipt,
+  Mic,
   LucideIcon,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -79,6 +80,7 @@ const iconMap: Record<string, LucideIcon> = {
   "Kanban Projetos": Building2,
   "Kanban Quadra": ListChecks,
   "Histórico de Voz": ListChecks,
+  "Audio Tasks": Mic,
   "Fornecedores": Truck,
   "Calendário": CalendarRange,
   "Roteiros": Film,
@@ -112,6 +114,7 @@ const menuGroups: MenuGroup[] = [
         subItems: [
           { title: "Kanban Projetos", url: "/tasks/projetos" },
           { title: "Kanban Quadra", url: "/tasks/quadra" },
+          { title: "Audio Tasks", url: "/construction/voice-tasks" },
         ],
       },
     ],
@@ -142,7 +145,6 @@ const menuGroups: MenuGroup[] = [
           { title: "Acompanhamento", url: "/construction/tracking" },
         ],
       },
-      { title: "Histórico de Voz", url: "/construction/voice-tasks" },
       { title: "Fornecedores", url: "/construction/suppliers" },
     ],
   },
