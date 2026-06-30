@@ -14,7 +14,10 @@ import {
   BarChart3,
   Bell,
   ChevronRight,
+  Search,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -63,6 +66,10 @@ export default function DashboardObras() {
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
 
+  const [activeTab, setActiveTab] = useState<"geral" | "multiobras">("geral");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterSearch, setFilterSearch] = useState("");
+
   // ── Queries — dados ao vivo, refetch ao focar a aba ──
   const liveOpts = { enabled: !!user, staleTime: 30 * 1000, refetchOnWindowFocus: true, refetchOnMount: true };
 
@@ -104,7 +111,11 @@ export default function DashboardObras() {
 
   // ── BLOCO 1 — Visão Geral de Projetos ──
   const projectCards = useMemo(() => {
-    const active = projects.filter((p) => ["execucao", "mobilizacao", "planejamento"].includes(p.status ?? "") || !p.status);
+    const active = projects.filter((p) =>
+      (["execucao", "mobilizacao", "planejamento"].includes(p.status ?? "") || !p.status) &&
+      (filterStatus === "all" || p.status === filterStatus) &&
+      (!filterSearch || p.name?.toLowerCase().includes(filterSearch.toLowerCase()))
+    );
     return active.map((proj) => {
       const tasks = scheduleTasks.filter((t) => t.project_id === proj.id);
       const total = tasks.length;
@@ -127,7 +138,7 @@ export default function DashboardObras() {
         nextTask: nextTask?.task_name ?? null,
       };
     });
-  }, [projects, scheduleTasks, todayStr]);
+  }, [projects, scheduleTasks, todayStr, filterStatus, filterSearch]);
 
   // ── BLOCO 2 — Alertas ──
   const alerts = useMemo(() => {
@@ -187,7 +198,11 @@ export default function DashboardObras() {
 
   // ── Multi-Obras (mantido) ──
   const multiObras = useMemo(() => {
-    const activeProjects = projects.filter((p) => p.status === "execucao" || p.status === "mobilizacao" || p.status === "planejamento");
+    const activeProjects = projects.filter((p) =>
+      (p.status === "execucao" || p.status === "mobilizacao" || p.status === "planejamento") &&
+      (filterStatus === "all" || p.status === filterStatus) &&
+      (!filterSearch || p.name?.toLowerCase().includes(filterSearch.toLowerCase()))
+    );
     const activeProjectIds = new Set(activeProjects.map((p) => p.id));
 
     // Supplier Matrix
@@ -263,9 +278,7 @@ export default function DashboardObras() {
       supplierMatrix: { suppliers, projects: activeProjects, matrix },
       timeline: { items: timelineItems, globalStart, globalEnd },
     };
-  }, [projects, scheduleTasks, todayStr, today]);
-
-  const [activeTab, setActiveTab] = useState<"geral" | "multiobras">("geral");
+  }, [projects, scheduleTasks, todayStr, today, filterStatus, filterSearch]);
 
   return (
     <div className="space-y-5">
@@ -284,6 +297,22 @@ export default function DashboardObras() {
             {t === "geral" ? "Visão Geral" : "Multi-Obras"}
           </button>
         ))}
+      </div>
+
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+          <Input placeholder="Buscar obra..." value={filterSearch} onChange={(e) => setFilterSearch(e.target.value)} className="pl-8 w-full sm:w-48 h-9" />
+        </div>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-full sm:w-[160px] h-9"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="execucao">Em Execução</SelectItem>
+            <SelectItem value="mobilizacao">Mobilização</SelectItem>
+            <SelectItem value="planejamento">Planejamento</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {activeTab === "geral" && (<>
@@ -447,6 +476,38 @@ export default function DashboardObras() {
 
       {/* ═══ ABA MULTI-OBRAS ═══ */}
       {activeTab === "multiobras" && (<>
+
+      {/* KPI bar */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Obras Ativas</p>
+            <p className="text-2xl font-semibold" style={{ color: C.navy }}>{multiObras.supplierMatrix.projects.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Fornecedores</p>
+            <p className="text-2xl font-semibold" style={{ color: C.terra }}>{multiObras.supplierMatrix.suppliers.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Progresso Médio</p>
+            <p className="text-2xl font-semibold" style={{ color: C.success }}>
+              {multiObras.timeline.items.length > 0 ? Math.round(multiObras.timeline.items.reduce((s, i) => s + i.progress, 0) / multiObras.timeline.items.length) : 0}%
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Conflitos</p>
+            <p className="text-2xl font-semibold" style={{ color: C.warning }}>
+              {multiObras.supplierMatrix.suppliers.filter(s => multiObras.supplierMatrix.projects.some(p => multiObras.supplierMatrix.matrix[s]?.[p.id]?.conflict)).length}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Mapa de Fornecedores */}
       <Card>

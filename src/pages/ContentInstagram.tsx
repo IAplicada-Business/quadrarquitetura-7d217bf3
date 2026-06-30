@@ -1,11 +1,4 @@
-// Sprint 4d (item 15b) — Análise comparativa de Instagrams.
-// Mariana (vídeo 15): "ficou faltando aquele ponto onde você faria
-// análise comparando os Instagrams que a gente mandou pra você".
-//
-// Métricas são input manual (sem integração com API do IG). Tela
-// dividida em: perfis cadastrados (Quadra + referências), métricas
-// mensais por perfil e comparativo lado a lado.
-import { useMemo, useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,14 +8,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Instagram, BarChart3 } from "lucide-react";
-import { useInstagramAnalysis, type InstagramProfile, type InstagramMetric } from "@/hooks/useInstagramAnalysis";
+import {
+  Plus, Pencil, Trash2, Instagram, TrendingUp, TrendingDown, Minus,
+  Users, Heart, MessageCircle, Eye, Bookmark, Star, Copy, Check,
+  Link,
+} from "lucide-react";
+import { useInstagramAnalysis } from "@/hooks/useInstagramAnalysis";
+import { useInstagramInspirations, type InstagramInspiration } from "@/hooks/useInstagramInspirations";
+import { format, parseISO, startOfWeek, endOfWeek } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import type { InstagramMetric } from "@/hooks/useInstagramAnalysis";
 
-function fmtMonth(d: string) {
-  return new Date(d + "T00:00:00").toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
-}
-function fmtNumber(n: number | null | undefined) {
+function fmtN(n: number | null | undefined) {
   if (n == null) return "—";
   return new Intl.NumberFormat("pt-BR").format(n);
 }
@@ -31,88 +28,174 @@ function fmtPct(n: number | null | undefined) {
   return `${n.toFixed(2)}%`;
 }
 
+const METRIC_FIELDS = [
+  { key: "followers" as const, label: "Seguidores", icon: Users },
+  { key: "post_count" as const, label: "Posts", icon: Instagram },
+  { key: "reel_count" as const, label: "Reels", icon: TrendingUp },
+  { key: "avg_likes" as const, label: "Likes médios", icon: Heart },
+  { key: "avg_comments" as const, label: "Coment. médios", icon: MessageCircle },
+  { key: "avg_reach" as const, label: "Alcance médio", icon: Eye },
+  { key: "avg_saves" as const, label: "Saves médios", icon: Bookmark },
+  { key: "engagement_rate" as const, label: "Engajamento %", icon: Star },
+];
+
+const INSPIRATION_CATEGORIES = [
+  { value: "geral", label: "Geral" },
+  { value: "layout", label: "Layout" },
+  { value: "copy", label: "Copy" },
+  { value: "reels", label: "Reels" },
+  { value: "carrossel", label: "Carrossel" },
+  { value: "story", label: "Story" },
+  { value: "branding", label: "Branding" },
+];
+
+const CLAUDE_PROMPT = `Você é um especialista em marketing digital para arquitetura e design de interiores. Analise o desempenho do meu Instagram para o período indicado e retorne um objeto JSON estruturado com as métricas da semana.
+
+Período: [SEMANA: dd/mm/yyyy a dd/mm/yyyy]
+
+Por favor, analise os dados fornecidos abaixo e retorne EXATAMENTE neste formato JSON (sem nenhum texto adicional antes ou depois):
+
+{
+  "followers": [número total de seguidores],
+  "post_count": [número de posts no período],
+  "reel_count": [número de reels no período],
+  "story_count": [número de stories no período],
+  "avg_likes": [média de likes por post],
+  "avg_comments": [média de comentários por post],
+  "avg_reach": [alcance médio por post],
+  "avg_saves": [média de salvamentos por post],
+  "engagement_rate": [taxa de engajamento em porcentagem, ex: 3.45],
+  "notes": "Observações sobre a semana: destaques, posts que performaram melhor, tendências observadas"
+}
+
+Dados do período (cole aqui as métricas do Instagram Insights):
+[COLE OS DADOS DO INSTAGRAM INSIGHTS AQUI]`;
+
 export default function ContentInstagram() {
   const {
     profiles, metrics, isLoading,
     createProfile, updateProfile, removeProfile,
     createMetric, updateMetric, removeMetric,
   } = useInstagramAnalysis();
+  const { inspirations, isLoading: inspsLoading, create: createInsp, update: updateInsp, remove: removeInsp } = useInstagramInspirations();
 
+  // Own profile (kind = 'self')
+  const ownProfile = useMemo(() => profiles.find(p => p.kind === "self" && p.is_active), [profiles]);
+
+  // Metrics history filter
+  const [metricPeriodFilter, setMetricPeriodFilter] = useState<string>("all");
+  const [metricYear, setMetricYear] = useState<string>(String(new Date().getFullYear()));
+
+  // AI parse state
+  const [aiResponseText, setAiResponseText] = useState("");
+  const [aiParsed, setAiParsed] = useState<Partial<InstagramMetric> | null>(null);
+  const [promptCopied, setPromptCopied] = useState(false);
+
+  // Profile setup dialog
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
-  const [editingProfile, setEditingProfile] = useState<InstagramProfile | null>(null);
-  const [profileDraft, setProfileDraft] = useState<{
-    handle: string;
-    label: string;
-    kind: "self" | "reference";
-    notes: string;
-    is_active: boolean;
-  }>({ handle: "", label: "", kind: "reference", notes: "", is_active: true });
+  const [profileDraft, setProfileDraft] = useState({ handle: "", label: "" });
 
+  // Metric dialog
   const [metricDialogOpen, setMetricDialogOpen] = useState(false);
   const [editingMetric, setEditingMetric] = useState<InstagramMetric | null>(null);
   const today = new Date();
-  const todayIso = today.toISOString().slice(0, 10);
-  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
   const [metricDraft, setMetricDraft] = useState<Partial<InstagramMetric>>({
-    profile_id: "",
-    period_start: firstOfMonth,
-    period_end: todayIso,
+    profile_id: ownProfile?.id ?? "",
+    period_start: format(weekStart, "yyyy-MM-dd"),
+    period_end: format(weekEnd, "yyyy-MM-dd"),
   });
 
-  // === Perfis ===
-  const openCreateProfile = () => {
-    setEditingProfile(null);
-    setProfileDraft({ handle: "", label: "", kind: "reference", notes: "", is_active: true });
-    setProfileDialogOpen(true);
-  };
-  const openEditProfile = (p: InstagramProfile) => {
-    setEditingProfile(p);
-    setProfileDraft({
-      handle: p.handle,
-      label: p.label ?? "",
-      kind: (p.kind as "self" | "reference") ?? "reference",
-      notes: p.notes ?? "",
-      is_active: p.is_active,
-    });
-    setProfileDialogOpen(true);
-  };
-  const saveProfile = () => {
-    if (!profileDraft.handle.trim()) return;
-    const handle = profileDraft.handle.startsWith("@")
-      ? profileDraft.handle.slice(1).trim()
-      : profileDraft.handle.trim();
-    const payload = {
-      handle,
-      label: profileDraft.label.trim() || null,
-      kind: profileDraft.kind,
-      notes: profileDraft.notes.trim() || null,
-      is_active: profileDraft.is_active,
-    };
-    if (editingProfile) {
-      updateProfile.mutate({ id: editingProfile.id, ...payload }, {
-        onSuccess: () => setProfileDialogOpen(false),
-      });
-    } else {
-      createProfile.mutate(payload, { onSuccess: () => setProfileDialogOpen(false) });
-    }
-  };
+  // Inspiration dialog
+  const [inspDialogOpen, setInspDialogOpen] = useState(false);
+  const [editingInsp, setEditingInsp] = useState<InstagramInspiration | null>(null);
+  const [inspDraft, setInspDraft] = useState<Partial<InstagramInspiration>>({ category: "geral", is_favorite: false });
+  const [inspCatFilter, setInspCatFilter] = useState("all");
+  const [inspFavOnly, setInspFavOnly] = useState(false);
 
-  // === Métricas ===
-  const openCreateMetric = (profileId?: string) => {
+  // Filtered metrics
+  const ownMetrics = useMemo(() => {
+    if (!ownProfile) return [];
+    return metrics.filter(m => m.profile_id === ownProfile.id)
+      .sort((a, b) => b.period_start.localeCompare(a.period_start));
+  }, [metrics, ownProfile]);
+
+  const filteredMetrics = useMemo(() => {
+    if (metricPeriodFilter === "all") return ownMetrics;
+    return ownMetrics.filter(m => m.period_start.startsWith(
+      metricPeriodFilter === "year" ? metricYear : `${metricYear}-`
+    ));
+  }, [ownMetrics, metricPeriodFilter, metricYear]);
+
+  const latestMetric = ownMetrics[0];
+  const prevMetric = ownMetrics[1];
+
+  function trend(curr: number | null | undefined, prev: number | null | undefined) {
+    if (!curr || !prev) return null;
+    const pct = ((curr - prev) / prev) * 100;
+    return pct;
+  }
+
+  // Inspiration helpers
+  const filteredInspirations = useMemo(() => {
+    return inspirations.filter(i => {
+      if (inspFavOnly && !i.is_favorite) return false;
+      if (inspCatFilter !== "all" && i.category !== inspCatFilter) return false;
+      return true;
+    });
+  }, [inspirations, inspCatFilter, inspFavOnly]);
+
+  // AI parse
+  function handleParseAI() {
+    try {
+      const jsonMatch = aiResponseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("Não encontrei JSON na resposta");
+      const parsed = JSON.parse(jsonMatch[0]);
+      setAiParsed(parsed);
+      // Pre-fill metric draft
+      setMetricDraft(d => ({
+        ...d,
+        followers: parsed.followers ?? d.followers,
+        post_count: parsed.post_count ?? d.post_count,
+        reel_count: parsed.reel_count ?? d.reel_count,
+        story_count: parsed.story_count ?? d.story_count,
+        avg_likes: parsed.avg_likes ?? d.avg_likes,
+        avg_comments: parsed.avg_comments ?? d.avg_comments,
+        avg_reach: parsed.avg_reach ?? d.avg_reach,
+        avg_saves: parsed.avg_saves ?? d.avg_saves,
+        engagement_rate: parsed.engagement_rate ?? d.engagement_rate,
+        notes: parsed.notes ?? d.notes,
+      }));
+      setMetricDialogOpen(true);
+    } catch (e: any) {
+      alert("Erro ao interpretar resposta: " + e.message);
+    }
+  }
+
+  function handleCopyPrompt() {
+    navigator.clipboard.writeText(CLAUDE_PROMPT);
+    setPromptCopied(true);
+    setTimeout(() => setPromptCopied(false), 2000);
+  }
+
+  function openNewMetric() {
     setEditingMetric(null);
     setMetricDraft({
-      profile_id: profileId ?? profiles[0]?.id ?? "",
-      period_start: firstOfMonth,
-      period_end: todayIso,
+      profile_id: ownProfile?.id ?? "",
+      period_start: format(weekStart, "yyyy-MM-dd"),
+      period_end: format(weekEnd, "yyyy-MM-dd"),
     });
     setMetricDialogOpen(true);
-  };
-  const openEditMetric = (m: InstagramMetric) => {
+  }
+
+  function openEditMetric(m: InstagramMetric) {
     setEditingMetric(m);
     setMetricDraft({ ...m });
     setMetricDialogOpen(true);
-  };
-  const saveMetric = () => {
+  }
+
+  function saveMetric() {
     const d = metricDraft;
     if (!d.profile_id || !d.period_start || !d.period_end) return;
     const payload = {
@@ -128,432 +211,440 @@ export default function ContentInstagram() {
       avg_reach: d.avg_reach ?? null,
       avg_saves: d.avg_saves ?? null,
       engagement_rate: d.engagement_rate ?? null,
-      palette_dominant: d.palette_dominant ?? null,
-      palette_secondary: d.palette_secondary ?? null,
-      palette_tertiary: d.palette_tertiary ?? null,
-      palette_quaternary: d.palette_quaternary ?? null,
       notes: d.notes ?? null,
+      palette_dominant: null,
+      palette_secondary: null,
+      palette_tertiary: null,
+      palette_quaternary: null,
     };
     if (editingMetric) {
-      updateMetric.mutate({ id: editingMetric.id, ...payload }, {
-        onSuccess: () => setMetricDialogOpen(false),
-      });
+      updateMetric.mutate({ id: editingMetric.id, ...payload }, { onSuccess: () => { setMetricDialogOpen(false); setAiParsed(null); setAiResponseText(""); } });
     } else {
-      createMetric.mutate(payload, { onSuccess: () => setMetricDialogOpen(false) });
+      createMetric.mutate(payload, { onSuccess: () => { setMetricDialogOpen(false); setAiParsed(null); setAiResponseText(""); } });
     }
-  };
+  }
 
-  const profilesById = useMemo(
-    () => Object.fromEntries(profiles.map((p) => [p.id, p])),
-    [profiles],
-  );
-
-  // === Comparativo (último período registrado por perfil) ===
-  const latestByProfile = useMemo(() => {
-    const map = new Map<string, InstagramMetric>();
-    for (const m of metrics) {
-      const cur = map.get(m.profile_id);
-      if (!cur || m.period_start > cur.period_start) map.set(m.profile_id, m);
+  function saveInspiration() {
+    const d = inspDraft;
+    if (!d.title?.trim()) return;
+    const payload = {
+      title: d.title,
+      source_url: d.source_url ?? null,
+      image_url: d.image_url ?? null,
+      category: d.category ?? "geral",
+      tags: d.tags ?? null,
+      notes: d.notes ?? null,
+      is_favorite: d.is_favorite ?? false,
+    };
+    if (editingInsp) {
+      updateInsp.mutate({ id: editingInsp.id, ...payload }, { onSuccess: () => setInspDialogOpen(false) });
+    } else {
+      createInsp.mutate(payload, { onSuccess: () => setInspDialogOpen(false) });
     }
-    return profiles
-      .filter((p) => p.is_active && map.has(p.id))
-      .map((p) => ({ profile: p, metric: map.get(p.id)! }));
-  }, [metrics, profiles]);
+  }
 
-  const setMetricField = (field: keyof InstagramMetric, value: any) =>
-    setMetricDraft((d) => ({ ...d, [field]: value }));
+  if (isLoading) return <div className="py-12 text-center text-muted-foreground">Carregando…</div>;
 
   return (
-    <div className="space-y-6 p-0">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-playfair">Análise de Instagrams</h1>
+          <h1 className="text-2xl font-display">Instagram</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Comparação manual de perfis de referência. Cadastre os perfis (Quadra + referências) e
-            registre métricas mensais para comparar engajamento, frequência e paleta.
+            Métricas semanais e inspirações de conteúdo
           </p>
         </div>
+        {ownProfile && (
+          <Badge variant="secondary" className="text-sm gap-1.5 px-3 py-1.5">
+            <Instagram className="h-3.5 w-3.5" />
+            @{ownProfile.handle}
+          </Badge>
+        )}
       </div>
 
-      {isLoading ? (
-        <div className="py-12 text-center text-muted-foreground">Carregando…</div>
-      ) : (
-        <Tabs defaultValue="comparativo">
-          <TabsList>
-            <TabsTrigger value="comparativo">Comparativo</TabsTrigger>
-            <TabsTrigger value="perfis">Perfis ({profiles.length})</TabsTrigger>
-            <TabsTrigger value="metricas">Métricas ({metrics.length})</TabsTrigger>
-          </TabsList>
-
-          {/* === Comparativo === */}
-          <TabsContent value="comparativo" className="mt-4 space-y-4">
-            {latestByProfile.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  Cadastre perfis e adicione métricas para ver o comparativo.
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4" />
-                    Último período registrado por perfil
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0 overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="sticky left-0 bg-background">Métrica</TableHead>
-                        {latestByProfile.map(({ profile, metric }) => (
-                          <TableHead key={profile.id} className="min-w-[160px]">
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-foreground flex items-center gap-1.5">
-                                @{profile.handle}
-                                {profile.kind === "self" && (
-                                  <Badge variant="secondary" className="text-[9px]">Quadra</Badge>
-                                )}
-                              </span>
-                              <span className="text-[10px] font-normal">
-                                {fmtMonth(metric.period_start)} → {fmtMonth(metric.period_end)}
-                              </span>
-                            </div>
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {[
-                        { label: "Seguidores", key: "followers" as const, fmt: fmtNumber },
-                        { label: "Posts no período", key: "post_count" as const, fmt: fmtNumber },
-                        { label: "Reels no período", key: "reel_count" as const, fmt: fmtNumber },
-                        { label: "Stories no período", key: "story_count" as const, fmt: fmtNumber },
-                        { label: "Média de likes", key: "avg_likes" as const, fmt: fmtNumber },
-                        { label: "Média de comentários", key: "avg_comments" as const, fmt: fmtNumber },
-                        { label: "Média de alcance", key: "avg_reach" as const, fmt: fmtNumber },
-                        { label: "Média de saves", key: "avg_saves" as const, fmt: fmtNumber },
-                        { label: "Engagement rate", key: "engagement_rate" as const, fmt: fmtPct },
-                      ].map((row) => (
-                        <TableRow key={row.key}>
-                          <TableCell className="sticky left-0 bg-background font-medium text-xs">
-                            {row.label}
-                          </TableCell>
-                          {latestByProfile.map(({ profile, metric }) => (
-                            <TableCell key={profile.id} className="text-xs">
-                              {row.fmt((metric as any)[row.key])}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                      <TableRow>
-                        <TableCell className="sticky left-0 bg-background font-medium text-xs">
-                          Paleta
-                        </TableCell>
-                        {latestByProfile.map(({ profile, metric }) => {
-                          const palette = [
-                            metric.palette_dominant, metric.palette_secondary,
-                            metric.palette_tertiary, metric.palette_quaternary,
-                          ].filter(Boolean) as string[];
-                          return (
-                            <TableCell key={profile.id} className="text-xs">
-                              {palette.length === 0 ? "—" : (
-                                <div className="flex gap-1">
-                                  {palette.map((c, i) => (
-                                    <div
-                                      key={i}
-                                      title={c}
-                                      className="h-4 w-4 rounded border"
-                                      style={{ background: c }}
-                                    />
-                                  ))}
-                                </div>
-                              )}
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          {/* === Perfis === */}
-          <TabsContent value="perfis" className="mt-4 space-y-3">
-            <div className="flex justify-end">
-              <Button size="sm" onClick={openCreateProfile}>
-                <Plus className="h-4 w-4 mr-1" /> Novo Perfil
-              </Button>
+      {!ownProfile && (
+        <Card className="border-dashed border-2">
+          <CardContent className="flex flex-col items-center justify-center py-10 text-center gap-4">
+            <Instagram className="h-12 w-12 text-muted-foreground/30" />
+            <div>
+              <p className="font-medium">Configure seu perfil do Instagram</p>
+              <p className="text-sm text-muted-foreground mt-1">Cadastre o @ da Quadra para começar a registrar métricas</p>
             </div>
-            {profiles.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  Nenhum perfil cadastrado.
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Handle</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Rótulo</TableHead>
-                        <TableHead>Ativo</TableHead>
-                        <TableHead className="w-28" />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {profiles.map((p) => (
-                        <TableRow key={p.id}>
-                          <TableCell className="font-medium flex items-center gap-1.5">
-                            <Instagram className="h-3.5 w-3.5 text-muted-foreground" />
-                            @{p.handle}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={p.kind === "self" ? "default" : "outline"} className="text-[10px]">
-                              {p.kind === "self" ? "Quadra" : "Referência"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{p.label || "—"}</TableCell>
-                          <TableCell className="text-xs">{p.is_active ? "Sim" : "Não"}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openCreateMetric(p.id)} title="Adicionar métricas">
-                                <Plus className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditProfile(p)}>
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeProfile.mutate(p.id)}>
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          {/* === Métricas === */}
-          <TabsContent value="metricas" className="mt-4 space-y-3">
-            <div className="flex justify-end">
-              <Button size="sm" onClick={() => openCreateMetric()} disabled={profiles.length === 0}>
-                <Plus className="h-4 w-4 mr-1" /> Nova Métrica
-              </Button>
-            </div>
-            {metrics.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  Cadastre métricas por perfil e período (mensal recomendado).
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="p-0 overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Perfil</TableHead>
-                        <TableHead>Período</TableHead>
-                        <TableHead>Seguidores</TableHead>
-                        <TableHead>Posts</TableHead>
-                        <TableHead>Reels</TableHead>
-                        <TableHead>Likes méd.</TableHead>
-                        <TableHead>Coment. méd.</TableHead>
-                        <TableHead>Engagement</TableHead>
-                        <TableHead className="w-24" />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {metrics.map((m) => (
-                        <TableRow key={m.id}>
-                          <TableCell className="text-xs font-medium">@{profilesById[m.profile_id]?.handle ?? "—"}</TableCell>
-                          <TableCell className="text-xs">{fmtMonth(m.period_start)} → {fmtMonth(m.period_end)}</TableCell>
-                          <TableCell className="text-xs">{fmtNumber(m.followers)}</TableCell>
-                          <TableCell className="text-xs">{fmtNumber(m.post_count)}</TableCell>
-                          <TableCell className="text-xs">{fmtNumber(m.reel_count)}</TableCell>
-                          <TableCell className="text-xs">{fmtNumber(m.avg_likes)}</TableCell>
-                          <TableCell className="text-xs">{fmtNumber(m.avg_comments)}</TableCell>
-                          <TableCell className="text-xs">{fmtPct(m.engagement_rate)}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditMetric(m)}>
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeMetric.mutate(m.id)}>
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+            <Button onClick={() => { setProfileDraft({ handle: "", label: "" }); setProfileDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-1" /> Configurar Perfil
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Dialog Perfil */}
+      <Tabs defaultValue="metricas">
+        <TabsList>
+          <TabsTrigger value="metricas">Métricas</TabsTrigger>
+          <TabsTrigger value="inspiracoes">Inspirações ({inspirations.length})</TabsTrigger>
+          <TabsTrigger value="prompt">Prompt IA</TabsTrigger>
+        </TabsList>
+
+        {/* ── Métricas ── */}
+        <TabsContent value="metricas" className="mt-4 space-y-4">
+          {/* Latest metrics KPI bar */}
+          {latestMetric && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {METRIC_FIELDS.slice(0, 4).map(f => {
+                const curr = latestMetric[f.key] as number | null;
+                const prev = prevMetric ? prevMetric[f.key] as number | null : null;
+                const t = trend(curr, prev);
+                const Icon = f.icon;
+                return (
+                  <Card key={f.key}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground">{f.label}</p>
+                      </div>
+                      <p className="text-xl font-semibold">{f.key === "engagement_rate" ? fmtPct(curr) : fmtN(curr)}</p>
+                      {t != null && (
+                        <p className={`text-xs mt-0.5 flex items-center gap-0.5 ${t > 0 ? "text-success" : t < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                          {t > 0 ? <TrendingUp className="h-3 w-3" /> : t < 0 ? <TrendingDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+                          {t > 0 ? "+" : ""}{t.toFixed(1)}% vs semana ant.
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Controls */}
+          <div className="flex flex-wrap gap-3 items-center justify-between">
+            <div className="flex gap-2 items-center">
+              <Select value={metricPeriodFilter} onValueChange={setMetricPeriodFilter}>
+                <SelectTrigger className="h-9 w-[130px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todo período</SelectItem>
+                  <SelectItem value="year">Este ano</SelectItem>
+                </SelectContent>
+              </Select>
+              {metricPeriodFilter === "year" && (
+                <Select value={metricYear} onValueChange={setMetricYear}>
+                  <SelectTrigger className="h-9 w-[90px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[2026, 2025, 2024].map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            {ownProfile && (
+              <Button size="sm" onClick={openNewMetric}>
+                <Plus className="h-4 w-4 mr-1" /> Adicionar Métricas
+              </Button>
+            )}
+          </div>
+
+          {/* Metrics history */}
+          {filteredMetrics.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                {ownProfile ? "Nenhuma métrica registrada ainda. Use o botão acima ou o Prompt IA para adicionar." : "Configure seu perfil primeiro."}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {filteredMetrics.map((m) => (
+                <Card key={m.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-muted-foreground mb-3">
+                          {format(parseISO(m.period_start), "dd/MM/yyyy", { locale: ptBR })} → {format(parseISO(m.period_end), "dd/MM/yyyy", { locale: ptBR })}
+                        </p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2">
+                          {METRIC_FIELDS.map(f => (
+                            <div key={f.key}>
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{f.label}</p>
+                              <p className="text-sm font-semibold">{f.key === "engagement_rate" ? fmtPct(m[f.key] as number) : fmtN(m[f.key] as number)}</p>
+                            </div>
+                          ))}
+                        </div>
+                        {m.notes && <p className="text-xs text-muted-foreground mt-3 border-t pt-2">{m.notes}</p>}
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditMetric(m)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeMetric.mutate(m.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ── Inspirações ── */}
+        <TabsContent value="inspiracoes" className="mt-4 space-y-4">
+          <div className="flex flex-wrap gap-3 items-center justify-between">
+            <div className="flex gap-2 items-center flex-wrap">
+              <Select value={inspCatFilter} onValueChange={setInspCatFilter}>
+                <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {INSPIRATION_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button size="sm" variant={inspFavOnly ? "default" : "outline"} onClick={() => setInspFavOnly(v => !v)} className="h-9">
+                <Star className="h-3.5 w-3.5 mr-1" /> Favoritas
+              </Button>
+            </div>
+            <Button size="sm" onClick={() => { setEditingInsp(null); setInspDraft({ category: "geral", is_favorite: false }); setInspDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-1" /> Nova Inspiração
+            </Button>
+          </div>
+
+          {filteredInspirations.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                Nenhuma inspiração encontrada. Salve posts de referência aqui!
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredInspirations.map(insp => (
+                <Card key={insp.id} className="overflow-hidden">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          {insp.is_favorite && <Star className="h-3.5 w-3.5 text-warning fill-warning" />}
+                          <p className="font-medium text-sm truncate">{insp.title}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Badge variant="secondary" className="text-[10px]">{INSPIRATION_CATEGORIES.find(c => c.value === insp.category)?.label || insp.category}</Badge>
+                          {(insp.tags ?? []).slice(0, 3).map(tag => (
+                            <Badge key={tag} variant="outline" className="text-[10px]">#{tag}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setEditingInsp(insp); setInspDraft({ ...insp }); setInspDialogOpen(true); }}>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => removeInsp.mutate(insp.id)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    {insp.notes && <p className="text-xs text-muted-foreground">{insp.notes}</p>}
+                    {insp.source_url && (
+                      <a href={insp.source_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline">
+                        <Link className="h-3 w-3" /> Ver original
+                      </a>
+                    )}
+                    {insp.image_url && (
+                      <img src={insp.image_url} alt={insp.title} className="w-full h-32 object-cover rounded-md border" />
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ── Prompt IA ── */}
+        <TabsContent value="prompt" className="mt-4 space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Como usar o Prompt IA</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
+                  <span className="shrink-0 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">1</span>
+                  <p>Copie o prompt abaixo e cole no Claude (claude.ai) no seu navegador</p>
+                </div>
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
+                  <span className="shrink-0 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">2</span>
+                  <p>Cole os dados do Instagram Insights onde indicado e envie para o Claude</p>
+                </div>
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
+                  <span className="shrink-0 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">3</span>
+                  <p>Cole a resposta do Claude abaixo — as métricas serão preenchidas automaticamente</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm">Prompt Template</CardTitle>
+              <Button size="sm" variant="outline" onClick={handleCopyPrompt} className="h-8">
+                {promptCopied ? <><Check className="h-3.5 w-3.5 mr-1 text-success" />Copiado!</> : <><Copy className="h-3.5 w-3.5 mr-1" />Copiar Prompt</>}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <pre className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-4 whitespace-pre-wrap font-mono overflow-x-auto">
+                {CLAUDE_PROMPT}
+              </pre>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Cole a Resposta do Claude</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Textarea
+                placeholder="Cole aqui a resposta completa do Claude com o JSON de métricas..."
+                rows={8}
+                value={aiResponseText}
+                onChange={(e) => setAiResponseText(e.target.value)}
+                className="font-mono text-xs"
+              />
+              <Button onClick={handleParseAI} disabled={!aiResponseText.trim() || !ownProfile} className="w-full">
+                Interpretar e Preencher Métricas
+              </Button>
+              {!ownProfile && <p className="text-xs text-muted-foreground text-center">Configure seu perfil primeiro na aba Métricas.</p>}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Dialog: Setup profile */}
       <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingProfile ? "Editar Perfil" : "Novo Perfil"}</DialogTitle>
+            <DialogTitle>Configurar Perfil do Instagram</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="grid grid-cols-[1fr_180px] gap-3">
-              <div>
-                <Label>Handle *</Label>
-                <Input
-                  placeholder="ex: quadrarq"
-                  value={profileDraft.handle}
-                  onChange={(e) => setProfileDraft((d) => ({ ...d, handle: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label>Tipo</Label>
-                <Select value={profileDraft.kind} onValueChange={(v) => setProfileDraft((d) => ({ ...d, kind: v as any }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="self">Quadra (nosso)</SelectItem>
-                    <SelectItem value="reference">Referência</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label>Handle (sem @) *</Label>
+              <Input placeholder="ex: quadrarq" value={profileDraft.handle} onChange={(e) => setProfileDraft(d => ({ ...d, handle: e.target.value }))} />
             </div>
             <div>
               <Label>Rótulo (opcional)</Label>
-              <Input
-                placeholder="Ex: Concorrente direta, Inspiração de paleta"
-                value={profileDraft.label}
-                onChange={(e) => setProfileDraft((d) => ({ ...d, label: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label>Observações</Label>
-              <Textarea
-                rows={3}
-                value={profileDraft.notes}
-                onChange={(e) => setProfileDraft((d) => ({ ...d, notes: e.target.value }))}
-              />
+              <Input placeholder="ex: Quadra Arquitetura" value={profileDraft.label} onChange={(e) => setProfileDraft(d => ({ ...d, label: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setProfileDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={saveProfile} disabled={!profileDraft.handle.trim()}>
-              {editingProfile ? "Salvar" : "Criar"}
+            <Button onClick={() => {
+              if (!profileDraft.handle.trim()) return;
+              const handle = profileDraft.handle.startsWith("@") ? profileDraft.handle.slice(1) : profileDraft.handle;
+              createProfile.mutate({ handle, label: profileDraft.label || null, kind: "self", notes: null, is_active: true }, {
+                onSuccess: () => setProfileDialogOpen(false),
+              });
+            }} disabled={!profileDraft.handle.trim()}>
+              Salvar
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Métricas */}
-      <Dialog open={metricDialogOpen} onOpenChange={setMetricDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      {/* Dialog: Add/edit metric */}
+      <Dialog open={metricDialogOpen} onOpenChange={(o) => { setMetricDialogOpen(o); if (!o) { setAiParsed(null); } }}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingMetric ? "Editar Métricas" : "Novas Métricas"}</DialogTitle>
+            <DialogTitle>{editingMetric ? "Editar Métricas" : "Adicionar Métricas"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {aiParsed && (
+            <div className="bg-success/10 text-success text-xs rounded-lg p-3 border border-success/20">
+              Métricas pré-preenchidas pelo Claude — revise e salve.
+            </div>
+          )}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Perfil *</Label>
-                <Select
-                  value={(metricDraft.profile_id as string) ?? ""}
-                  onValueChange={(v) => setMetricField("profile_id", v)}
-                >
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {profiles.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>@{p.handle}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="text-xs">Início do período *</Label>
+                <Input type="date" value={metricDraft.period_start as string ?? ""} onChange={(e) => setMetricDraft(d => ({ ...d, period_start: e.target.value }))} />
               </div>
               <div>
-                <Label>Início *</Label>
-                <Input
-                  type="date"
-                  value={(metricDraft.period_start as string) ?? ""}
-                  onChange={(e) => setMetricField("period_start", e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Fim *</Label>
-                <Input
-                  type="date"
-                  value={(metricDraft.period_end as string) ?? ""}
-                  onChange={(e) => setMetricField("period_end", e.target.value)}
-                />
+                <Label className="text-xs">Fim do período *</Label>
+                <Input type="date" value={metricDraft.period_end as string ?? ""} onChange={(e) => setMetricDraft(d => ({ ...d, period_end: e.target.value }))} />
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { label: "Seguidores", key: "followers" as const },
-                { label: "Posts", key: "post_count" as const },
-                { label: "Reels", key: "reel_count" as const },
-                { label: "Stories", key: "story_count" as const },
-                { label: "Likes méd.", key: "avg_likes" as const },
-                { label: "Coment. méd.", key: "avg_comments" as const },
-                { label: "Alcance méd.", key: "avg_reach" as const },
-                { label: "Saves méd.", key: "avg_saves" as const },
-                { label: "Engagement %", key: "engagement_rate" as const },
-              ].map((f) => (
+            <div className="grid grid-cols-2 gap-3">
+              {METRIC_FIELDS.map(f => (
                 <div key={f.key}>
-                  <Label className="text-xs">{f.label}</Label>
+                  <Label className="text-xs">{f.label}{f.key === "engagement_rate" ? " (%)" : ""}</Label>
                   <Input
                     type="number"
                     step="0.01"
                     value={(metricDraft[f.key] as number | null) ?? ""}
-                    onChange={(e) =>
-                      setMetricField(f.key, e.target.value === "" ? null : parseFloat(e.target.value))
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { label: "Cor dominante", key: "palette_dominant" as const },
-                { label: "Cor secundária", key: "palette_secondary" as const },
-                { label: "Cor terciária", key: "palette_tertiary" as const },
-                { label: "Cor 4", key: "palette_quaternary" as const },
-              ].map((f) => (
-                <div key={f.key}>
-                  <Label className="text-xs">{f.label}</Label>
-                  <Input
-                    placeholder="#A1B2C3 ou bege"
-                    value={(metricDraft[f.key] as string | null) ?? ""}
-                    onChange={(e) => setMetricField(f.key, e.target.value || null)}
+                    onChange={(e) => setMetricDraft(d => ({ ...d, [f.key]: e.target.value === "" ? null : parseFloat(e.target.value) }))}
                   />
                 </div>
               ))}
             </div>
             <div>
-              <Label>Observações</Label>
-              <Textarea
-                rows={2}
-                value={(metricDraft.notes as string | null) ?? ""}
-                onChange={(e) => setMetricField("notes", e.target.value || null)}
-              />
+              <Label className="text-xs">Observações</Label>
+              <Textarea rows={2} value={(metricDraft.notes as string | null) ?? ""} onChange={(e) => setMetricDraft(d => ({ ...d, notes: e.target.value || null }))} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setMetricDialogOpen(false)}>Cancelar</Button>
-            <Button
-              onClick={saveMetric}
-              disabled={!metricDraft.profile_id || !metricDraft.period_start || !metricDraft.period_end}
-            >
-              {editingMetric ? "Salvar" : "Criar"}
+            <Button variant="outline" onClick={() => { setMetricDialogOpen(false); setAiParsed(null); }}>Cancelar</Button>
+            <Button onClick={saveMetric} disabled={!metricDraft.period_start || !metricDraft.period_end}>
+              {editingMetric ? "Salvar" : "Registrar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Add/edit inspiration */}
+      <Dialog open={inspDialogOpen} onOpenChange={setInspDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingInsp ? "Editar Inspiração" : "Nova Inspiração"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Título *</Label>
+              <Input placeholder="Descreva o post..." value={inspDraft.title ?? ""} onChange={(e) => setInspDraft(d => ({ ...d, title: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Categoria</Label>
+                <Select value={inspDraft.category ?? "geral"} onValueChange={(v) => setInspDraft(d => ({ ...d, category: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {INSPIRATION_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={inspDraft.is_favorite ?? false} onChange={(e) => setInspDraft(d => ({ ...d, is_favorite: e.target.checked }))} className="w-4 h-4" />
+                  <span className="text-sm">Favorita</span>
+                </label>
+              </div>
+            </div>
+            <div>
+              <Label>URL do post original</Label>
+              <Input placeholder="https://instagram.com/p/..." value={inspDraft.source_url ?? ""} onChange={(e) => setInspDraft(d => ({ ...d, source_url: e.target.value || null }))} />
+            </div>
+            <div>
+              <Label>URL da imagem (para preview)</Label>
+              <Input placeholder="https://..." value={inspDraft.image_url ?? ""} onChange={(e) => setInspDraft(d => ({ ...d, image_url: e.target.value || null }))} />
+            </div>
+            <div>
+              <Label>Tags (separadas por vírgula)</Label>
+              <Input
+                placeholder="ex: minimalismo, branco, arquitetura"
+                value={(inspDraft.tags ?? []).join(", ")}
+                onChange={(e) => setInspDraft(d => ({ ...d, tags: e.target.value ? e.target.value.split(",").map(t => t.trim()).filter(Boolean) : null }))}
+              />
+            </div>
+            <div>
+              <Label>Observações</Label>
+              <Textarea rows={2} value={inspDraft.notes ?? ""} onChange={(e) => setInspDraft(d => ({ ...d, notes: e.target.value || null }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInspDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={saveInspiration} disabled={!inspDraft.title?.trim()}>
+              {editingInsp ? "Salvar" : "Adicionar"}
             </Button>
           </DialogFooter>
         </DialogContent>
