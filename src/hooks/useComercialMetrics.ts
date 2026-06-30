@@ -27,8 +27,10 @@ interface ProposalRow {
   updated_at: string;
   lead_id: string;
   notes: string | null;
-  leads: { name: string; phone: string; email: string | null } | null;
+  leads: { name: string; phone: string; email: string | null; status: string | null } | null;
 }
+
+const LOST_OR_CLOSED_LEAD_STATUSES = new Set(["perdido", "perdido_definitivo", "fechado"]);
 
 export interface FunilStage {
   label: string;
@@ -104,7 +106,7 @@ export function useComercialMetrics({
     queryFn: async () => {
       const [leadsRes, proposalsRes] = await Promise.all([
         supabase.from("leads").select("id, status, name, created_at, updated_at, origin, project_type"),
-        supabase.from("proposals").select("id, status, price_full, final_value, sent_at, approved_at, created_at, updated_at, lead_id, notes, leads(name, phone, email)"),
+        supabase.from("proposals").select("id, status, price_full, final_value, sent_at, approved_at, created_at, updated_at, lead_id, notes, leads(name, phone, email, status)"),
       ]);
       return {
         leads: (leadsRes.data ?? []) as LeadRow[],
@@ -215,8 +217,11 @@ export function useComercialMetrics({
           )
         : 0;
 
-    // Propostas aguardando (global, não filtrado por período)
-    const proposalsAguardando = proposals.filter((p) => p.status === "enviada");
+    // Propostas aguardando (global, não filtrado por período).
+    // Exclui propostas de leads já perdidos ou fechados.
+    const proposalsAguardando = proposals.filter(
+      (p) => p.status === "enviada" && !LOST_OR_CLOSED_LEAD_STATUSES.has(p.leads?.status ?? "")
+    );
     const hasUrgent = proposalsAguardando.some(
       (p) => p.sent_at && differenceInDays(today, parseISO(p.sent_at)) > 7
     );
