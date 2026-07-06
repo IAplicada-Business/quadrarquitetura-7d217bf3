@@ -151,8 +151,8 @@ export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialD
                 <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
               </div>
               <div>
-                <Label>Disciplina</Label>
-                <Input value={discipline} onChange={e => setDiscipline(e.target.value)} placeholder="Ex: Elétrica" />
+                <Label>Disciplina *</Label>
+                <Input value={discipline} onChange={e => setDiscipline(e.target.value)} placeholder="Ex: Elétrica" required />
               </div>
             </div>
             {MEDICAO_ANCHORED_DISCIPLINES.has(discipline) && (
@@ -294,7 +294,7 @@ export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialD
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button onClick={handleSubmit} disabled={!name.trim() || isLoading}>
+            <Button onClick={handleSubmit} disabled={!name.trim() || !discipline.trim() || isLoading}>
               {initialData?.id ? "Salvar" : "Criar"}
             </Button>
           </DialogFooter>

@@ -355,13 +355,18 @@ export function GanttChart({ tasks, allTasks, onEdit, viewMode }: GanttChartProp
                     <TooltipProvider>
                       <Tooltip>
                     <TooltipTrigger asChild>
-                          <div className="truncate text-xs font-medium flex items-center gap-1 cursor-pointer" onClick={() => onEdit?.(task)}>
-                            {task.requires_presence && <User className="h-3 w-3 text-warning shrink-0" />}
-                            {(isOverdue || isExpiringSoon) && (
-                              <AlertTriangle className="h-3 w-3 shrink-0" style={{ color: isOverdue ? "#DC2626" : "#D97706" }} />
+                          <div className="flex flex-col justify-center cursor-pointer min-w-0 overflow-hidden" onClick={() => onEdit?.(task)}>
+                            <div className="truncate text-xs font-medium flex items-center gap-1">
+                              {task.requires_presence && <User className="h-3 w-3 text-warning shrink-0" />}
+                              {(isOverdue || isExpiringSoon) && (
+                                <AlertTriangle className="h-3 w-3 shrink-0" style={{ color: isOverdue ? "#DC2626" : "#D97706" }} />
+                              )}
+                              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: barColor }} />
+                              <span className="truncate">{task.task_name}</span>
+                            </div>
+                            {task.discipline && (
+                              <span className="text-[10px] text-muted-foreground truncate pl-3">{task.discipline}</span>
                             )}
-                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: barColor }} />
-                            <span className="truncate">{task.task_name}</span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs">

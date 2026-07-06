@@ -192,16 +192,23 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
     if (!user || activitiesToImport.length === 0) return;
     setImportingBudget(true);
     try {
-      const inserts = activitiesToImport.map(a => ({
-        project_id: projectId,
-        user_id: user.id,
-        services_description: a.name,
-        value: 0,
-        material_estimate: a.area_m2 ?? 0,
-        status: "pendente" as const,
-        revision_number: currentRev,
-        supplier_name: null,
-      }));
+      const inserts = activitiesToImport.map(a => {
+        // Link to contracted scope item by matching discipline name (case-insensitive)
+        const matchingScopeItem = contractedScopeItems.find(
+          s => s.discipline?.toLowerCase() === (a as any).discipline?.toLowerCase()
+        );
+        return {
+          project_id: projectId,
+          user_id: user.id,
+          services_description: a.name,
+          value: 0,
+          material_estimate: (a as any).area_m2 ?? 0,
+          status: "pendente" as const,
+          revision_number: currentRev,
+          supplier_name: null,
+          scope_item_id: matchingScopeItem?.id ?? null,
+        };
+      });
       const { error } = await supabase.from("budget_quotes").insert(inserts);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] });
@@ -510,12 +517,24 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
             <Button variant="outline" onClick={() => setAiModalOpen(false)}>Fechar</Button>
             <Button onClick={async () => {
               if (!user || !aiEstimates) return;
-              const inserts = aiEstimates.map((e: any) => ({
-                project_id: projectId, user_id: user.id,
-                services_description: e.activity_name,
-                value: Math.round((e.estimated_cost_min + e.estimated_cost_max) / 2),
-                status: "pendente" as const, revision_number: currentRev,
-              }));
+              const inserts = aiEstimates.map((e: any) => {
+                // Try to match AI estimate to activity → discipline → contracted scope item
+                const matchingActivity = activities.find(a =>
+                  a.name.toLowerCase() === e.activity_name.toLowerCase()
+                );
+                const matchingScopeItem = matchingActivity?.discipline
+                  ? contractedScopeItems.find(s =>
+                      s.discipline?.toLowerCase() === matchingActivity.discipline?.toLowerCase()
+                    )
+                  : undefined;
+                return {
+                  project_id: projectId, user_id: user.id,
+                  services_description: e.activity_name,
+                  value: Math.round((e.estimated_cost_min + e.estimated_cost_max) / 2),
+                  status: "pendente" as const, revision_number: currentRev,
+                  scope_item_id: matchingScopeItem?.id ?? null,
+                };
+              });
               const { error } = await supabase.from("budget_quotes").insert(inserts);
               if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
               queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] });
