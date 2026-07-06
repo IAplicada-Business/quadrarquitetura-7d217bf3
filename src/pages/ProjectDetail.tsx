@@ -11,7 +11,6 @@ import { useProjectDetail } from "@/hooks/useProjectDetail";
 import { statusLabels } from "@/lib/projectConstants";
 import { ProjectSummaryTab } from "@/components/projects/ProjectSummaryTab";
 import { ProjectScopeTab } from "@/components/projects/ProjectScopeTab";
-import { ProjectScenariosTab } from "@/components/projects/ProjectScenariosTab";
 import { ProjectBudgetsTab } from "@/components/projects/ProjectBudgetsTab";
 import { ProjectMaterialsTab } from "@/components/projects/ProjectMaterialsTab";
 import { ProjectScheduleTab } from "@/components/projects/ProjectScheduleTab";
@@ -29,7 +28,6 @@ export default function ProjectDetail() {
 
   const tabs = [
     { value: "resumo", label: "Resumo" },
-    { value: "cenarios", label: "Cotações" },
     { value: "escopo", label: "Escopo" },
     { value: "orcamentos", label: "Orçamentos" },
     { value: "materiais", label: "Materiais" },
@@ -132,9 +130,6 @@ export default function ProjectDetail() {
         <div className="mt-4">
           <TabsContent value="resumo">
             <ProjectSummaryTab project={project as Record<string, unknown>} onTabChange={setActiveTab} />
-          </TabsContent>
-          <TabsContent value="cenarios">
-            <ProjectScenariosTab projectId={project.id} onTabChange={setActiveTab} />
           </TabsContent>
           <TabsContent value="escopo">
             <ProjectScopeTab projectId={project.id} />
