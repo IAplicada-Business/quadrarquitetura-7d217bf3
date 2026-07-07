@@ -17,9 +17,10 @@ interface BudgetQuoteFormProps {
   scopeItemName?: string;
   revisionNumber?: number;
   isLoading?: boolean;
+  allScopeItems?: { id: string; discipline: string | null }[];
 }
 
-export function BudgetQuoteForm({ open, onOpenChange, onSubmit, initialData, scopeItemId, scopeItemName, revisionNumber = 1, isLoading }: BudgetQuoteFormProps) {
+export function BudgetQuoteForm({ open, onOpenChange, onSubmit, initialData, scopeItemId, scopeItemName, revisionNumber = 1, isLoading, allScopeItems }: BudgetQuoteFormProps) {
   const [supplierId, setSupplierId] = useState("");
   const [supplierName, setSupplierName] = useState("");
   const [servicesDescription, setServicesDescription] = useState("");
@@ -28,6 +29,7 @@ export function BudgetQuoteForm({ open, onOpenChange, onSubmit, initialData, sco
   const [deliveryTime, setDeliveryTime] = useState("");
   const [paymentTerms, setPaymentTerms] = useState("");
   const [status, setStatus] = useState("pendente");
+  const [selectedScopeItemId, setSelectedScopeItemId] = useState("");
 
   const { data: suppliers } = useQuery({
     queryKey: ["suppliers"],
@@ -48,16 +50,20 @@ export function BudgetQuoteForm({ open, onOpenChange, onSubmit, initialData, sco
       setDeliveryTime((initialData.delivery_time as string) || "");
       setPaymentTerms((initialData.payment_terms as string) || "");
       setStatus((initialData.status as string) || "pendente");
+      setSelectedScopeItemId((initialData.scope_item_id as string) || "");
     } else {
       setSupplierId(""); setSupplierName(""); setServicesDescription("");
       setValue(""); setMaterialEstimate(""); setDeliveryTime(""); setPaymentTerms(""); setStatus("pendente");
+      setSelectedScopeItemId(scopeItemId || "");
     }
-  }, [initialData, open]);
+  }, [initialData, open, scopeItemId]);
+
+  const selectedScopeName = allScopeItems?.find(s => s.id === selectedScopeItemId)?.discipline;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
-      scope_item_id: scopeItemId || null,
+      scope_item_id: selectedScopeItemId || null,
       supplier_id: supplierId || null,
       supplier_name: supplierName || null,
       services_description: servicesDescription || null,
@@ -79,10 +85,28 @@ export function BudgetQuoteForm({ open, onOpenChange, onSubmit, initialData, sco
         <DialogHeader>
           <DialogTitle className="text-display">
             {initialData ? "Editar Cotação" : "Nova Cotação"}
-            {scopeItemName && <span className="text-sm font-normal text-muted-foreground ml-2">— {scopeItemName}</span>}
+            {(selectedScopeName || scopeItemName) && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">— {selectedScopeName || scopeItemName}</span>
+            )}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {allScopeItems && allScopeItems.length > 0 && (
+            <div>
+              <Label>Disciplina</Label>
+              <Select value={selectedScopeItemId} onValueChange={setSelectedScopeItemId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem disciplina vinculada" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sem disciplina</SelectItem>
+                  {allScopeItems.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.discipline}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <Label>Fornecedor (cadastrado)</Label>
             <Select value={supplierId} onValueChange={setSupplierId}>

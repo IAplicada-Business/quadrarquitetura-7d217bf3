@@ -1,10 +1,10 @@
 import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Sparkles, GripVertical, Pencil, Trash2, Link2, Users, ChevronDown, ChevronRight, Wand2, Check, X, Loader2, RotateCcw } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -127,7 +127,7 @@ export function ProjectScopeTab({ projectId }: ProjectScopeTabProps) {
   const [editingItem, setEditingItem] = useState<Partial<ProjectActivity> | null>(null);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
-  const [groupByDiscipline, setGroupByDiscipline] = useState(false);
+  const [groupByDiscipline, setGroupByDiscipline] = useState(true);
   const [disciplineFilter, setDisciplineFilter] = useState<string[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
