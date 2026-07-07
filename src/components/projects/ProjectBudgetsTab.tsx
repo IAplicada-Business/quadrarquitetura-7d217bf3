@@ -70,6 +70,7 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
   const [priceSearchExisting, setPriceSearchExisting] = useState<any[] | undefined>(undefined);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importingBudget, setImportingBudget] = useState(false);
+  const [importScopeOverrides, setImportScopeOverrides] = useState<Record<string, string>>({});
   const { callAction, loading: aiLoading } = useProjectAI();
   const [aiEstimates, setAiEstimates] = useState<any[] | null>(null);
   const [aiModalOpen, setAiModalOpen] = useState(false);
@@ -86,27 +87,54 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
     return quotes.filter((q) => q.revision_number === currentRev);
   }, [quotes, currentRev]);
 
+  const contractedScopeItems = scopeItems.filter(s => s.scope_type === 'contratado');
+
+  // Derive discipline for each quote: from scope_item → or by matching activity name
+  const quotesWithDiscipline = useMemo(() => {
+    return currentQuotes.map(q => {
+      let discipline: string | null = null;
+      if (q.scope_item_id) {
+        discipline = scopeItems.find(s => s.id === q.scope_item_id)?.discipline || null;
+      }
+      if (!discipline) {
+        const matchingActivity = activities.find(
+          a => a.name.toLowerCase().trim() === (q.services_description || "").toLowerCase().trim()
+        );
+        discipline = (matchingActivity as any)?.discipline || null;
+      }
+      return { ...q, _discipline: discipline };
+    });
+  }, [currentQuotes, scopeItems, activities]);
+
+  // Sections = unique disciplines from activities (mirrors Escopo grouping)
+  const disciplineSections = useMemo(() => {
+    const fromActivities = [...new Set(
+      activities.map(a => (a as any).discipline as string | null).filter(Boolean)
+    )] as string[];
+    const fromQuotes = [...new Set(
+      quotesWithDiscipline.map(q => q._discipline).filter(Boolean)
+    )] as string[];
+    return [...new Set([...fromActivities, ...fromQuotes])].sort((a, b) => a.localeCompare(b));
+  }, [activities, quotesWithDiscipline]);
+
+  // Group quotes by derived discipline
   const groupedQuotes = useMemo(() => {
-    const groups: Record<string, typeof currentQuotes> = {};
-    for (const q of currentQuotes) {
-      const key = q.scope_item_id || "sem_disciplina";
+    const groups: Record<string, typeof quotesWithDiscipline> = {};
+    for (const q of quotesWithDiscipline) {
+      const key = q._discipline || "sem_disciplina";
       if (!groups[key]) groups[key] = [];
       groups[key].push(q);
     }
     return groups;
-  }, [currentQuotes]);
-
-  const contractedScopeItems = scopeItems.filter(s => s.scope_type === 'contratado');
+  }, [quotesWithDiscipline]);
 
   const totals = useMemo(() => {
     let total = 0;
     const byDiscipline: Record<string, number> = {};
-    for (const [scopeId, qs] of Object.entries(groupedQuotes)) {
-      const approved = qs.find((q) => q.status === "aprovado");
-      const serviceValue = approved ? (approved.value || 0) : 0;
-      const materialValue = approved ? (approved.material_estimate || 0) : 0;
-      const subtotal = serviceValue + materialValue;
-      byDiscipline[scopeId] = subtotal;
+    for (const [disc, qs] of Object.entries(groupedQuotes)) {
+      const approved = qs.find(q => q.status === "aprovado");
+      const subtotal = approved ? (approved.value || 0) + (approved.material_estimate || 0) : 0;
+      byDiscipline[disc] = subtotal;
       total += subtotal;
     }
     return { total, byDiscipline };
@@ -134,9 +162,11 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
   };
 
   const handleApprove = async (quoteId: string, scopeItemId: string | null) => {
-    // Reject all others for same scope item in current revision
-    const siblings = currentQuotes.filter(
-      (q) => q.scope_item_id === scopeItemId && q.id !== quoteId
+    // Reject all others for same discipline in current revision
+    const thisQuote = quotesWithDiscipline.find(q => q.id === quoteId);
+    const thisDiscipline = thisQuote?._discipline;
+    const siblings = quotesWithDiscipline.filter(
+      (q) => q._discipline === thisDiscipline && q.id !== quoteId
     );
     for (const s of siblings) {
       if (s.status === "aprovado") {
@@ -192,28 +222,43 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
     if (!user || activitiesToImport.length === 0) return;
     setImportingBudget(true);
     try {
+      const activityUpdates: { id: string; discipline: string }[] = [];
       const inserts = activitiesToImport.map(a => {
-        // Link to contracted scope item by matching discipline name (case-insensitive)
-        const matchingScopeItem = contractedScopeItems.find(
-          s => s.discipline?.toLowerCase() === (a as any).discipline?.toLowerCase()
-        );
+        const overrideScopeId = importScopeOverrides[a.id];
+        let scopeItemId: string | null = null;
+        if (overrideScopeId) {
+          scopeItemId = overrideScopeId;
+          const overrideDiscipline = contractedScopeItems.find(s => s.id === overrideScopeId)?.discipline;
+          if (overrideDiscipline && !(a as any).discipline) {
+            activityUpdates.push({ id: a.id, discipline: overrideDiscipline });
+          }
+        } else {
+          const match = contractedScopeItems.find(
+            s => s.discipline?.toLowerCase() === (a as any).discipline?.toLowerCase()
+          );
+          scopeItemId = match?.id ?? null;
+        }
         return {
-          project_id: projectId,
-          user_id: user.id,
-          services_description: a.name,
-          value: 0,
+          project_id: projectId, user_id: user.id,
+          services_description: a.name, value: 0,
           material_estimate: (a as any).area_m2 ?? 0,
-          status: "pendente" as const,
-          revision_number: currentRev,
-          supplier_name: null,
-          scope_item_id: matchingScopeItem?.id ?? null,
+          status: "pendente" as const, revision_number: currentRev,
+          supplier_name: null, scope_item_id: scopeItemId,
         };
       });
       const { error } = await supabase.from("budget_quotes").insert(inserts);
       if (error) throw error;
+      // Persist discipline back to activities that had overrides
+      for (const upd of activityUpdates) {
+        await supabase.from("project_activities").update({ discipline: upd.discipline }).eq("id", upd.id);
+      }
+      if (activityUpdates.length > 0) {
+        queryClient.invalidateQueries({ queryKey: ["project_activities", projectId] });
+      }
       queryClient.invalidateQueries({ queryKey: ["budget_quotes", projectId] });
       toast({ title: `${inserts.length} itens importados do escopo` });
       setImportDialogOpen(false);
+      setImportScopeOverrides({});
     } catch (e: any) {
       toast({ title: "Erro ao importar", description: e.message, variant: "destructive" });
     } finally {
@@ -244,7 +289,7 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
                   ))}
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)} disabled={activities.length === 0}>
+              <Button variant="outline" size="sm" onClick={() => { setImportScopeOverrides({}); setImportDialogOpen(true); }} disabled={activities.length === 0}>
                 <FileDown className="h-4 w-4 mr-1" /> Importar do Escopo
               </Button>
               <Button variant="outline" size="sm" disabled={aiLoading || activities.length === 0} onClick={async () => {
@@ -278,44 +323,44 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
             <div className="flex justify-center py-12">
               <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
             </div>
-          ) : contractedScopeItems.length === 0 && (groupedQuotes["sem_disciplina"] ?? []).length === 0 ? (
+          ) : disciplineSections.length === 0 && (groupedQuotes["sem_disciplina"] ?? []).length === 0 ? (
             <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-              Cadastre disciplinas contratadas na aba "Escopo" para começar a adicionar cotações.
+              Cadastre atividades com disciplina na aba "Escopo" para começar a adicionar cotações.
             </div>
           ) : (
             <>
-              {contractedScopeItems.filter((s) => !s.parent_id).map((scope) => {
-                const scopeQuotes = groupedQuotes[scope.id] || [];
-                const subtotal = totals.byDiscipline[scope.id] || 0;
-                const approvedQuote = scopeQuotes.find(q => q.status === 'aprovado');
+              {disciplineSections.map((disc) => {
+                const discQuotes = groupedQuotes[disc] || [];
+                const subtotal = totals.byDiscipline[disc] || 0;
+                const approvedQuote = discQuotes.find(q => q.status === 'aprovado');
+                const matchingScopeItem = contractedScopeItems.find(
+                  s => s.discipline?.toLowerCase() === disc.toLowerCase()
+                );
 
                 return (
-                  <Card key={scope.id} className={approvedQuote ? "border-green-500/50 bg-green-50/10" : ""}>
+                  <Card key={disc} className={approvedQuote ? "border-green-500/50 bg-green-50/10" : ""}>
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <CardTitle className="text-base text-display">{scope.discipline}</CardTitle>
+                          <CardTitle className="text-base text-display">{disc}</CardTitle>
                           {approvedQuote && <Badge variant="default" className="bg-green-600 text-[10px]">Fornecedor Definido</Badge>}
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-sm font-semibold text-primary">{formatCurrency(subtotal)}</span>
-                          <Button size="sm" variant="outline" onClick={() => handleAddQuote(scope.id)}>
+                          <Button size="sm" variant="outline" onClick={() => handleAddQuote(matchingScopeItem?.id ?? null)}>
                             <Plus className="h-3.5 w-3.5 mr-1" /> Cotação
                           </Button>
                         </div>
                       </div>
-                      {scope.description && (
-                        <p className="text-xs text-muted-foreground mt-1">{scope.description}</p>
-                      )}
                     </CardHeader>
                     <CardContent>
-                      {scopeQuotes.length === 0 ? (
+                      {discQuotes.length === 0 ? (
                         <div className="flex items-center justify-center py-6 text-sm text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
                           Nenhuma cotação. Clique em "Cotação" para adicionar.
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {scopeQuotes.map((q) => (
+                          {discQuotes.map((q) => (
                             <BudgetQuoteCard
                               key={q.id}
                               quote={q as Record<string, unknown>}
@@ -331,22 +376,19 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
                 );
               })}
 
-              {/* Cotações sem disciplina vinculada (ex: estimativas de IA importadas) */}
+              {/* Quotes that couldn't be matched to any activity discipline */}
               {(groupedQuotes["sem_disciplina"] ?? []).length > 0 && (
-                <Card>
+                <Card className="border-amber-500/30">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <CardTitle className="text-base text-display">Estimativas de IA (sem disciplina vinculada)</CardTitle>
-                        <Badge variant="secondary" className="text-[10px]">Sem disciplina</Badge>
+                        <CardTitle className="text-base text-display">Sem Disciplina</CardTitle>
+                        <Badge variant="secondary" className="text-[10px]">Use Editar para vincular</Badge>
                       </div>
                       <Button size="sm" variant="outline" onClick={() => handleAddQuote(null)}>
                         <Plus className="h-3.5 w-3.5 mr-1" /> Cotação
                       </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Estas cotações foram geradas pela IA. Edite os valores e vincule cada uma a uma disciplina do escopo se quiser incluí-las no total.
-                    </p>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -389,6 +431,7 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
             scopeItemName={activeScopeName}
             revisionNumber={currentRev}
             isLoading={create.isPending || update.isPending}
+            allScopeItems={contractedScopeItems}
           />
 
           <ShoppingListDialog
@@ -549,23 +592,59 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
 
       {/* Import from Scope Dialog */}
       <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Importar do Escopo</DialogTitle>
             <DialogDescription>
               {activitiesToImport.length > 0
-                ? `Encontradas ${activitiesToImport.length} atividades no escopo. Deseja importá-las como itens de orçamento?`
-                : "Todas as atividades do escopo já foram importadas."}
+                ? `${activitiesToImport.length} atividades encontradas. Confirme a disciplina de cada uma.`
+                : "Todas as atividades já foram importadas."}
             </DialogDescription>
           </DialogHeader>
           {activitiesToImport.length > 0 && (
-            <div className="max-h-60 overflow-y-auto border rounded-lg divide-y">
-              {activitiesToImport.map(a => (
-                <div key={a.id} className="px-3 py-2 text-sm flex justify-between">
-                  <span className="font-medium">{a.name}</span>
-                  <span className="text-muted-foreground text-xs">{a.area_m2 ? `${a.area_m2} m²` : "—"}</span>
-                </div>
-              ))}
+            <div className="max-h-72 overflow-y-auto border rounded-lg divide-y">
+              {activitiesToImport.map(a => {
+                const overrideScopeId = importScopeOverrides[a.id];
+                const autoMatch = (a as any).discipline
+                  ? contractedScopeItems.find(s => s.discipline?.toLowerCase() === (a as any).discipline?.toLowerCase())
+                  : null;
+                const effectiveScopeItem = overrideScopeId
+                  ? contractedScopeItems.find(s => s.id === overrideScopeId)
+                  : autoMatch;
+                const hasMatch = !!effectiveScopeItem;
+
+                return (
+                  <div key={a.id} className={`px-3 py-2 text-sm ${!hasMatch ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium block truncate">{a.name}</span>
+                        {(a as any).area_m2 && (
+                          <span className="text-xs text-muted-foreground">{(a as any).area_m2} m²</span>
+                        )}
+                      </div>
+                      <div className="flex-shrink-0 w-44">
+                        {hasMatch && !overrideScopeId ? (
+                          <span className="text-xs text-green-600 font-medium">✓ {effectiveScopeItem!.discipline}</span>
+                        ) : (
+                          <Select
+                            value={overrideScopeId || ""}
+                            onValueChange={(val) => setImportScopeOverrides(prev => ({ ...prev, [a.id]: val }))}
+                          >
+                            <SelectTrigger className="h-7 text-xs">
+                              <SelectValue placeholder={hasMatch ? effectiveScopeItem!.discipline! : "Atribuir disciplina..."} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {contractedScopeItems.map(s => (
+                                <SelectItem key={s.id} value={s.id}>{s.discipline}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
           <DialogFooter>
