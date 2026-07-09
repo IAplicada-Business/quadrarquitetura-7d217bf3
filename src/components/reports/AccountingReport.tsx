@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useInvoicesNF } from "@/hooks/useInvoicesNF";
-import { csvRow, csvBrl, downloadCsv } from "@/lib/csv";
+import { exportNFsToXlsx, type NFExportRow } from "@/lib/nfExport";
 
 const NF_TYPE_LABEL: Record<string, string> = { emitida: "Emitida", recebida: "Recebida" };
 const STATUS_LABEL: Record<string, string> = {
@@ -65,31 +65,24 @@ export function AccountingReport() {
     });
   }, [month]);
 
-  const handleExportCSV = () => {
-    const header = csvRow([
-      "Nº NF", "Tipo", "Projeto", "Emitente", "Tomador",
-      "Valor (R$)", "Data Emissão", "Competência", "Status",
-    ]);
-    const toRow = (i: any) => csvRow([
-      i.nf_number || "",
-      NF_TYPE_LABEL[i.nf_type] ?? i.nf_type,
-      i.projects?.name || "",
-      i.issuer_name || "",
-      i.recipient_name || "",
-      csvBrl(i.amount),
-      i.issue_date || "",
-      i.competence_month || "",
-      STATUS_LABEL[i.status] ?? i.status,
-    ]);
-    let csv = `RELATÓRIO FISCAL — ${monthLabel.toUpperCase()}\n\n`;
-    csv += "NOTAS FISCAIS EMITIDAS\n" + header;
-    emitidas.forEach((i: any) => { csv += toRow(i); });
-    csv += csvRow(["", "", "", "", "Total Emitidas", csvBrl(totalEmitidas)]) + "\n";
-    csv += "NOTAS FISCAIS RECEBIDAS\n" + header;
-    recebidas.forEach((i: any) => { csv += toRow(i); });
-    csv += csvRow(["", "", "", "", "Total Recebidas", csvBrl(totalRecebidas)]) + "\n";
-    csv += csvRow(["", "", "", "", "Saldo (Emitidas − Recebidas)", csvBrl(saldo)]);
-    downloadCsv(`contabilidade_${month || "geral"}.csv`, csv);
+  const handleExportXlsx = () => {
+    const toRow = (i: any): NFExportRow => ({
+      nf_number: i.nf_number,
+      nf_type: i.nf_type,
+      project_name: i.projects?.name,
+      issuer_name: i.issuer_name,
+      recipient_name: i.recipient_name,
+      amount: i.amount,
+      issue_date: i.issue_date,
+      competence_month: i.competence_month,
+      status: i.status,
+    });
+    exportNFsToXlsx(
+      `contabilidade_${month || "geral"}`,
+      emitidas.map(toRow),
+      recebidas.map(toRow),
+      { includeProject: true }
+    );
   };
 
   return (
@@ -106,8 +99,8 @@ export function AccountingReport() {
           />
         </div>
         <div className="flex-1" />
-        <Button variant="outline" onClick={handleExportCSV} disabled={items.length === 0}>
-          <Download className="h-4 w-4 mr-2" /> Exportar CSV
+        <Button variant="outline" onClick={handleExportXlsx} disabled={items.length === 0}>
+          <Download className="h-4 w-4 mr-2" /> Exportar Excel
         </Button>
         <Button variant="outline" onClick={() => window.print()}>
           <FileText className="h-4 w-4 mr-2" /> Imprimir / PDF

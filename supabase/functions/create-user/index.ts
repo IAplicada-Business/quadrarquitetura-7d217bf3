@@ -91,17 +91,46 @@ Deno.serve(async (req) => {
         user_metadata: { full_name },
       });
 
+    let targetUserId: string | null = newUser?.user?.id ?? null;
+    let repaired = false;
+
     if (createError) {
-      return new Response(JSON.stringify({ error: createError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // E-mail já cadastrado: em vez de falhar, REPARA o acesso do usuário
+      // existente (perfil, role, time). Criações que falhavam no meio
+      // deixavam o auth user órfão — sem role/time ele loga e vê tudo
+      // vazio, e o retry devolvia só "email já existe", sem saída.
+      const emailExists = /already been registered|email_exists|already registered/i.test(createError.message);
+      if (!emailExists) {
+        return new Response(JSON.stringify({ error: createError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      let existingId: string | null = null;
+      for (let page = 1; page <= 10 && !existingId; page++) {
+        const { data: list, error: listError } = await serviceClient.auth.admin.listUsers({ page, perPage: 200 });
+        if (listError || !list?.users?.length) break;
+        existingId = list.users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase())?.id ?? null;
+        if (list.users.length < 200) break;
+      }
+      if (!existingId) {
+        return new Response(
+          JSON.stringify({ error: "E-mail já cadastrado, mas não foi possível localizar o usuário para reparar o acesso" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      targetUserId = existingId;
+      repaired = true;
+      // Garante o perfil (o trigger só roda em INSERT de auth.users)
+      await serviceClient
+        .from("profiles")
+        .upsert({ user_id: targetUserId, full_name }, { onConflict: "user_id" });
     }
 
-    // Assign role
+    // Assign role (idempotente)
     const { error: roleError } = await serviceClient
       .from("user_roles")
-      .insert({ user_id: newUser.user.id, role });
+      .upsert({ user_id: targetUserId, role }, { onConflict: "user_id,role", ignoreDuplicates: true });
 
     if (roleError) {
       return new Response(JSON.stringify({ error: roleError.message }), {
@@ -124,24 +153,41 @@ Deno.serve(async (req) => {
     if (!teamId) {
       // First time: generate a team_id for both caller and new user
       teamId = crypto.randomUUID();
-      await serviceClient
+      const { error: callerTeamError } = await serviceClient
         .from("team_members")
         .insert({ team_id: teamId, user_id: callerId, role: "admin" });
+      if (callerTeamError) {
+        return new Response(
+          JSON.stringify({ error: `Erro ao criar time: ${callerTeamError.message}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
-    // Insert new user into the team
-    await serviceClient
+    // Insert new user into the team (idempotente; sem time o usuário
+    // enxerga o sistema vazio — RLS filtra tudo por get_team_user_ids)
+    const { error: teamError } = await serviceClient
       .from("team_members")
-      .insert({ team_id: teamId, user_id: newUser.user.id, role: role === "admin" ? "admin" : "member" });
+      .upsert(
+        { team_id: teamId, user_id: targetUserId, role: role === "admin" ? "admin" : "member" },
+        { onConflict: "team_id,user_id", ignoreDuplicates: true }
+      );
+    if (teamError) {
+      return new Response(
+        JSON.stringify({ error: `Usuário criado, mas falhou ao vincular ao time: ${teamError.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     return new Response(
       JSON.stringify({
         user: {
-          id: newUser.user.id,
-          email: newUser.user.email,
+          id: targetUserId,
+          email,
           full_name,
           role,
         },
+        repaired,
       }),
       {
         status: 200,

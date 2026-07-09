@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { useInvoicesNF } from "@/hooks/useInvoicesNF";
 import { InvoiceNFForm } from "./InvoiceNFForm";
-import { csvRow, csvBrl, downloadCsv } from "@/lib/csv";
+import { exportNFsToXlsx, type NFExportRow } from "@/lib/nfExport";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -95,30 +95,24 @@ export function InvoiceNFList({ projectId, showProjectColumn, projects }: Invoic
   const totalEmitidas = items.filter((i: any) => i.nf_type === "emitida").reduce((s: number, i: any) => s + (i.amount ?? 0), 0);
   const totalRecebidas = items.filter((i: any) => i.nf_type === "recebida").reduce((s: number, i: any) => s + (i.amount ?? 0), 0);
 
-  const handleExportCSV = () => {
-    const emitidas = items.filter((i: any) => i.nf_type === "emitida");
-    const recebidas = items.filter((i: any) => i.nf_type === "recebida");
-    const header = csvRow([
-      "Nº NF", "Tipo", "Emitente", "Tomador", "Valor (R$)",
-      "Data Emissão", "Competência", "Status",
-    ]);
-    const toRow = (i: any) => csvRow([
-      i.nf_number || "",
-      NF_TYPE_LABEL[i.nf_type] ?? i.nf_type,
-      i.issuer_name || "",
-      i.recipient_name || "",
-      csvBrl(i.amount),
-      i.issue_date || "",
-      i.competence_month || "",
-      STATUS_LABEL[i.status] ?? i.status,
-    ]);
-    let csv = "NOTAS FISCAIS EMITIDAS\n" + header;
-    emitidas.forEach((i: any) => { csv += toRow(i); });
-    csv += csvRow(["", "", "", "Total Emitidas", csvBrl(totalEmitidas)]) + "\n";
-    csv += "NOTAS FISCAIS RECEBIDAS\n" + header;
-    recebidas.forEach((i: any) => { csv += toRow(i); });
-    csv += csvRow(["", "", "", "Total Recebidas", csvBrl(totalRecebidas)]);
-    downloadCsv(`relatorio_nf_${competenceMonth || "geral"}.csv`, csv);
+  const handleExportXlsx = () => {
+    const toRow = (i: any): NFExportRow => ({
+      nf_number: i.nf_number,
+      nf_type: i.nf_type,
+      project_name: i.projects?.name,
+      issuer_name: i.issuer_name,
+      recipient_name: i.recipient_name,
+      amount: i.amount,
+      issue_date: i.issue_date,
+      competence_month: i.competence_month,
+      status: i.status,
+    });
+    exportNFsToXlsx(
+      `relatorio_nf_${competenceMonth || "geral"}`,
+      items.filter((i: any) => i.nf_type === "emitida").map(toRow),
+      items.filter((i: any) => i.nf_type === "recebida").map(toRow),
+      { includeProject: !!showProjectColumn }
+    );
   };
 
   return (
@@ -168,8 +162,8 @@ export function InvoiceNFList({ projectId, showProjectColumn, projects }: Invoic
           </SelectContent>
         </Select>
         <div className="flex-1" />
-        <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={items.length === 0}>
-          <FileText className="h-4 w-4 mr-1" /> Exportar CSV
+        <Button variant="outline" size="sm" onClick={handleExportXlsx} disabled={items.length === 0}>
+          <FileText className="h-4 w-4 mr-1" /> Exportar Excel
         </Button>
         <Button size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}>
           <Plus className="h-4 w-4 mr-1" /> Nova NF
