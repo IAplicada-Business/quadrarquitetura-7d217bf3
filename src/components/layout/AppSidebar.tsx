@@ -25,8 +25,9 @@ import {
   LucideIcon,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
 import logoBege from "@/assets/logo-bege.png";
 import { InstallPwaButton } from "@/components/layout/InstallPwaButton";
@@ -171,6 +172,30 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
+  // Esconde do menu tudo que o usuário não pode ver (permissões por tela
+  // salvas em Administrativo → Usuários). Sub-itens são filtrados um a um;
+  // itens e grupos que ficarem vazios somem inteiros.
+  const { canViewPath } = usePermissions();
+  const visibleGroups = useMemo((): MenuGroup[] => {
+    return menuGroups
+      .map((group) => ({
+        ...group,
+        items: group.items
+          .map((item) => {
+            if (item.subItems) {
+              const subItems = item.subItems.filter((s) => canViewPath(s.url));
+              if (subItems.length === 0) return null;
+              // Se a URL "pai" ficou inacessível, aponta pro 1º sub visível
+              const url = canViewPath(item.url) ? item.url : subItems[0].url;
+              return { ...item, url, subItems };
+            }
+            return canViewPath(item.url) ? item : null;
+          })
+          .filter((i): i is MenuItem => i !== null),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [canViewPath]);
+
   // Sprint 7d — comportamento pedido na call: "menu fica todo aberto,
   // deveria ficar somente os menus pais". Default sempre fechado.
   // Mantemos localStorage para persistir a preferência do usuário,
@@ -233,7 +258,7 @@ export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
           </div>
 
           <nav className="flex-1 py-3 overflow-y-auto scrollbar-sidebar">
-            {menuGroups.map((group, gi) => (
+            {visibleGroups.map((group, gi) => (
               <div key={group.label} className={cn(gi > 0 && "mt-2 pt-2 border-t border-sidebar-border/40")}>
                 {group.items.map((item) => {
                   if (item.subItems) {
@@ -296,7 +321,7 @@ export function AppSidebar({ onNavigate, collapsed = false }: AppSidebarProps) {
       </div>
 
       <nav className="flex-1 py-3 px-2 overflow-y-auto scrollbar-sidebar min-h-0">
-        {menuGroups.map((group) => {
+        {visibleGroups.map((group) => {
           const GroupIcon = groupIcons[group.label];
           const isOpen = openGroups[group.label];
           return (

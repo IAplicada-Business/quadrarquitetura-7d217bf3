@@ -18,6 +18,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Users, Plus, Shield, Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { PAGE_GROUPS } from "@/lib/pagePermissions";
+import { Switch } from "@/components/ui/switch";
 
 interface UserRow {
   id: string;
@@ -26,35 +28,6 @@ interface UserRow {
   role: string;
   created_at: string;
 }
-
-const PAGE_KEYS = [
-  { group: "Dashboard", pages: [
-    { key: "dashboard_escritorio", label: "Escritório" },
-    { key: "dashboard_obras", label: "Obras" },
-  ]},
-  { group: "Leads", pages: [
-    { key: "leads_pipeline", label: "Pipeline" },
-    { key: "leads_proposals", label: "Propostas" },
-    { key: "leads_contracts", label: "Contratos" },
-  ]},
-  { group: "Clientes", pages: [
-    { key: "clients", label: "Lista" },
-  ]},
-  { group: "Projetos", pages: [
-    { key: "projects", label: "Lista" },
-  ]},
-  { group: "Obra", pages: [
-    { key: "construction_tracking", label: "Acompanhamento" },
-    { key: "construction_tasks", label: "Tarefas" },
-    { key: "construction_suppliers", label: "Fornecedores" },
-    { key: "construction_documents", label: "Documentos" },
-    { key: "construction_reports", label: "Relatórios" },
-  ]},
-  { group: "Administrativo", pages: [
-    { key: "admin_settings", label: "Configurações" },
-    { key: "admin_users", label: "Usuários" },
-  ]},
-];
 
 type PermMap = Record<string, { can_view: boolean; can_edit: boolean }>;
 
@@ -69,6 +42,10 @@ export default function AdminUsersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", full_name: "", role: "user" });
+  // Acesso por tela definido já na criação (pedido da Mariana: "ao criar
+  // um usuário, dar acesso aos menus e telas que esse usuário vai ter")
+  const [restrictAccess, setRestrictAccess] = useState(false);
+  const [createPerms, setCreatePerms] = useState<PermMap>({});
 
   // Permissões
   const [permUser, setPermUser] = useState<UserRow | null>(null);
@@ -186,8 +163,22 @@ export default function AdminUsersPage() {
     fetchUsers();
   };
 
+  const toggleCreatePerm = (pageKey: string, field: "can_view" | "can_edit") => {
+    setCreatePerms((prev) => {
+      const current = prev[pageKey] || { can_view: false, can_edit: false };
+      const updated = { ...current, [field]: !current[field] };
+      if (field === "can_edit" && updated.can_edit) updated.can_view = true;
+      if (field === "can_view" && !updated.can_view) updated.can_edit = false;
+      return { ...prev, [pageKey]: updated };
+    });
+  };
+
   const createUser = async () => {
     if (!form.email || !form.password || !form.full_name) { toast.error("Preencha todos os campos"); return; }
+    if (restrictAccess && form.role !== "admin") {
+      const anyView = Object.values(createPerms).some(v => v.can_view || v.can_edit);
+      if (!anyView) { toast.error("Selecione ao menos uma tela ou desative o acesso restrito"); return; }
+    }
     setCreating(true);
     const { data, error } = await supabase.functions.invoke("create-user", { body: form });
     let errorMessage: string | null = null;
@@ -207,13 +198,29 @@ export default function AdminUsersPage() {
       setCreating(false);
       return;
     }
+    // Grava as permissões por tela escolhidas na criação
+    const newUserId: string | undefined = data?.user?.id;
+    if (newUserId && restrictAccess && form.role !== "admin") {
+      await supabase.from("user_permissions").delete().eq("user_id", newUserId);
+      const rows = Object.entries(createPerms)
+        .filter(([, v]) => v.can_view || v.can_edit)
+        .map(([key, v]) => ({ user_id: newUserId, page_key: key, can_view: v.can_view, can_edit: v.can_edit }));
+      if (rows.length > 0) {
+        const { error: permError } = await supabase.from("user_permissions").insert(rows);
+        if (permError) {
+          toast.error("Usuário criado, mas houve erro ao salvar as permissões: " + permError.message);
+        }
+      }
+    }
     if (data?.repaired) {
       toast.success("Usuário já existia — acesso reparado (função e equipe configuradas)");
     } else {
-      toast.success("Usuário criado");
+      toast.success(restrictAccess && form.role !== "admin" ? "Usuário criado com acesso restrito às telas selecionadas" : "Usuário criado");
     }
     setCreateOpen(false);
     setForm({ email: "", password: "", full_name: "", role: "user" });
+    setRestrictAccess(false);
+    setCreatePerms({});
     setCreating(false);
     fetchUsers();
   };
@@ -279,8 +286,8 @@ export default function AdminUsersPage() {
       </Card>
 
       {/* Dialog: Criar Usuário */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
+      <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) { setRestrictAccess(false); setCreatePerms({}); } }}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Criar Novo Usuário</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div><Label>Nome Completo</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
@@ -297,6 +304,52 @@ export default function AdminUsersPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {form.role !== "admin" && (
+              <div className="rounded-lg border p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="restrict-access" className="cursor-pointer">Restringir acesso por tela</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {restrictAccess
+                        ? "O usuário verá apenas os menus e telas marcados abaixo."
+                        : "Desligado: o usuário terá acesso a todas as telas."}
+                    </p>
+                  </div>
+                  <Switch id="restrict-access" checked={restrictAccess} onCheckedChange={setRestrictAccess} />
+                </div>
+
+                {restrictAccess && (
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+                    {PAGE_GROUPS.map((group) => (
+                      <div key={group.group}>
+                        <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">{group.group}</h4>
+                        <div className="border rounded-md overflow-hidden">
+                          {group.pages.map((page, idx) => {
+                            const perm = createPerms[page.key] || { can_view: false, can_edit: false };
+                            return (
+                              <div key={page.key} className={`flex items-center justify-between py-1.5 px-2.5 ${idx % 2 === 0 ? "bg-muted/30" : ""}`}>
+                                <span className="text-xs">{page.label}</span>
+                                <div className="flex items-center gap-4">
+                                  <label className="flex items-center gap-1 text-[11px] text-muted-foreground cursor-pointer">
+                                    <Checkbox checked={perm.can_view} onCheckedChange={() => toggleCreatePerm(page.key, "can_view")} />
+                                    Ver
+                                  </label>
+                                  <label className="flex items-center gap-1 text-[11px] text-muted-foreground cursor-pointer">
+                                    <Checkbox checked={perm.can_edit} onCheckedChange={() => toggleCreatePerm(page.key, "can_edit")} />
+                                    Editar
+                                  </label>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
@@ -349,7 +402,7 @@ export default function AdminUsersPage() {
             <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
           ) : (
             <div className="space-y-4">
-              {PAGE_KEYS.map((group) => (
+              {PAGE_GROUPS.map((group) => (
                 <div key={group.group}>
                   <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">{group.group}</h4>
                   <div className="space-y-1 border rounded-md overflow-hidden">
