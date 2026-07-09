@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, TrendingUp, TrendingDown } from "lucide-react";
-import { format } from "date-fns";
+import { format, addMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const FIN_MONTHS = Array.from({ length: 12 }, (_, i) => ({
@@ -80,6 +80,7 @@ interface LancamentoForm {
   paid_date: string;
   status: string;
   project_id: string;
+  repeat: string;
 }
 
 const emptyForm = (): LancamentoForm => ({
@@ -91,7 +92,12 @@ const emptyForm = (): LancamentoForm => ({
   paid_date: "",
   status: "pendente",
   project_id: "",
+  repeat: "1",
 });
+
+function shiftMonths(dateStr: string, months: number): string {
+  return format(addMonths(parseISO(dateStr), months), "yyyy-MM-dd");
+}
 
 export default function Lancamentos() {
   const { user } = useAuth();
@@ -128,7 +134,10 @@ export default function Lancamentos() {
 
       if (filterType !== "all") q = q.eq("payment_type", filterType);
       if (filterStatus !== "all") q = q.eq("status", filterStatus);
-      if (datePrefix) q = q.like("due_date", `${datePrefix}%`);
+      // Considera o mês do vencimento OU do pagamento: lançamento pago sem
+      // vencimento preenchido sumia da lista mas aparecia no gráfico do
+      // dashboard (que agrega por paid_date).
+      if (datePrefix) q = q.or(`due_date.like.${datePrefix}%,paid_date.like.${datePrefix}%`);
 
       const { data, error } = await q;
       if (error) throw error;
@@ -144,24 +153,38 @@ export default function Lancamentos() {
 
   const create = useMutation({
     mutationFn: async (data: Omit<LancamentoForm, "value"> & { value: number }) => {
-      const { error } = await supabase.from("payments").insert({
+      const repeatCount = Math.min(Math.max(parseInt(data.repeat) || 1, 1), 60);
+      // Sem vencimento informado, herda a data de pagamento — evita o
+      // lançamento sumir da listagem mensal (que filtra por data).
+      const baseDue = data.due_date || data.paid_date || null;
+      const description = `${data.category ? `[${data.category}] ` : ""}${data.description}`.trim() || null;
+      const supplierName = data.payment_type === "despesa" ? (data.description || data.category || "Despesa") : "Receita Escritório";
+
+      const rows = Array.from({ length: repeatCount }, (_, i) => ({
         user_id: user!.id,
         project_id: data.project_id || null,
         source: "escritorio",
         payment_type: data.payment_type,
-        description: `${data.category ? `[${data.category}] ` : ""}${data.description}`.trim() || null,
-        supplier_name: data.payment_type === "despesa" ? (data.description || data.category || "Despesa") : "Receita Escritório",
+        description: repeatCount > 1 && description ? `${description} (${i + 1}/${repeatCount})` : description,
+        supplier_name: supplierName,
         value: data.value,
-        due_date: data.due_date || null,
-        paid_date: data.paid_date || null,
-        status: data.status,
-      } as never);
+        due_date: baseDue ? shiftMonths(baseDue, i) : null,
+        // Só a 1ª ocorrência carrega pagamento/status informado;
+        // as futuras entram como pendentes.
+        paid_date: i === 0 ? data.paid_date || null : null,
+        status: i === 0 ? data.status : "pendente",
+        installment_number: repeatCount > 1 ? i + 1 : null,
+        total_installments: repeatCount > 1 ? repeatCount : null,
+      }));
+
+      const { error } = await supabase.from("payments").insert(rows as never);
       if (error) throw error;
+      return repeatCount;
     },
-    onSuccess: () => {
+    onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["lancamentos-escritorio"] });
       queryClient.invalidateQueries({ queryKey: ["financeiro-metrics"] });
-      toast({ title: "Lançamento adicionado" });
+      toast({ title: count > 1 ? `${count} lançamentos criados (repetição mensal)` : "Lançamento adicionado" });
       setFormOpen(false);
       setForm(emptyForm());
     },
@@ -176,7 +199,7 @@ export default function Lancamentos() {
         description: `${data.category ? `[${data.category}] ` : ""}${data.description}`.trim() || null,
         supplier_name: data.payment_type === "despesa" ? (data.description || data.category || "Despesa") : "Receita Escritório",
         value: data.value,
-        due_date: data.due_date || null,
+        due_date: data.due_date || data.paid_date || null,
         paid_date: data.paid_date || null,
         status: data.status,
       } as never).eq("id", id);
@@ -230,6 +253,7 @@ export default function Lancamentos() {
       paid_date: item.paid_date ?? "",
       status: item.status ?? "pendente",
       project_id: item.project_id ?? "",
+      repeat: "1",
     });
     setEditingId(item.id);
     setFormOpen(true);
@@ -456,6 +480,23 @@ export default function Lancamentos() {
                 <Input type="date" value={form.paid_date} onChange={e => setForm(f => ({ ...f, paid_date: e.target.value }))} />
               </div>
             </div>
+            {!editingId && (
+              <div>
+                <Label>
+                  Repetir (nº de meses)
+                  <span className="ml-1 text-[11px] text-muted-foreground font-normal">
+                    — gera um lançamento por mês; os futuros ficam pendentes
+                  </span>
+                </Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={form.repeat}
+                  onChange={e => setForm(f => ({ ...f, repeat: e.target.value }))}
+                />
+              </div>
+            )}
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={create.isPending || update.isPending}>

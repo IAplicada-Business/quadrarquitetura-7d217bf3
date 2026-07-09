@@ -207,7 +207,11 @@ export default function AdminUsersPage() {
       setCreating(false);
       return;
     }
-    toast.success("Usuário criado");
+    if (data?.repaired) {
+      toast.success("Usuário já existia — acesso reparado (função e equipe configuradas)");
+    } else {
+      toast.success("Usuário criado");
+    }
     setCreateOpen(false);
     setForm({ email: "", password: "", full_name: "", role: "user" });
     setCreating(false);
