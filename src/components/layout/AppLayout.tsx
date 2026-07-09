@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
+import { PermissionGate } from "./PermissionGate";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AIChatBox } from "@/components/chat/AIChatBox";
 import {
@@ -57,7 +58,9 @@ export function AppLayout() {
         />
         <main className="flex-1 overflow-y-auto scrollbar-elegant">
           <div className="w-full px-6 py-6 lg:px-8 lg:py-8 animate-fade-in">
-            <Outlet />
+            <PermissionGate>
+              <Outlet />
+            </PermissionGate>
           </div>
         </main>
       </div>
