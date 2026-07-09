@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as sbClient } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
-export type InstagramProfile = Tables<"instagram_profiles">;
-export type InstagramMetric = Tables<"instagram_metrics">;
+const supabase: any = sbClient;
+
+export type InstagramProfile = any;
+export type InstagramMetric = any;
 
 export function useInstagramAnalysis() {
   const { user } = useAuth();
@@ -17,7 +18,7 @@ export function useInstagramAnalysis() {
       const { data, error } = await supabase
         .from("instagram_profiles")
         .select("*")
-        .order("kind") // 'self' antes de 'reference'
+        .order("kind")
         .order("handle");
       if (error) throw error;
       return data as InstagramProfile[];
@@ -39,7 +40,7 @@ export function useInstagramAnalysis() {
   });
 
   const createProfile = useMutation({
-    mutationFn: async (input: Omit<TablesInsert<"instagram_profiles">, "user_id">) => {
+    mutationFn: async (input: any) => {
       const { error } = await supabase
         .from("instagram_profiles")
         .insert({ ...input, user_id: user!.id });
@@ -54,7 +55,7 @@ export function useInstagramAnalysis() {
   });
 
   const updateProfile = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string } & TablesUpdate<"instagram_profiles">) => {
+    mutationFn: async ({ id, ...updates }: { id: string } & Record<string, any>) => {
       const { error } = await supabase
         .from("instagram_profiles")
         .update(updates)
@@ -81,7 +82,7 @@ export function useInstagramAnalysis() {
   });
 
   const createMetric = useMutation({
-    mutationFn: async (input: Omit<TablesInsert<"instagram_metrics">, "user_id">) => {
+    mutationFn: async (input: any) => {
       const { error } = await supabase
         .from("instagram_metrics")
         .insert({ ...input, user_id: user!.id });
@@ -96,7 +97,7 @@ export function useInstagramAnalysis() {
   });
 
   const updateMetric = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string } & TablesUpdate<"instagram_metrics">) => {
+    mutationFn: async ({ id, ...updates }: { id: string } & Record<string, any>) => {
       const { error } = await supabase.from("instagram_metrics").update(updates).eq("id", id);
       if (error) throw error;
     },

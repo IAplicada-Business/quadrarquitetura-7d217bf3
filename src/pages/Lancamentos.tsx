@@ -133,7 +133,7 @@ export default function Lancamentos() {
         .order("due_date", { ascending: false });
 
       if (filterType !== "all") q = q.eq("payment_type", filterType);
-      if (filterStatus !== "all") q = q.eq("status", filterStatus);
+      if (filterStatus !== "all") q = q.eq("status", filterStatus as any);
       // Considera o mês do vencimento OU do pagamento: lançamento pago sem
       // vencimento preenchido sumia da lista mas aparecia no gráfico do
       // dashboard (que agrega por paid_date).

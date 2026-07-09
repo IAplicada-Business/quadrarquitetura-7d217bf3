@@ -14,118 +14,58 @@ export type Database = {
   }
   public: {
     Tables: {
-      instagram_profiles: {
+      activity_template_items: {
         Row: {
+          ambiente: string | null
+          area_m2: number | null
           created_at: string
-          handle: string
+          depends_on_positions: number[] | null
+          description: string | null
+          discipline: string | null
+          duration_days: number | null
           id: string
-          is_active: boolean
-          kind: string
-          label: string | null
-          notes: string | null
+          name: string
+          position: number
+          template_id: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          ambiente?: string | null
+          area_m2?: number | null
           created_at?: string
-          handle: string
+          depends_on_positions?: number[] | null
+          description?: string | null
+          discipline?: string | null
+          duration_days?: number | null
           id?: string
-          is_active?: boolean
-          kind?: string
-          label?: string | null
-          notes?: string | null
+          name: string
+          position?: number
+          template_id: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          ambiente?: string | null
+          area_m2?: number | null
           created_at?: string
-          handle?: string
+          depends_on_positions?: number[] | null
+          description?: string | null
+          discipline?: string | null
+          duration_days?: number | null
           id?: string
-          is_active?: boolean
-          kind?: string
-          label?: string | null
-          notes?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      instagram_metrics: {
-        Row: {
-          avg_comments: number | null
-          avg_likes: number | null
-          avg_reach: number | null
-          avg_saves: number | null
-          created_at: string
-          engagement_rate: number | null
-          followers: number | null
-          id: string
-          notes: string | null
-          palette_dominant: string | null
-          palette_quaternary: string | null
-          palette_secondary: string | null
-          palette_tertiary: string | null
-          period_end: string
-          period_start: string
-          post_count: number | null
-          profile_id: string
-          reel_count: number | null
-          story_count: number | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          avg_comments?: number | null
-          avg_likes?: number | null
-          avg_reach?: number | null
-          avg_saves?: number | null
-          created_at?: string
-          engagement_rate?: number | null
-          followers?: number | null
-          id?: string
-          notes?: string | null
-          palette_dominant?: string | null
-          palette_quaternary?: string | null
-          palette_secondary?: string | null
-          palette_tertiary?: string | null
-          period_end: string
-          period_start: string
-          post_count?: number | null
-          profile_id: string
-          reel_count?: number | null
-          story_count?: number | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          avg_comments?: number | null
-          avg_likes?: number | null
-          avg_reach?: number | null
-          avg_saves?: number | null
-          created_at?: string
-          engagement_rate?: number | null
-          followers?: number | null
-          id?: string
-          notes?: string | null
-          palette_dominant?: string | null
-          palette_quaternary?: string | null
-          palette_secondary?: string | null
-          palette_tertiary?: string | null
-          period_end?: string
-          period_start?: string
-          post_count?: number | null
-          profile_id?: string
-          reel_count?: number | null
-          story_count?: number | null
+          name?: string
+          position?: number
+          template_id?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "instagram_metrics_profile_id_fkey"
-            columns: ["profile_id"]
+            foreignKeyName: "activity_template_items_template_id_fkey"
+            columns: ["template_id"]
             isOneToOne: false
-            referencedRelation: "instagram_profiles"
+            referencedRelation: "activity_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -159,68 +99,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      activity_template_items: {
-        Row: {
-          ambiente: string | null
-          area_basis: string
-          area_factor: number | null
-          area_m2: number | null
-          created_at: string
-          depends_on_positions: number[] | null
-          description: string | null
-          discipline: string | null
-          duration_days: number | null
-          id: string
-          name: string
-          position: number
-          template_id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          ambiente?: string | null
-          area_basis?: string
-          area_factor?: number | null
-          area_m2?: number | null
-          created_at?: string
-          depends_on_positions?: number[] | null
-          description?: string | null
-          discipline?: string | null
-          duration_days?: number | null
-          id?: string
-          name: string
-          position?: number
-          template_id: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          ambiente?: string | null
-          area_basis?: string
-          area_factor?: number | null
-          area_m2?: number | null
-          created_at?: string
-          depends_on_positions?: number[] | null
-          description?: string | null
-          discipline?: string | null
-          duration_days?: number | null
-          id?: string
-          name?: string
-          position?: number
-          template_id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "activity_template_items_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "activity_templates"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       budget_quote_items: {
         Row: {
@@ -2125,6 +2003,44 @@ export type Database = {
           },
         ]
       }
+      project_rooms: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          project_id: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          project_id: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          project_id?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_rooms_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           address: string | null
@@ -2133,7 +2049,6 @@ export type Database = {
           city: string | null
           client_budget: number | null
           client_id: string | null
-          client_move_in_date: string | null
           construction_type_estimate: string | null
           contingency_percentage: number | null
           contract_id: string | null
@@ -2170,7 +2085,6 @@ export type Database = {
           city?: string | null
           client_budget?: number | null
           client_id?: string | null
-          client_move_in_date?: string | null
           construction_type_estimate?: string | null
           contingency_percentage?: number | null
           contract_id?: string | null
@@ -2207,7 +2121,6 @@ export type Database = {
           city?: string | null
           client_budget?: number | null
           client_id?: string | null
-          client_move_in_date?: string | null
           construction_type_estimate?: string | null
           contingency_percentage?: number | null
           contract_id?: string | null
@@ -2651,44 +2564,6 @@ export type Database = {
           },
         ]
       }
-      project_rooms: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          project_id: string
-          sort_order: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          project_id: string
-          sort_order?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          project_id?: string
-          sort_order?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_rooms_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       reports: {
         Row: {
           content: Json
@@ -3056,112 +2931,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      schedule_scenarios: {
-        Row: {
-          applied_at: string | null
-          created_at: string
-          description: string | null
-          id: string
-          is_baseline: boolean
-          name: string
-          project_id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          applied_at?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_baseline?: boolean
-          name: string
-          project_id: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          applied_at?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_baseline?: boolean
-          name?: string
-          project_id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "schedule_scenarios_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      schedule_scenario_activities: {
-        Row: {
-          area_m2: number | null
-          created_at: string
-          depends_on: string[] | null
-          description: string | null
-          discipline: string | null
-          duration_days: number | null
-          end_date: string | null
-          id: string
-          name: string
-          position: number
-          scenario_id: string
-          source_activity_id: string | null
-          start_date: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          area_m2?: number | null
-          created_at?: string
-          depends_on?: string[] | null
-          description?: string | null
-          discipline?: string | null
-          duration_days?: number | null
-          end_date?: string | null
-          id?: string
-          name: string
-          position?: number
-          scenario_id: string
-          source_activity_id?: string | null
-          start_date?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          area_m2?: number | null
-          created_at?: string
-          depends_on?: string[] | null
-          description?: string | null
-          discipline?: string | null
-          duration_days?: number | null
-          end_date?: string | null
-          id?: string
-          name?: string
-          position?: number
-          scenario_id?: string
-          source_activity_id?: string | null
-          start_date?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "schedule_scenario_activities_scenario_id_fkey"
-            columns: ["scenario_id"]
-            isOneToOne: false
-            referencedRelation: "schedule_scenarios"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       site_diary_entries: {
         Row: {
@@ -3543,63 +3312,51 @@ export type Database = {
       }
       voice_tasks: {
         Row: {
-          assigned_to: string | null
           category: string
           created_at: string
           description: string | null
           due_date: string | null
           id: string
-          is_recurring: boolean
           parent_id: string | null
           priority: string
-          project_id: string | null
-          recurrence_rule: string | null
+          project_id: string
           responsible: string | null
           source_transcript: string | null
           status: string
-          tags: string[] | null
           task_type: string
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
-          assigned_to?: string | null
           category?: string
           created_at?: string
           description?: string | null
           due_date?: string | null
           id?: string
-          is_recurring?: boolean
           parent_id?: string | null
           priority?: string
-          project_id?: string | null
-          recurrence_rule?: string | null
+          project_id: string
           responsible?: string | null
           source_transcript?: string | null
           status?: string
-          tags?: string[] | null
           task_type?: string
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
-          assigned_to?: string | null
           category?: string
           created_at?: string
           description?: string | null
           due_date?: string | null
           id?: string
-          is_recurring?: boolean
           parent_id?: string | null
           priority?: string
-          project_id?: string | null
-          recurrence_rule?: string | null
+          project_id?: string
           responsible?: string | null
           source_transcript?: string | null
           status?: string
-          tags?: string[] | null
           task_type?: string
           title?: string
           updated_at?: string

@@ -92,24 +92,29 @@ Contexto: ${baseContext}
 Retorne JSON: {"hook": "novo hook impactante, máx 15 palavras", "alternatives": ["alternativa 1", "alternativa 2"]}`;
     }
 
-    const aiRes = await fetch("https://ai.lovable.dev/chat/completions", {
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Lovable-API-Key": LOVABLE_API_KEY,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-4o-mini",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.8,
       }),
     });
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
+      if (aiRes.status === 429) {
+        return new Response(JSON.stringify({ error: "Limite de requisições atingido. Tente novamente em instantes." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (aiRes.status === 402) {
+        return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos no workspace." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
       throw new Error(`AI API error: ${aiRes.status} - ${errText}`);
     }
 

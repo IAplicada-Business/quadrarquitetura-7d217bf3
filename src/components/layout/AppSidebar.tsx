@@ -75,7 +75,6 @@ const iconMap: Record<string, LucideIcon> = {
   "Tarefas": CheckSquare,
   "Tarefas por Obra": CheckSquare,
   "Tarefas Quadra": ListChecks,
-  "Tarefas": ListChecks,
   "Kanban": ListChecks,
   "Kanban Projetos": Building2,
   "Kanban Quadra": ListChecks,
@@ -88,7 +87,6 @@ const iconMap: Record<string, LucideIcon> = {
   "Social": Instagram,
   "Configurações": Settings,
   "Usuários": Shield,
-  "Notas Fiscais": Receipt,
 };
 
 const menuGroups: MenuGroup[] = [
