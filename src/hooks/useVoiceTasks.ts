@@ -149,16 +149,13 @@ export function useVoiceTasks(projectId?: string) {
       recurrence_rule?: string | null;
       tags?: string[] | null;
     }) => {
-      const { data, error } = await supabase
-        .from("voice_tasks")
-        .insert({
+      const payload: Record<string, unknown> = {
           user_id: user!.id,
           project_id: task.project_id ?? null,
           parent_id: task.parent_id ?? null,
           title: task.title,
           description: task.description || null,
           responsible: task.responsible || null,
-          assigned_to: task.assigned_to || null,
           task_type: task.task_type || "geral",
           category: task.category || "pendencias",
           priority: task.priority || "media",
@@ -167,7 +164,15 @@ export function useVoiceTasks(projectId?: string) {
           recurrence_rule: task.recurrence_rule || null,
           tags: task.tags ?? null,
           source_transcript: null,
-        })
+        };
+      // Só envia assigned_to quando houver valor — evita erros de schema
+      // se a coluna ainda não existir em algum ambiente.
+      if (task.assigned_to) {
+        payload.assigned_to = task.assigned_to;
+      }
+      const { data, error } = await supabase
+        .from("voice_tasks")
+        .insert(payload as any)
         .select()
         .single();
       if (error) throw error;
