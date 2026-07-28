@@ -1,73 +1,60 @@
-# Welcome to your Lovable project
+# Quadra Arquitetura
 
-## Project info
+Sistema operacional da Quadra Arquitetura — gestão comercial, obras, financeiro, tarefas e conteúdo.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**Lovable:** https://lovable.dev/projects/bb62f3cc-01c8-4342-80c8-67a725b43124  
+**App:** https://quadrarquitetura.lovable.app  
+**Repo canônico:** https://github.com/IAplicada-Business/quadrarquitetura-7d217bf3  
+**Repo legado:** https://github.com/IAplicada-Business/quadrarquitetura
 
-## How can I edit this code?
+## Status da sincronização (28/07/2026)
 
-There are several ways of editing your application.
+O repositório novo foi criado na transição GitHub do Lovable. Comparado com o legado:
 
-**Use Lovable**
+| Item | Status |
+|---|---|
+| Commit `main` | Idêntico (`bf621bd`) |
+| Histórico | 1188 commits em ambos |
+| Árvore de arquivos | 426 arquivos, checksums iguais |
+| Supabase | Mesmo projeto `howrjpavjofxbvqpiyey` |
+| Edge functions | 15 (incl. `create-user` / `delete-user`) |
+| Migrations | 99 |
+| Knowledge Lovable | Restaurado a partir do inventário do repo legado |
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+Branch legada `lovable-sync-1782789294` (delete-user) já está absorvida no `main` via commits posteriores — não há funcionalidade pendente nela.
 
-Changes made via Lovable will be committed automatically to this repo.
+## Stack
 
-**Use your preferred IDE**
+- Vite + React + TypeScript
+- shadcn/ui + Tailwind CSS
+- Supabase (Auth, Postgres, Storage, Edge Functions)
+- PWA (`vite-plugin-pwa`)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Como editar
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+**Lovable** — abra o projeto e faça prompts; commits vão para este repo.
 
-Follow these steps:
+**IDE local:**
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
+git clone https://github.com/IAplicada-Business/quadrarquitetura-7d217bf3.git
+cd quadrarquitetura-7d217bf3
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Scripts úteis: `npm run build`, `npm test`, `npm run lint`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Módulos principais
 
-**Use GitHub Codespaces**
+- **Análises:** Dashboard Comercial, Obras, Financeiro (lançamentos, NFs, gráficos)
+- **Comercial:** Leads, Clientes, Propostas, Contratos
+- **Obras:** Escopo / Orçamentos / Materiais / Cronograma (disciplina-first), Checklist, Prestação de Contas, Portal do cliente
+- **Tarefas:** Kanban Projetos, Kanban Quadra, Audio Tasks
+- **Conteúdo:** Calendário, Roteiros, Publicações, Instagram
+- **Admin:** Configurações + Usuários com permissão por tela
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Deploy / domínio
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Publicação e domínio customizado: Project → Share/Publish e Settings → Domains no Lovable.  
+Docs: https://docs.lovable.dev/features/custom-domain
