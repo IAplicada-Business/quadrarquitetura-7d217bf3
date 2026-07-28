@@ -27,7 +27,7 @@ interface VoiceTaskFormProps {
     is_recurring?: boolean;
     recurrence_rule?: string | null;
     tags?: string[] | null;
-  }) => void;
+  }) => void | Promise<void>;
   projects: { id: string; name: string }[];
   defaultProjectId?: string;
   isLoading?: boolean;
@@ -64,40 +64,44 @@ export function VoiceTaskForm({
     }
   }, [open, defaultProjectId]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title.trim()) return;
+    if (!form.title.trim() || isLoading) return;
     const tagsArr = form.tags
       .split(/[,\s]+/)
       .map((t) => t.replace(/^#/, "").trim())
       .filter(Boolean);
-    onSubmit({
-      project_id: form.project_id === NO_PROJECT ? null : form.project_id,
-      title: form.title.trim(),
-      description: form.description.trim() || undefined,
-      responsible: form.responsible.trim() || undefined,
-      task_type: form.task_type,
-      category: form.category,
-      priority: form.priority,
-      due_date: form.due_date || undefined,
-      is_recurring: form.is_recurring,
-      recurrence_rule: form.is_recurring ? form.recurrence_rule : null,
-      tags: tagsArr.length > 0 ? tagsArr : null,
-    });
-    setForm({
-      project_id: defaultProjectId || NO_PROJECT,
-      title: "",
-      description: "",
-      responsible: "",
-      task_type: "geral",
-      category: "pendencias",
-      priority: "media",
-      due_date: "",
-      is_recurring: false,
-      recurrence_rule: "FREQ=WEEKLY",
-      tags: "",
-    });
-    onOpenChange(false);
+    try {
+      await onSubmit({
+        project_id: form.project_id === NO_PROJECT ? null : form.project_id,
+        title: form.title.trim(),
+        description: form.description.trim() || undefined,
+        responsible: form.responsible.trim() || undefined,
+        task_type: form.task_type,
+        category: form.category,
+        priority: form.priority,
+        due_date: form.due_date || undefined,
+        is_recurring: form.is_recurring,
+        recurrence_rule: form.is_recurring ? form.recurrence_rule : null,
+        tags: tagsArr.length > 0 ? tagsArr : null,
+      });
+      setForm({
+        project_id: defaultProjectId || NO_PROJECT,
+        title: "",
+        description: "",
+        responsible: "",
+        task_type: "geral",
+        category: "pendencias",
+        priority: "media",
+        due_date: "",
+        is_recurring: false,
+        recurrence_rule: "FREQ=WEEKLY",
+        tags: "",
+      });
+      onOpenChange(false);
+    } catch {
+      // Erro já é tratado no hook (toast). Mantém o formulário aberto.
+    }
   };
 
   return (
