@@ -1043,11 +1043,11 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
       <ScheduleTaskForm
         open={formOpen}
         onOpenChange={setFormOpen}
-        onSubmit={(data) => {
+        onSubmit={async (data) => {
           if (editing) {
-            update.mutate({ id: editing.id as string, ...data });
+            await update.mutateAsync({ id: editing.id as string, ...data });
           } else {
-            create.mutate(data);
+            await create.mutateAsync(data as any);
           }
           setEditing(null);
         }}
@@ -1059,11 +1059,13 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
       <ActivityForm
         open={activityFormOpen}
         onOpenChange={setActivityFormOpen}
-        onSubmit={(data) => {
+        onSubmit={async (data) => {
           if (editingActivity?.id) {
-            updateActivity.mutate({ id: editingActivity.id, ...data });
+            const { id: _ignore, ...rest } = data as any;
+            await updateActivity.mutateAsync({ id: editingActivity.id, ...rest });
           } else {
-            createActivity.mutate(data);
+            const { id: _ignore, ...rest } = data as any;
+            await createActivity.mutateAsync(rest);
           }
           setEditingActivity(null);
         }}

@@ -13,20 +13,20 @@ interface ScheduleTaskFormProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: {
     task_name: string;
-    scope_item_id?: string;
-    start_date?: string;
-    end_date?: string;
+    scope_item_id?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
     status?: string;
-    payment_note?: string;
+    payment_note?: string | null;
     order_index?: number;
-    supplier_name?: string;
-    discipline?: string;
+    supplier_name?: string | null;
+    discipline?: string | null;
     is_client_visible?: boolean;
     is_daily_detail?: boolean;
     requires_presence?: boolean;
     progress_percentage?: number;
     color?: string;
-  }) => void;
+  }) => void | Promise<void>;
   initialData?: Record<string, unknown> | null;
   isLoading?: boolean;
   scopeItems?: { id: string; discipline: string }[];
@@ -78,30 +78,34 @@ export function ScheduleTaskForm({ open, onOpenChange, onSubmit, initialData, is
     }
   }, [initialData, open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!taskName) return;
-    onSubmit({
-      task_name: taskName,
-      scope_item_id: scopeItemId || undefined,
-      start_date: startDate || undefined,
-      end_date: endDate || undefined,
-      status,
-      payment_note: paymentNote || undefined,
-      order_index: orderIndex ? Number(orderIndex) : undefined,
-      supplier_name: supplierName || undefined,
-      discipline: discipline || undefined,
-      is_client_visible: isClientVisible,
-      is_daily_detail: isDailyDetail,
-      requires_presence: requiresPresence,
-      progress_percentage: progress,
-      color,
-    });
-    onOpenChange(false);
-    setTaskName(""); setScopeItemId(""); setStartDate(""); setEndDate("");
-    setStatus("planejado"); setPaymentNote(""); setOrderIndex("");
-    setSupplierName(""); setDiscipline(""); setIsClientVisible(true);
-    setIsDailyDetail(false); setRequiresPresence(false); setProgress(0); setColor("#3b82f6");
+    if (!taskName || isLoading) return;
+    try {
+      await onSubmit({
+        task_name: taskName,
+        scope_item_id: scopeItemId || null,
+        start_date: startDate || null,
+        end_date: endDate || null,
+        status,
+        payment_note: paymentNote || null,
+        order_index: orderIndex ? Number(orderIndex) : undefined,
+        supplier_name: supplierName || null,
+        discipline: discipline || null,
+        is_client_visible: isClientVisible,
+        is_daily_detail: isDailyDetail,
+        requires_presence: requiresPresence,
+        progress_percentage: progress,
+        color,
+      });
+      onOpenChange(false);
+      setTaskName(""); setScopeItemId(""); setStartDate(""); setEndDate("");
+      setStatus("planejado"); setPaymentNote(""); setOrderIndex("");
+      setSupplierName(""); setDiscipline(""); setIsClientVisible(true);
+      setIsDailyDetail(false); setRequiresPresence(false); setProgress(0); setColor("#3b82f6");
+    } catch {
+      // Erro tratado no hook (toast). Mantém formulário aberto.
+    }
   };
 
   return (

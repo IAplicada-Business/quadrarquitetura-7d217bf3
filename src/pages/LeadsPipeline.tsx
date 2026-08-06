@@ -134,14 +134,19 @@ export default function LeadsPipeline() {
     setFormOpen(true);
   };
 
-  const handleSubmit = () => {
-    if (!formData.name || !formData.phone) return;
-    if (editingLead) {
-      update.mutate({ id: editingLead.id, ...formData });
-    } else {
-      create.mutate(formData);
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.phone || create.isPending || update.isPending) return;
+    try {
+      if (editingLead) {
+        await update.mutateAsync({ id: editingLead.id, ...formData });
+      } else {
+        await create.mutateAsync(formData);
+      }
+      setFormOpen(false);
+      setEditingLead(null);
+    } catch {
+      // Toast já tratado no hook; mantém o formulário aberto com os dados.
     }
-    setFormOpen(false);
   };
 
   const moveStatus = (lead: Lead, newStatus: string) => {

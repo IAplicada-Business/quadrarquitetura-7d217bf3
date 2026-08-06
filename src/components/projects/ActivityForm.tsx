@@ -17,7 +17,7 @@ import { toast } from "@/hooks/use-toast";
 interface ActivityFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: Partial<ProjectActivity>) => void;
+  onSubmit: (data: Partial<ProjectActivity>) => void | Promise<void>;
   onCascade?: (changes: { id: string; start_date: string; end_date: string }[]) => void;
   initialData?: Partial<ProjectActivity> | null;
   allActivities: ProjectActivity[];
@@ -60,8 +60,8 @@ export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialD
     }
   }, [initialData, open]);
 
-  const handleSubmit = () => {
-    if (!name.trim()) return;
+  const handleSubmit = async () => {
+    if (!name.trim() || isLoading) return;
     const dur = durationDays ? parseInt(durationDays) : null;
     let endDate: string | null = null;
     if (startDate && dur && dur > 0) {
@@ -97,16 +97,28 @@ export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialD
       }
     }
 
-    onSubmit(payload);
-    onOpenChange(false);
+    try {
+      await onSubmit(payload);
+      onOpenChange(false);
+    } catch {
+      // Toast no hook; mantém formulário aberto.
+    }
   };
 
-  const handleCascadeConfirm = () => {
+  const handleCascadeConfirm = async () => {
     if (pendingSubmit) {
-      onSubmit(pendingSubmit);
-      if (onCascade) {
-        onCascade(cascadeChanges.map(c => ({ id: c.id, start_date: c.newStart, end_date: c.newEnd })));
+      try {
+        await onSubmit(pendingSubmit);
+        if (onCascade) {
+          onCascade(cascadeChanges.map(c => ({ id: c.id, start_date: c.newStart, end_date: c.newEnd })));
+        }
+        setCascadeChanges([]);
+        setPendingSubmit(null);
+        onOpenChange(false);
+      } catch {
+        // Mantém preview aberto em caso de erro.
       }
+      return;
     }
     setCascadeChanges([]);
     setPendingSubmit(null);
