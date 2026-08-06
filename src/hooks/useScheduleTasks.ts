@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { sanitizeEmptyStrings } from "@/lib/sanitizePayload";
 
 export function useScheduleTasks(projectId: string | undefined) {
   const { user } = useAuth();
@@ -40,11 +41,11 @@ export function useScheduleTasks(projectId: string | undefined) {
       color?: string;
     }) => {
       const { error } = await supabase.from("schedule_tasks").insert({
-        ...item,
+        ...sanitizeEmptyStrings(item as Record<string, unknown>),
         status: item.status ?? "planejado",
         project_id: projectId!,
         user_id: user!.id,
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -56,7 +57,10 @@ export function useScheduleTasks(projectId: string | undefined) {
 
   const update = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Record<string, unknown>) => {
-      const { error } = await supabase.from("schedule_tasks").update(updates).eq("id", id);
+      const { error } = await supabase
+        .from("schedule_tasks")
+        .update(sanitizeEmptyStrings(updates) as any)
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

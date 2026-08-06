@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { addDays, differenceInDays } from "date-fns";
+import { sanitizeEmptyStrings } from "@/lib/sanitizePayload";
 
 export interface ProjectActivity {
   id: string;
@@ -208,7 +209,7 @@ export function useProjectActivities(projectId: string | undefined) {
       const { data, error } = await supabase
         .from("project_activities" as any)
         .insert({
-          ...item,
+          ...sanitizeEmptyStrings(item as Record<string, unknown>),
           project_id: projectId!,
           user_id: user!.id,
         } as any)
@@ -235,12 +236,13 @@ export function useProjectActivities(projectId: string | undefined) {
 
   const update = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<ProjectActivity>) => {
+      const clean = sanitizeEmptyStrings(updates as Record<string, unknown>);
       const { error } = await supabase
         .from("project_activities" as any)
-        .update(updates as any)
+        .update(clean as any)
         .eq("id", id);
       if (error) throw error;
-      return { id, ...updates };
+      return { id, ...clean };
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["project_activities", projectId] });

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { handleDeleteError } from "@/lib/handleDeleteError";
+import { sanitizeEmptyStrings } from "@/lib/sanitizePayload";
 
 export const LEAD_STATUSES = [
   "novo",
@@ -90,7 +91,9 @@ export function useLeads() {
 
   const update = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Record<string, unknown>) => {
-      const castUpdates: Record<string, unknown> = { ...updates };
+      // Formulário manda meeting_date (e outros opcionais) como "" — Postgres
+      // rejeita date com string vazia (22007). create() já fazia || null; update não.
+      const castUpdates: Record<string, unknown> = sanitizeEmptyStrings({ ...updates });
       if (castUpdates.origin) castUpdates.origin = castUpdates.origin as any;
       if (castUpdates.project_type) castUpdates.project_type = castUpdates.project_type as any;
       const { error } = await supabase.from("leads").update(castUpdates as any).eq("id", id);

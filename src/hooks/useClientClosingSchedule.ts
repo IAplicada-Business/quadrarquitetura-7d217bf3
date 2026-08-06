@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { sanitizeEmptyStrings } from "@/lib/sanitizePayload";
 
 export interface ClosingScheduleItem {
   id: string;
@@ -40,7 +41,11 @@ export function useClientClosingSchedule(projectId: string) {
     mutationFn: async (item: Omit<ClosingScheduleItem, "id" | "project_id" | "user_id" | "created_at">) => {
       const { data, error } = await supabase
         .from("client_closing_schedule" as any)
-        .insert({ ...item, project_id: projectId, user_id: user!.id })
+        .insert({
+          ...sanitizeEmptyStrings(item as unknown as Record<string, unknown>),
+          project_id: projectId,
+          user_id: user!.id,
+        })
         .select()
         .single();
       if (error) throw error;
@@ -57,7 +62,7 @@ export function useClientClosingSchedule(projectId: string) {
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<ClosingScheduleItem>) => {
       const { error } = await supabase
         .from("client_closing_schedule" as any)
-        .update(updates)
+        .update(sanitizeEmptyStrings(updates as Record<string, unknown>))
         .eq("id", id);
       if (error) throw error;
     },

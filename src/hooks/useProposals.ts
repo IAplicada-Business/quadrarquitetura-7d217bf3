@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { handleDeleteError } from "@/lib/handleDeleteError";
+import { sanitizeEmptyStrings } from "@/lib/sanitizePayload";
 
 export interface Proposal {
   id: string;
@@ -70,7 +71,10 @@ export function useProposals() {
 
   const update = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Record<string, unknown>) => {
-      const { error } = await supabase.from("proposals").update(updates).eq("id", id);
+      const { error } = await supabase
+        .from("proposals")
+        .update(sanitizeEmptyStrings(updates) as any)
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
