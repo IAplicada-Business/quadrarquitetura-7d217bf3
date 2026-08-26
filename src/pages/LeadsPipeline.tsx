@@ -18,9 +18,12 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { useLeads, LEAD_STATUSES, leadStatusLabels, Lead } from "@/hooks/useLeads";
+import { useAcquisitionChannels } from "@/hooks/useAcquisitionChannels";
 import { differenceInDays, subMonths, format, startOfMonth, startOfYear } from "date-fns";
 import { pt } from "date-fns/locale";
 import { SendMessageModal } from "@/components/messages/SendMessageModal";
+import { ChannelBadge } from "@/components/leads/ChannelBadge";
+import { ChannelMultiSelectFilter, NO_CHANNEL_VALUE } from "@/components/leads/ChannelMultiSelectFilter";
 
 const originLabels: Record<string, string> = {
   indicacao: "Indicação", instagram: "Instagram", google: "Google", site: "Site", outro: "Outro",
@@ -57,18 +60,23 @@ const LOST_STATUSES = new Set(["perdido_definitivo", "perdido"]);
 export default function LeadsPipeline() {
   const navigate = useNavigate();
   const { leads, isLoading, create, update, remove, convertToClient } = useLeads();
+  const { channels: allChannels, activeChannels } = useAcquisitionChannels();
 
   const [view, setView] = useState<"kanban" | "tabela" | "analise">("kanban");
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("todos");
   const [filterOrigin, setFilterOrigin] = useState("todos");
   const [filterPeriod, setFilterPeriod] = useState("todos");
+  const [filterChannelIds, setFilterChannelIds] = useState<string[]>([]);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string; phone: string; email: string; phone_secondary: string;
+    project_type: string; channel_id: string | null; responsible: string; notes: string; meeting_date: string;
+  }>({
     name: "", phone: "", email: "", phone_secondary: "",
-    project_type: "residencial", origin: "outro", responsible: "", notes: "", meeting_date: "",
+    project_type: "residencial", channel_id: null, responsible: "", notes: "", meeting_date: "",
   });
 
   // Message modal state
@@ -103,6 +111,11 @@ export default function LeadsPipeline() {
     }
     if (filterStatus !== "todos") result = result.filter((l) => l.status === filterStatus);
     if (filterOrigin !== "todos") result = result.filter((l) => l.origin === filterOrigin);
+    if (filterChannelIds.length > 0) {
+      result = result.filter((l) =>
+        l.channel_id ? filterChannelIds.includes(l.channel_id) : filterChannelIds.includes(NO_CHANNEL_VALUE)
+      );
+    }
     if (filterPeriod !== "todos") {
       const now = new Date();
       result = result.filter((l) => {
@@ -115,11 +128,11 @@ export default function LeadsPipeline() {
       });
     }
     return result;
-  }, [leads, search, filterStatus, filterOrigin, filterPeriod]);
+  }, [leads, search, filterStatus, filterOrigin, filterChannelIds, filterPeriod]);
 
   const openNew = () => {
     setEditingLead(null);
-    setFormData({ name: "", phone: "", email: "", phone_secondary: "", project_type: "residencial", origin: "outro", responsible: "", notes: "", meeting_date: "" });
+    setFormData({ name: "", phone: "", email: "", phone_secondary: "", project_type: "residencial", channel_id: null, responsible: "", notes: "", meeting_date: "" });
     setFormOpen(true);
   };
 
@@ -128,7 +141,7 @@ export default function LeadsPipeline() {
     setFormData({
       name: lead.name, phone: lead.phone, email: lead.email || "",
       phone_secondary: lead.phone_secondary || "", project_type: lead.project_type,
-      origin: lead.origin, responsible: lead.responsible || "",
+      channel_id: lead.channel_id, responsible: lead.responsible || "",
       notes: lead.notes || "", meeting_date: lead.meeting_date || "",
     });
     setFormOpen(true);
@@ -267,6 +280,7 @@ export default function LeadsPipeline() {
               ))}
             </SelectContent>
           </Select>
+          <ChannelMultiSelectFilter channels={allChannels} selected={filterChannelIds} onChange={setFilterChannelIds} />
           <Select value={filterPeriod} onValueChange={setFilterPeriod}>
             <SelectTrigger className="w-full sm:w-[160px]">
               <SelectValue placeholder="Período" />
@@ -443,7 +457,7 @@ export default function LeadsPipeline() {
                         )}
                         <div className="flex flex-wrap gap-1">
                           <Badge variant="outline" className="text-[10px]">{typeLabels[lead.project_type] || lead.project_type}</Badge>
-                          <Badge variant="outline" className="text-[10px]">{originLabels[lead.origin] || lead.origin}</Badge>
+                          <ChannelBadge channel={allChannels.find((c) => c.id === lead.channel_id)} />
                         </div>
                         <div className="flex flex-wrap items-center gap-1 pt-1">
                           <Button size="icon" variant="ghost" className="h-7 w-7 flex-shrink-0" title="Enviar mensagem" onClick={() => setMsgLead(lead)}>
@@ -590,15 +604,17 @@ export default function LeadsPipeline() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Origem</Label>
-              <Select value={formData.origin} onValueChange={(v) => setFormData({ ...formData, origin: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Label>Canal de aquisição</Label>
+              <Select
+                value={formData.channel_id ?? "none"}
+                onValueChange={(v) => setFormData({ ...formData, channel_id: v === "none" ? null : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Selecione um canal" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="indicacao">Indicação</SelectItem>
-                  <SelectItem value="instagram">Instagram</SelectItem>
-                  <SelectItem value="google">Google</SelectItem>
-                  <SelectItem value="site">Site</SelectItem>
-                  <SelectItem value="outro">Outro</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {activeChannels.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

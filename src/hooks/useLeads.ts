@@ -4,6 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { handleDeleteError } from "@/lib/handleDeleteError";
 import { sanitizeEmptyStrings } from "@/lib/sanitizePayload";
+import type { Database } from "@/integrations/supabase/types";
+
+type ClientOrigin = Database["public"]["Enums"]["client_origin"];
+type ClientType = Database["public"]["Enums"]["client_type"];
 
 export const LEAD_STATUSES = [
   "novo",
@@ -38,6 +42,7 @@ export interface Lead {
   phone_secondary: string | null;
   project_type: string;
   origin: string;
+  channel_id: string | null;
   responsible: string | null;
   notes: string | null;
   status: string;
@@ -66,15 +71,16 @@ export function useLeads() {
   });
 
   const create = useMutation({
-    mutationFn: async (lead: { name: string; phone: string; email?: string; phone_secondary?: string; project_type?: string; origin?: string; responsible?: string; notes?: string; status?: string; meeting_date?: string }) => {
+    mutationFn: async (lead: { name: string; phone: string; email?: string; phone_secondary?: string; project_type?: string; origin?: string; channel_id?: string | null; responsible?: string; notes?: string; status?: string; meeting_date?: string }) => {
       const { error } = await supabase.from("leads").insert({
         user_id: user!.id,
         name: lead.name,
         phone: lead.phone,
         email: lead.email || null,
         phone_secondary: lead.phone_secondary || null,
-        project_type: (lead.project_type || "residencial") as any,
-        origin: (lead.origin || "outro") as any,
+        project_type: (lead.project_type || "residencial") as ClientType,
+        origin: (lead.origin || "outro") as ClientOrigin,
+        channel_id: lead.channel_id || null,
         responsible: lead.responsible || null,
         notes: lead.notes || null,
         status: lead.status || "novo",
@@ -93,10 +99,11 @@ export function useLeads() {
     mutationFn: async ({ id, ...updates }: { id: string } & Record<string, unknown>) => {
       // Formulário manda meeting_date (e outros opcionais) como "" — Postgres
       // rejeita date com string vazia (22007). create() já fazia || null; update não.
-      const castUpdates: Record<string, unknown> = sanitizeEmptyStrings({ ...updates });
-      if (castUpdates.origin) castUpdates.origin = castUpdates.origin as any;
-      if (castUpdates.project_type) castUpdates.project_type = castUpdates.project_type as any;
-      const { error } = await supabase.from("leads").update(castUpdates as any).eq("id", id);
+      const castUpdates = sanitizeEmptyStrings({ ...updates }) as Record<string, unknown> & {
+        origin?: ClientOrigin;
+        project_type?: ClientType;
+      };
+      const { error } = await supabase.from("leads").update(castUpdates).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   ChartContainer,
   ChartTooltip,
@@ -23,6 +24,7 @@ import {
   Filter,
 } from "lucide-react";
 import { useComercialMetrics, PERIOD_LABELS, ORIGIN_OPTIONS, PROJECT_TYPE_OPTIONS, type ComercialPeriod } from "@/hooks/useComercialMetrics";
+import { useChannelMetrics, type ChannelMetric } from "@/hooks/useChannelMetrics";
 import { C } from "@/lib/chartColors";
 import Reports from "@/pages/Reports";
 
@@ -49,6 +51,7 @@ export default function DashboardEscritorio() {
   const [cmType,   setCmType]   = useState("todos");
 
   const comercial = useComercialMetrics({ period: cmPeriod, origin: cmOrigin, projectType: cmType });
+  const channelMetrics = useChannelMetrics();
 
   if (comercial.isLoading) {
     return (
@@ -247,6 +250,39 @@ export default function DashboardEscritorio() {
               </ChartContainer>
             </CardContent>
           </Card>
+
+          {/* Canais de Aquisição */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-display">Canais de aquisição — últimos {channelMetrics.windowDays} dias</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {channelMetrics.isLoading ? (
+                <div className="h-32 animate-pulse bg-muted rounded" />
+              ) : channelMetrics.data && channelMetrics.data.length > 0 ? (
+                <Tabs defaultValue="leads">
+                  <TabsList className="mb-3">
+                    <TabsTrigger value="leads">Leads</TabsTrigger>
+                    <TabsTrigger value="conversao">Conversão</TabsTrigger>
+                    <TabsTrigger value="ticket">Ticket médio</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="leads" className="space-y-2">
+                    <ChannelBars metrics={channelMetrics.data} valueOf={(m) => m.leadCount} formatValue={(v) => String(v)} />
+                  </TabsContent>
+                  <TabsContent value="conversao" className="space-y-2">
+                    <ChannelBars metrics={channelMetrics.data} valueOf={(m) => m.conversionRate} formatValue={(v) => `${v}%`} />
+                  </TabsContent>
+                  <TabsContent value="ticket" className="space-y-2">
+                    <ChannelBars metrics={channelMetrics.data} valueOf={(m) => m.ticketMedio} formatValue={fmt} />
+                  </TabsContent>
+                </Tabs>
+              ) : (
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                  Nenhum lead com canal registrado nos últimos {channelMetrics.windowDays} dias.
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
 
@@ -257,6 +293,43 @@ export default function DashboardEscritorio() {
 }
 
 /* ── helpers ── */
+
+function ChannelBars({
+  metrics,
+  valueOf,
+  formatValue,
+}: {
+  metrics: ChannelMetric[];
+  valueOf: (m: ChannelMetric) => number;
+  formatValue: (v: number) => string;
+}) {
+  const maxValue = Math.max(...metrics.map(valueOf), 1);
+  return (
+    <div className="space-y-2">
+      {metrics.map((m) => {
+        const value = valueOf(m);
+        const widthPct = Math.max(4, (value / maxValue) * 100);
+        return (
+          <div key={m.channelId ?? "sem-canal"} className="flex items-center gap-3">
+            <div className="w-32 sm:w-40 shrink-0 flex items-center gap-1.5 text-xs">
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: m.color }} />
+              <span className="truncate font-medium text-foreground">{m.name}</span>
+            </div>
+            <div className="flex-1 relative h-7 rounded-md overflow-hidden bg-muted/40">
+              <div
+                className="absolute inset-y-0 left-0 transition-all rounded-md"
+                style={{ width: `${widthPct}%`, background: `${m.color}30`, borderLeft: `3px solid ${m.color}` }}
+              />
+              <div className="absolute inset-0 flex items-center px-3">
+                <span className="text-xs font-semibold tabular-nums" style={{ color: m.color }}>{formatValue(value)}</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 const TAB_LABELS: Record<"comercial" | "relatorios", string> = {
   comercial:  "Comercial",

@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      acquisition_channels: {
+        Row: {
+          category: Database["public"]["Enums"]["acquisition_channel_category"]
+          color: string
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["acquisition_channel_category"]
+          color?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["acquisition_channel_category"]
+          color?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       activity_template_items: {
         Row: {
           ambiente: string | null
@@ -1315,6 +1351,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          channel_id: string | null
           construction_type: string | null
           converted_at: string | null
           converted_client_id: string | null
@@ -1337,6 +1374,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          channel_id?: string | null
           construction_type?: string | null
           converted_at?: string | null
           converted_client_id?: string | null
@@ -1359,6 +1397,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          channel_id?: string | null
           construction_type?: string | null
           converted_at?: string | null
           converted_client_id?: string | null
@@ -1386,6 +1425,13 @@ export type Database = {
             columns: ["converted_client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "acquisition_channels"
             referencedColumns: ["id"]
           },
         ]
@@ -3459,6 +3505,7 @@ export type Database = {
       }
     }
     Enums: {
+      acquisition_channel_category: "digital" | "indicacao" | "evento" | "parceria" | "outros"
       app_role: "admin" | "moderator" | "user"
       budget_status: "pendente" | "cotado" | "aprovado" | "rejeitado"
       client_origin: "indicacao" | "instagram" | "google" | "site" | "outro"
