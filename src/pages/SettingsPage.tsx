@@ -16,6 +16,7 @@ import { useContentSeries } from "@/hooks/useContentSeries";
 import SupplierCategoriesManager from "@/components/settings/SupplierCategoriesManager";
 import MessageTemplatesSettings from "@/components/settings/MessageTemplatesSettings";
 import ActivityTemplatesManager from "@/components/settings/ActivityTemplatesManager";
+import AcquisitionChannelsSettings from "@/components/settings/AcquisitionChannelsSettings";
 import { BRAND_HEX } from "@/lib/chartColors";
 import {
   useCostReferenceTable,
@@ -186,6 +187,7 @@ export default function SettingsPage() {
           <TabsTrigger value="regras">Regras de Cálculo</TabsTrigger>
           <TabsTrigger value="proposta">Proposta</TabsTrigger>
           <TabsTrigger value="conteudo">Conteúdo</TabsTrigger>
+          <TabsTrigger value="canais">Canais de Aquisição</TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral">
@@ -362,6 +364,10 @@ export default function SettingsPage() {
 
         <TabsContent value="conteudo">
           <ContentSeriesManager />
+        </TabsContent>
+
+        <TabsContent value="canais">
+          <AcquisitionChannelsSettings />
         </TabsContent>
       </Tabs>
     </div>
