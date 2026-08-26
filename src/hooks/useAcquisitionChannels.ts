@@ -59,13 +59,14 @@ export function useAcquisitionChannels() {
   const channels = useMemo(() => query.data ?? [], [query.data]);
 
   const create = useMutation({
-    mutationFn: async (values: { name: string; category: AcquisitionChannelCategory; color: string }) => {
+    mutationFn: async (values: { name: string; category: AcquisitionChannelCategory; color: string; is_partner_channel?: boolean }) => {
       const nextOrder = channels.reduce((max, c) => Math.max(max, c.display_order), -1) + 1;
       const { error } = await supabase.from("acquisition_channels").insert({
         user_id: user!.id,
         name: values.name,
         category: values.category,
         color: values.color,
+        is_partner_channel: values.is_partner_channel ?? false,
         display_order: nextOrder,
       });
       if (error) throw error;
@@ -78,7 +79,7 @@ export function useAcquisitionChannels() {
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, ...values }: { id: string; name?: string; category?: AcquisitionChannelCategory; color?: string; is_active?: boolean }) => {
+    mutationFn: async ({ id, ...values }: { id: string; name?: string; category?: AcquisitionChannelCategory; color?: string; is_active?: boolean; is_partner_channel?: boolean }) => {
       const { error } = await supabase.from("acquisition_channels").update(values).eq("id", id);
       if (error) throw error;
     },

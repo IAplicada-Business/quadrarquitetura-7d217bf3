@@ -104,8 +104,11 @@ export function useComercialMetrics({
   const query = useQuery({
     queryKey: ["comercial-metrics", period, origin, projectType],
     queryFn: async () => {
+      // .eq("lead_type", "comercial") — blinda o dashboard/funil comercial
+      // dos leads do pipeline de parceiros (reposicionamento estratégico:
+      // funis totalmente separados, mesma tabela).
       const [leadsRes, proposalsRes] = await Promise.all([
-        supabase.from("leads").select("id, status, name, created_at, updated_at, origin, project_type"),
+        supabase.from("leads").select("id, status, name, created_at, updated_at, origin, project_type").eq("lead_type", "comercial"),
         supabase.from("proposals").select("id, status, price_full, final_value, sent_at, approved_at, created_at, updated_at, lead_id, notes, leads(name, phone, email, status)"),
       ]);
       return {

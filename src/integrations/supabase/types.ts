@@ -22,6 +22,7 @@ export type Database = {
           display_order: number
           id: string
           is_active: boolean
+          is_partner_channel: boolean
           name: string
           updated_at: string
           user_id: string
@@ -33,6 +34,7 @@ export type Database = {
           display_order?: number
           id?: string
           is_active?: boolean
+          is_partner_channel?: boolean
           name: string
           updated_at?: string
           user_id: string
@@ -44,6 +46,7 @@ export type Database = {
           display_order?: number
           id?: string
           is_active?: boolean
+          is_partner_channel?: boolean
           name?: string
           updated_at?: string
           user_id?: string
@@ -1358,15 +1361,18 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          lead_type: Database["public"]["Enums"]["lead_type"]
           lost_reason: string | null
           meeting_date: string | null
           message: string | null
           name: string
           notes: string | null
           origin: Database["public"]["Enums"]["client_origin"]
+          partner_stage: Database["public"]["Enums"]["partner_stage"] | null
           phone: string
           phone_secondary: string | null
           project_type: Database["public"]["Enums"]["client_type"]
+          referred_by_partner_id: string | null
           responsible: string | null
           source_detail: string | null
           status: string
@@ -1381,15 +1387,18 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          lead_type?: Database["public"]["Enums"]["lead_type"]
           lost_reason?: string | null
           meeting_date?: string | null
           message?: string | null
           name: string
           notes?: string | null
           origin?: Database["public"]["Enums"]["client_origin"]
+          partner_stage?: Database["public"]["Enums"]["partner_stage"] | null
           phone: string
           phone_secondary?: string | null
           project_type?: Database["public"]["Enums"]["client_type"]
+          referred_by_partner_id?: string | null
           responsible?: string | null
           source_detail?: string | null
           status?: string
@@ -1404,15 +1413,18 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          lead_type?: Database["public"]["Enums"]["lead_type"]
           lost_reason?: string | null
           meeting_date?: string | null
           message?: string | null
           name?: string
           notes?: string | null
           origin?: Database["public"]["Enums"]["client_origin"]
+          partner_stage?: Database["public"]["Enums"]["partner_stage"] | null
           phone?: string
           phone_secondary?: string | null
           project_type?: Database["public"]["Enums"]["client_type"]
+          referred_by_partner_id?: string | null
           responsible?: string | null
           source_detail?: string | null
           status?: string
@@ -1432,6 +1444,13 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "acquisition_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_referred_by_partner_id_fkey"
+            columns: ["referred_by_partner_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
@@ -3517,6 +3536,14 @@ export type Database = {
         | "proposta"
         | "relatorio"
         | "orcamento"
+      lead_type: "comercial" | "parceiro"
+      partner_stage:
+        | "novo"
+        | "primeira_conversa"
+        | "parceria_ativa"
+        | "trouxe_indicacao"
+        | "fidelizado"
+        | "inativo"
       payment_status: "pendente" | "notificado" | "pago" | "atrasado"
       project_status:
         | "proposta"

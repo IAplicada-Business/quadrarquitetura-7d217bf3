@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { GripVertical, ArchiveRestore, Archive, Pencil, Plus, X, ShieldAlert } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { GripVertical, ArchiveRestore, Archive, Pencil, Plus, X, ShieldAlert, Handshake } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import {
   useAcquisitionChannels,
@@ -23,9 +24,10 @@ interface FormState {
   name: string;
   category: AcquisitionChannelCategory;
   color: string;
+  is_partner_channel: boolean;
 }
 
-const emptyForm: FormState = { name: "", category: "outros", color: DEFAULT_COLOR };
+const emptyForm: FormState = { name: "", category: "outros", color: DEFAULT_COLOR, is_partner_channel: false };
 
 export default function AcquisitionChannelsSettings() {
   const { isAdmin } = usePermissions();
@@ -42,7 +44,7 @@ export default function AcquisitionChannelsSettings() {
   const startEdit = (c: AcquisitionChannel) => {
     setEditingId(c.id);
     setAdding(false);
-    setForm({ name: c.name, category: c.category, color: c.color });
+    setForm({ name: c.name, category: c.category, color: c.color, is_partner_channel: c.is_partner_channel });
   };
 
   const cancelForm = () => {
@@ -54,9 +56,9 @@ export default function AcquisitionChannelsSettings() {
   const submitForm = () => {
     if (!form.name.trim()) return;
     if (editingId) {
-      update.mutate({ id: editingId, name: form.name.trim(), category: form.category, color: form.color });
+      update.mutate({ id: editingId, name: form.name.trim(), category: form.category, color: form.color, is_partner_channel: form.is_partner_channel });
     } else {
-      create.mutate({ name: form.name.trim(), category: form.category, color: form.color });
+      create.mutate({ name: form.name.trim(), category: form.category, color: form.color, is_partner_channel: form.is_partner_channel });
     }
     cancelForm();
   };
@@ -92,42 +94,52 @@ export default function AcquisitionChannelsSettings() {
         )}
 
         {(adding || editingId) && isAdmin && (
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px_auto_auto_auto] gap-3 items-end p-3 border rounded-lg bg-muted/30">
-            <div>
-              <Label>Nome</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Ex: Parceria com Estúdio Y"
-                autoFocus
+          <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px_auto_auto_auto] gap-3 items-end">
+              <div>
+                <Label>Nome</Label>
+                <Input
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="Ex: Parceria com Estúdio Y"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <Label>Categoria</Label>
+                <Select value={form.category} onValueChange={(v) => setForm((f) => ({ ...f, category: v as AcquisitionChannelCategory }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CHANNEL_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{CHANNEL_CATEGORY_LABELS[cat]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Cor</Label>
+                <input
+                  type="color"
+                  value={form.color}
+                  onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
+                  className="h-9 w-9 rounded border cursor-pointer block"
+                />
+              </div>
+              <Button onClick={submitForm} disabled={!form.name.trim() || create.isPending || update.isPending}>
+                {editingId ? "Salvar" : "Adicionar"}
+              </Button>
+              <Button variant="ghost" size="icon" onClick={cancelForm}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer w-fit">
+              <Checkbox
+                checked={form.is_partner_channel}
+                onCheckedChange={(v) => setForm((f) => ({ ...f, is_partner_channel: v === true }))}
               />
-            </div>
-            <div>
-              <Label>Categoria</Label>
-              <Select value={form.category} onValueChange={(v) => setForm((f) => ({ ...f, category: v as AcquisitionChannelCategory }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CHANNEL_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{CHANNEL_CATEGORY_LABELS[cat]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Cor</Label>
-              <input
-                type="color"
-                value={form.color}
-                onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
-                className="h-9 w-9 rounded border cursor-pointer block"
-              />
-            </div>
-            <Button onClick={submitForm} disabled={!form.name.trim() || create.isPending || update.isPending}>
-              {editingId ? "Salvar" : "Adicionar"}
-            </Button>
-            <Button variant="ghost" size="icon" onClick={cancelForm}>
-              <X className="h-4 w-4" />
-            </Button>
+              <Handshake className="h-3.5 w-3.5 text-muted-foreground" />
+              Este canal indica um parceiro (permite vincular qual parceiro no formulário de lead)
+            </label>
           </div>
         )}
 
@@ -153,7 +165,12 @@ export default function AcquisitionChannelsSettings() {
                           )}
                           <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: c.color }} />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{c.name}</p>
+                            <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                              {c.name}
+                              {c.is_partner_channel && (
+                                <span title="Indica um parceiro"><Handshake className="h-3 w-3 text-muted-foreground" /></span>
+                              )}
+                            </p>
                             <p className="text-xs text-muted-foreground">{CHANNEL_CATEGORY_LABELS[c.category]}</p>
                           </div>
                           {isAdmin && (

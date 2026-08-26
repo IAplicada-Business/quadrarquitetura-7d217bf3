@@ -22,9 +22,12 @@ import {
   HandCoins,
   XCircle,
   Filter,
+  Handshake,
+  Star,
 } from "lucide-react";
 import { useComercialMetrics, PERIOD_LABELS, ORIGIN_OPTIONS, PROJECT_TYPE_OPTIONS, type ComercialPeriod } from "@/hooks/useComercialMetrics";
 import { useChannelMetrics, type ChannelMetric } from "@/hooks/useChannelMetrics";
+import { usePartnerMetrics } from "@/hooks/usePartnerMetrics";
 import { C } from "@/lib/chartColors";
 import Reports from "@/pages/Reports";
 
@@ -44,7 +47,7 @@ function oportBorderColor(days: number) {
 }
 
 export default function DashboardEscritorio() {
-  const [tab, setTab] = useState<"comercial" | "relatorios">("comercial");
+  const [tab, setTab] = useState<"comercial" | "parceiros" | "relatorios">("comercial");
 
   const [cmPeriod, setCmPeriod] = useState<ComercialPeriod>("mes_atual");
   const [cmOrigin, setCmOrigin] = useState("todos");
@@ -52,6 +55,9 @@ export default function DashboardEscritorio() {
 
   const comercial = useComercialMetrics({ period: cmPeriod, origin: cmOrigin, projectType: cmType });
   const channelMetrics = useChannelMetrics();
+  // Métricas de parceiros são isoladas do comercial — hook próprio, sem
+  // filtro de período/origem/tipo compartilhado com `comercial`.
+  const partnerMetrics = usePartnerMetrics();
 
   if (comercial.isLoading) {
     return (
@@ -286,6 +292,65 @@ export default function DashboardEscritorio() {
         </div>
       )}
 
+      {/* ═══════════════════ ABA PARCEIROS ═══════════════════ */}
+      {tab === "parceiros" && (
+        <div className="space-y-4">
+          {partnerMetrics.isLoading || !partnerMetrics.data ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[1, 2, 3, 4].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardContent className="pt-6"><div className="h-16 bg-muted rounded" /></CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <KpiCard icon={<Handshake className="h-4 w-4" />} label="Total de parceiros" value={String(partnerMetrics.data.totalParceiros)} />
+                <KpiCard icon={<Star className="h-4 w-4" />} label="Parceiros ativos" value={String(partnerMetrics.data.parceirosAtivos)} accent={C.success} />
+                <KpiCard icon={<Send className="h-4 w-4" />} label="Indicações no mês" value={String(partnerMetrics.data.indicacoesNoMes)} />
+                <KpiCard icon={<TrendingUp className="h-4 w-4" />} label="Conversão das indicações" value={`${partnerMetrics.data.taxaConversaoIndicacoes}%`} />
+              </div>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-display">Top parceiros por volume de indicações</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {partnerMetrics.data.topParceiros.length > 0 ? (
+                    <div className="space-y-2">
+                      {(() => {
+                        const maxCount = Math.max(...partnerMetrics.data.topParceiros.map((p) => p.count), 1);
+                        return partnerMetrics.data.topParceiros.map((p) => (
+                          <Link key={p.partnerId} to={`/partners/${p.partnerId}`} className="flex items-center gap-3 group">
+                            <div className="w-32 sm:w-40 shrink-0 text-xs font-medium text-foreground truncate group-hover:underline">{p.name}</div>
+                            <div className="flex-1 relative h-7 rounded-md overflow-hidden bg-muted/40">
+                              <div
+                                className="absolute inset-y-0 left-0 transition-all rounded-md"
+                                style={{ width: `${Math.max(4, (p.count / maxCount) * 100)}%`, background: `${C.navy}30`, borderLeft: `3px solid ${C.navy}` }}
+                              />
+                              <div className="absolute inset-0 flex items-center px-3">
+                                <span className="text-xs font-semibold tabular-nums" style={{ color: C.navy }}>{p.count}</span>
+                              </div>
+                            </div>
+                          </Link>
+                        ));
+                      })()}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <Handshake className="h-10 w-10 text-muted-foreground/30 mb-2" />
+                      <p className="text-sm text-muted-foreground mb-2">Nenhuma indicação de parceiro registrada ainda</p>
+                      <Link to="/partners/pipeline" className="text-sm font-medium text-primary hover:underline">Ver Pipeline de Parceiros →</Link>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+      )}
+
       {/* ═══════════════════ ABA RELATÓRIOS ═══════════════════ */}
       {tab === "relatorios" && <Reports />}
     </div>
@@ -331,15 +396,16 @@ function ChannelBars({
   );
 }
 
-const TAB_LABELS: Record<"comercial" | "relatorios", string> = {
+const TAB_LABELS: Record<"comercial" | "parceiros" | "relatorios", string> = {
   comercial:  "Comercial",
+  parceiros:  "Parceiros",
   relatorios: "Relatórios",
 };
 
-function SegmentedTabs({ tab, onChange }: { tab: "comercial" | "relatorios"; onChange: (t: "comercial" | "relatorios") => void }) {
+function SegmentedTabs({ tab, onChange }: { tab: "comercial" | "parceiros" | "relatorios"; onChange: (t: "comercial" | "parceiros" | "relatorios") => void }) {
   return (
     <div className="inline-flex p-1 bg-muted/50 rounded-lg">
-      {(["comercial", "relatorios"] as const).map((t) => (
+      {(["comercial", "parceiros", "relatorios"] as const).map((t) => (
         <button
           key={t}
           onClick={() => onChange(t)}

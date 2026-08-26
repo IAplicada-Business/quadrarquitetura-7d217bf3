@@ -51,6 +51,12 @@ export const PAGE_GROUPS: PageGroup[] = [
     ],
   },
   {
+    group: "Parceiros",
+    pages: [
+      { key: "partners_pipeline", label: "Parceiros (Pipeline)", url: "/partners/pipeline", prefixes: ["/partners/pipeline", "/partners/"] },
+    ],
+  },
+  {
     group: "Gestão de Obras",
     pages: [
       { key: "projects", label: "Obras (Lista e Detalhe)", url: "/projects", prefixes: ["/projects"] },

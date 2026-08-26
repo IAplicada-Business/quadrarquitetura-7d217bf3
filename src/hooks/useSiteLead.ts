@@ -21,6 +21,7 @@ export function useSiteLead() {
         project_type: data.projectType,
         message: data.message || null,
         origin: "site" as const,
+        lead_type: "comercial" as const,
         status: "novo",
         source_detail: "landing_page",
         // user_id is intentionally null for public leads — adjust per RLS policy

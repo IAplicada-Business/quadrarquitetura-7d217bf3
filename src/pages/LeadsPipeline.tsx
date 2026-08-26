@@ -9,10 +9,7 @@ import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,6 +21,7 @@ import { pt } from "date-fns/locale";
 import { SendMessageModal } from "@/components/messages/SendMessageModal";
 import { ChannelBadge } from "@/components/leads/ChannelBadge";
 import { ChannelMultiSelectFilter, NO_CHANNEL_VALUE } from "@/components/leads/ChannelMultiSelectFilter";
+import { LeadFormDialog } from "@/components/leads/LeadFormDialog";
 
 const originLabels: Record<string, string> = {
   indicacao: "Indicação", instagram: "Instagram", google: "Google", site: "Site", outro: "Outro",
@@ -59,8 +57,9 @@ const LOST_STATUSES = new Set(["perdido_definitivo", "perdido"]);
 
 export default function LeadsPipeline() {
   const navigate = useNavigate();
-  const { leads, isLoading, create, update, remove, convertToClient } = useLeads();
-  const { channels: allChannels, activeChannels } = useAcquisitionChannels();
+  const leadsHook = useLeads();
+  const { leads, isLoading, update, remove, convertToClient } = leadsHook;
+  const { channels: allChannels } = useAcquisitionChannels();
 
   const [view, setView] = useState<"kanban" | "tabela" | "analise">("kanban");
   const [search, setSearch] = useState("");
@@ -71,13 +70,6 @@ export default function LeadsPipeline() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
-  const [formData, setFormData] = useState<{
-    name: string; phone: string; email: string; phone_secondary: string;
-    project_type: string; channel_id: string | null; responsible: string; notes: string; meeting_date: string;
-  }>({
-    name: "", phone: "", email: "", phone_secondary: "",
-    project_type: "residencial", channel_id: null, responsible: "", notes: "", meeting_date: "",
-  });
 
   // Message modal state
   const [msgLead, setMsgLead] = useState<Lead | null>(null);
@@ -132,34 +124,12 @@ export default function LeadsPipeline() {
 
   const openNew = () => {
     setEditingLead(null);
-    setFormData({ name: "", phone: "", email: "", phone_secondary: "", project_type: "residencial", channel_id: null, responsible: "", notes: "", meeting_date: "" });
     setFormOpen(true);
   };
 
   const openEdit = (lead: Lead) => {
     setEditingLead(lead);
-    setFormData({
-      name: lead.name, phone: lead.phone, email: lead.email || "",
-      phone_secondary: lead.phone_secondary || "", project_type: lead.project_type,
-      channel_id: lead.channel_id, responsible: lead.responsible || "",
-      notes: lead.notes || "", meeting_date: lead.meeting_date || "",
-    });
     setFormOpen(true);
-  };
-
-  const handleSubmit = async () => {
-    if (!formData.name || !formData.phone || create.isPending || update.isPending) return;
-    try {
-      if (editingLead) {
-        await update.mutateAsync({ id: editingLead.id, ...formData });
-      } else {
-        await create.mutateAsync(formData);
-      }
-      setFormOpen(false);
-      setEditingLead(null);
-    } catch {
-      // Toast já tratado no hook; mantém o formulário aberto com os dados.
-    }
   };
 
   const moveStatus = (lead: Lead, newStatus: string) => {
@@ -569,76 +539,9 @@ export default function LeadsPipeline() {
       {view === "analise" && <LeadAnalytics leads={leads} />}
 
       {/* Lead Form Dialog */}
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingLead ? "Editar Lead" : "Novo Lead"}</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Nome *</Label>
-              <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Telefone *</Label>
-              <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Email</Label>
-              <Input value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Telefone Secundário</Label>
-              <Input value={formData.phone_secondary} onChange={(e) => setFormData({ ...formData, phone_secondary: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Tipo de Projeto</Label>
-              <Select value={formData.project_type} onValueChange={(v) => setFormData({ ...formData, project_type: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="residencial">Residencial</SelectItem>
-                  <SelectItem value="comercial">Comercial</SelectItem>
-                  <SelectItem value="saude">Saúde</SelectItem>
-                  <SelectItem value="outro">Outro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Canal de aquisição</Label>
-              <Select
-                value={formData.channel_id ?? "none"}
-                onValueChange={(v) => setFormData({ ...formData, channel_id: v === "none" ? null : v })}
-              >
-                <SelectTrigger><SelectValue placeholder="Selecione um canal" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhum</SelectItem>
-                  {activeChannels.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Responsável</Label>
-              <Input value={formData.responsible} onChange={(e) => setFormData({ ...formData, responsible: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Data da Reunião</Label>
-              <Input type="date" value={formData.meeting_date} onChange={(e) => setFormData({ ...formData, meeting_date: e.target.value })} />
-            </div>
-            <div className="md:col-span-2 space-y-1.5">
-              <Label>Observações</Label>
-              <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={3} />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSubmit} disabled={!formData.name || !formData.phone || create.isPending || update.isPending}>
-              {editingLead ? "Salvar" : "Criar Lead"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {formOpen && (
+        <LeadFormDialog open={formOpen} onOpenChange={setFormOpen} editingLead={editingLead} leadsHook={leadsHook} />
+      )}
       {/* Send Message Modal */}
       {msgLead && (
         <SendMessageModal
