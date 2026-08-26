@@ -16,6 +16,8 @@ import ProjectsKanban from "./pages/ProjectsKanban";
 import ProjectDetail from "./pages/ProjectDetail";
 import LeadsPipeline from "./pages/LeadsPipeline";
 import LeadDetail from "./pages/LeadDetail";
+import PartnersPipeline from "./pages/PartnersPipeline";
+import PartnerDetail from "./pages/PartnerDetail";
 import LeadsProposals from "./pages/LeadsProposals";
 import LeadsContracts from "./pages/LeadsContracts";
 import SiteTracking from "./pages/SiteTracking";
@@ -89,6 +91,9 @@ const App = () => (
               <Route path="/leads/:id" element={<LeadDetail />} />
               <Route path="/leads/proposals" element={<LeadsProposals />} />
               <Route path="/leads/contracts" element={<LeadsContracts />} />
+              {/* Parceiros — pipeline independente do funil comercial */}
+              <Route path="/partners/pipeline" element={<PartnersPipeline />} />
+              <Route path="/partners/:id" element={<PartnerDetail />} />
               {/* Obra */}
               <Route path="/construction/tracking" element={<SiteTracking />} />
               {/* Sprint 7 — "Tarefas por Obra" removida.

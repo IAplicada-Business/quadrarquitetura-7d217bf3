@@ -22,6 +22,7 @@ import {
   Shield,
   Receipt,
   Mic,
+  Handshake,
   LucideIcon,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -51,6 +52,7 @@ type MenuGroup = { label: string; items: MenuItem[] };
 const groupIcons: Record<string, LucideIcon> = {
   "Análises Quadra": LayoutDashboard,
   "Comercial": Users,
+  "Parceiros": Handshake,
   "Gestão de Obras": HardHat,
   "Gestão de Conteúdo": Film,
   "Administrativo": Settings,
@@ -79,6 +81,7 @@ const iconMap: Record<string, LucideIcon> = {
   "Kanban": ListChecks,
   "Kanban Projetos": Building2,
   "Kanban Quadra": ListChecks,
+  "Pipeline": Handshake,
   "Histórico de Voz": ListChecks,
   "Audio Tasks": Mic,
   "Fornecedores": Truck,
@@ -131,6 +134,12 @@ const menuGroups: MenuGroup[] = [
           { title: "Contratos", url: "/leads/contracts" },
         ],
       },
+    ],
+  },
+  {
+    label: "Parceiros",
+    items: [
+      { title: "Pipeline", url: "/partners/pipeline" },
     ],
   },
   {

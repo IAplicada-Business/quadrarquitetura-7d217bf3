@@ -8,6 +8,32 @@ import type { Database } from "@/integrations/supabase/types";
 
 type ClientOrigin = Database["public"]["Enums"]["client_origin"];
 type ClientType = Database["public"]["Enums"]["client_type"];
+export type LeadType = Database["public"]["Enums"]["lead_type"];
+export type PartnerStage = Database["public"]["Enums"]["partner_stage"];
+
+export const PARTNER_STAGES: PartnerStage[] = [
+  "novo",
+  "primeira_conversa",
+  "parceria_ativa",
+  "trouxe_indicacao",
+  "fidelizado",
+  "inativo",
+];
+
+export const partnerStageLabels: Record<PartnerStage, string> = {
+  novo: "Novo",
+  primeira_conversa: "Primeira Conversa",
+  parceria_ativa: "Parceria Ativa",
+  trouxe_indicacao: "Trouxe Indicação",
+  fidelizado: "Fidelizado",
+  inativo: "Inativo",
+};
+
+// Estágios que contam como "parceiro ativo" nas métricas — engajado o
+// suficiente pra já ter gerado ou poder gerar indicação. "novo" e
+// "primeira_conversa" ainda não provaram a parceria; "inativo" é
+// explícito.
+export const ACTIVE_PARTNER_STAGES = new Set<PartnerStage>(["parceria_ativa", "trouxe_indicacao", "fidelizado"]);
 
 export const LEAD_STATUSES = [
   "novo",
@@ -43,6 +69,9 @@ export interface Lead {
   project_type: string;
   origin: string;
   channel_id: string | null;
+  lead_type: LeadType;
+  partner_stage: PartnerStage | null;
+  referred_by_partner_id: string | null;
   responsible: string | null;
   notes: string | null;
   status: string;
@@ -53,16 +82,24 @@ export interface Lead {
   updated_at: string;
 }
 
-export function useLeads() {
+/**
+ * `type` separa o funil comercial (B2B/B2C) do pipeline de parceiros —
+ * mesma tabela `leads`, discriminada por `lead_type`. Default
+ * "comercial" protege todo consumidor existente (LeadsPipeline,
+ * LeadDetail, LeadsProposals, LeadsContracts) sem precisar tocar em
+ * cada um: só o Pipeline de Parceiros passa "parceiro" explicitamente.
+ */
+export function useLeads(type: LeadType = "comercial") {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const leadsQuery = useQuery({
-    queryKey: ["leads"],
+    queryKey: ["leads", type],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("leads")
         .select("*")
+        .eq("lead_type", type)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as Lead[];
@@ -71,7 +108,13 @@ export function useLeads() {
   });
 
   const create = useMutation({
-    mutationFn: async (lead: { name: string; phone: string; email?: string; phone_secondary?: string; project_type?: string; origin?: string; channel_id?: string | null; responsible?: string; notes?: string; status?: string; meeting_date?: string }) => {
+    mutationFn: async (lead: {
+      name: string; phone: string; email?: string; phone_secondary?: string;
+      project_type?: string; origin?: string; channel_id?: string | null;
+      lead_type?: LeadType; partner_stage?: PartnerStage | null; referred_by_partner_id?: string | null;
+      responsible?: string; notes?: string; status?: string; meeting_date?: string;
+    }) => {
+      const insertType = lead.lead_type ?? type;
       const { error } = await supabase.from("leads").insert({
         user_id: user!.id,
         name: lead.name,
@@ -81,16 +124,24 @@ export function useLeads() {
         project_type: (lead.project_type || "residencial") as ClientType,
         origin: (lead.origin || "outro") as ClientOrigin,
         channel_id: lead.channel_id || null,
+        lead_type: insertType,
+        partner_stage: insertType === "parceiro" ? (lead.partner_stage ?? "novo") : null,
+        referred_by_partner_id: insertType === "comercial" ? (lead.referred_by_partner_id || null) : null,
         responsible: lead.responsible || null,
         notes: lead.notes || null,
         status: lead.status || "novo",
         meeting_date: lead.meeting_date || null,
       });
       if (error) throw error;
+      return insertType;
     },
-    onSuccess: () => {
+    onSuccess: (insertType) => {
+      // Chave sem o `type` invalida as duas listas (comercial e parceiro) —
+      // importante pro toggle de tipo no formulário: um "Novo Lead"
+      // criado como parceiro precisa sumir da lista comercial e aparecer
+      // na de parceiros, mesmo estando as duas montadas ao mesmo tempo.
       queryClient.invalidateQueries({ queryKey: ["leads"] });
-      toast({ title: "Lead criado com sucesso" });
+      toast({ title: insertType === "parceiro" ? "Parceiro criado com sucesso" : "Lead criado com sucesso" });
     },
     onError: (e: Error) => toast({ title: "Erro ao criar lead", description: e.message, variant: "destructive" }),
   });

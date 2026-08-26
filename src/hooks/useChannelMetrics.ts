@@ -37,9 +37,12 @@ export function useChannelMetrics() {
   const query = useQuery({
     queryKey: ["channel-metrics"],
     queryFn: async () => {
+      // .eq("lead_type", "comercial") — este bloco alimenta o dashboard
+      // comercial; leads do pipeline de parceiros não entram aqui mesmo
+      // que algum dia ganhem canal de aquisição.
       const [channelsRes, leadsRes, proposalsRes] = await Promise.all([
         supabase.from("acquisition_channels").select("id, name, color, is_active"),
-        supabase.from("leads").select("id, status, created_at, channel_id"),
+        supabase.from("leads").select("id, status, created_at, channel_id").eq("lead_type", "comercial"),
         supabase.from("proposals").select("status, price_full, final_value, lead_id"),
       ]);
       return {
