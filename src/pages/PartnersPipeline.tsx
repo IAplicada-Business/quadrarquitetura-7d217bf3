@@ -1,5 +1,4 @@
 import { useState, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { Plus, Phone, Pencil, Trash2, GripVertical, Handshake, Users, Star, Send, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useLeads, PARTNER_STAGES, partnerStageLabels, ACTIVE_PARTNER_STAGES, type Lead } from "@/hooks/useLeads";
 import { usePartnerReferrals } from "@/hooks/usePartnerReferrals";
 import { LeadFormDialog } from "@/components/leads/LeadFormDialog";
+import { PartnerDetailSheet } from "@/components/leads/PartnerDetailSheet";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 
@@ -30,7 +30,6 @@ const stageBorderColors: Record<string, string> = {
 };
 
 export default function PartnersPipeline() {
-  const navigate = useNavigate();
   const leadsHook = useLeads("parceiro");
   const { leads: partners, isLoading, update, remove } = leadsHook;
   const { getSummary } = usePartnerReferrals();
@@ -40,6 +39,9 @@ export default function PartnersPipeline() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  // Painel lateral: abre pra qualquer parceiro, em qualquer etapa, sem
+  // sair do kanban (pedido: ver indicações/obras agrupadas de relance).
+  const [detailPartnerId, setDetailPartnerId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     if (!search) return partners;
@@ -179,7 +181,7 @@ export default function PartnersPipeline() {
                             <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 flex-shrink-0" />
                             <p
                               className="font-semibold text-sm leading-tight cursor-pointer hover:underline"
-                              onClick={() => navigate(`/partners/${partner.id}`)}
+                              onClick={() => setDetailPartnerId(partner.id)}
                             >
                               {partner.name}
                             </p>
@@ -222,6 +224,11 @@ export default function PartnersPipeline() {
       {formOpen && (
         <LeadFormDialog open={formOpen} onOpenChange={setFormOpen} editingLead={editingLead} lockType="parceiro" leadsHook={leadsHook} />
       )}
+      <PartnerDetailSheet
+        partnerId={detailPartnerId}
+        onOpenChange={(open) => { if (!open) setDetailPartnerId(null); }}
+        leadsHook={leadsHook}
+      />
     </div>
   );
 }
