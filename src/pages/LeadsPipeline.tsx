@@ -417,47 +417,42 @@ export default function LeadsPipeline() {
                             </Button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Phone className="h-3 w-3" /> {lead.phone}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {lead.phone}</span>
+                          {lead.email && (
+                            <span className="flex items-center gap-1 min-w-0"><Mail className="h-3 w-3 flex-shrink-0" /> <span className="truncate">{lead.email}</span></span>
+                          )}
                         </div>
-                        {lead.email && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Mail className="h-3 w-3" /> {lead.email}
-                          </div>
-                        )}
                         <div className="flex flex-wrap gap-1">
                           <Badge variant="outline" className="text-[10px]">{typeLabels[lead.project_type] || lead.project_type}</Badge>
                           <ChannelBadge channel={allChannels.find((c) => c.id === lead.channel_id)} />
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1 pt-1">
-                          <Button size="icon" variant="ghost" className="h-7 w-7 flex-shrink-0" title="Enviar mensagem" onClick={() => setMsgLead(lead)}>
-                            <MessageSquare className="h-3.5 w-3.5" />
-                          </Button>
-                          {getNextStatus(lead.status) && (
-                            <Button size="sm" variant="outline" className="text-xs h-7 flex-shrink-0" onClick={() => moveStatus(lead, getNextStatus(lead.status)!)}>
-                              <ArrowRight className="h-3 w-3 mr-1" /> Avançar
-                            </Button>
-                          )}
-                          {lead.status === "proposta_enviada" && (
-                            <Button size="sm" variant="secondary" className="text-xs h-7 flex-shrink-0" onClick={() => navigate("/leads/proposals")}>
-                              Proposta
-                            </Button>
-                          )}
-                          {!TERMINAL_STATUSES.has(lead.status) && (
-                            <>
-                              <Button size="sm" variant="ghost" className="text-xs h-7 flex-shrink-0 text-orange-700" title="Mover para backlog de recontato" onClick={() => moveStatus(lead, "backlog_recontato")}>
-                                Backlog
-                              </Button>
-                              <Button size="sm" variant="ghost" className="text-xs h-7 flex-shrink-0 text-destructive" title="Marcar como perdido definitivo" onClick={() => moveStatus(lead, "perdido_definitivo")}>
-                                Perdido
-                              </Button>
-                            </>
-                          )}
                           {lead.status === "fechado" && lead.converted_client_id && (
                             <Badge variant="secondary" className="text-[10px]">
                               <UserCheck className="h-3 w-3 mr-1" /> Cliente criado
                             </Badge>
                           )}
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-1 pt-1 border-t">
+                          <Button size="icon" variant="ghost" className="h-7 w-7 flex-shrink-0" title="Enviar mensagem" onClick={() => setMsgLead(lead)}>
+                            <MessageSquare className="h-3.5 w-3.5" />
+                          </Button>
+                          <div className="flex flex-wrap items-center gap-1 justify-end">
+                            {lead.status === "proposta_enviada" && (
+                              <Button size="sm" variant="secondary" className="text-xs h-7 flex-shrink-0" onClick={() => navigate("/leads/proposals")}>
+                                Proposta
+                              </Button>
+                            )}
+                            {!TERMINAL_STATUSES.has(lead.status) && (
+                              <>
+                                <Button size="sm" variant="ghost" className="text-xs h-7 flex-shrink-0 text-orange-700" title="Mover para backlog de recontato" onClick={() => moveStatus(lead, "backlog_recontato")}>
+                                  Backlog
+                                </Button>
+                                <Button size="sm" variant="ghost" className="text-xs h-7 flex-shrink-0 text-destructive" title="Marcar como perdido definitivo" onClick={() => moveStatus(lead, "perdido_definitivo")}>
+                                  Perdido
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
