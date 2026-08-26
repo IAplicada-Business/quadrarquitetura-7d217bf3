@@ -107,10 +107,16 @@ export function useComercialMetrics({
       // .eq("lead_type", "comercial") — blinda o dashboard/funil comercial
       // dos leads do pipeline de parceiros (reposicionamento estratégico:
       // funis totalmente separados, mesma tabela).
-      const [leadsRes, proposalsRes] = await Promise.all([
+      const [leadsRes0, proposalsRes] = await Promise.all([
         supabase.from("leads").select("id, status, name, created_at, updated_at, origin, project_type").eq("lead_type", "comercial"),
         supabase.from("proposals").select("id, status, price_full, final_value, sent_at, approved_at, created_at, updated_at, lead_id, notes, leads(name, phone, email, status)"),
       ]);
+      // 42703 = coluna lead_type ainda não existe no banco (migration
+      // pendente) — sem o filtro, volta ao comportamento anterior à
+      // feature de parceiros em vez de zerar o dashboard inteiro.
+      const leadsRes = leadsRes0.error?.code === "42703"
+        ? await supabase.from("leads").select("id, status, name, created_at, updated_at, origin, project_type")
+        : leadsRes0;
       return {
         leads: (leadsRes.data ?? []) as LeadRow[],
         proposals: (proposalsRes.data ?? []) as ProposalRow[],

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -101,11 +102,36 @@ export function useLeads(type: LeadType = "comercial") {
         .select("*")
         .eq("lead_type", type)
         .order("created_at", { ascending: false });
-      if (error) throw error;
+      if (error) {
+        // 42703 = coluna não existe — a migration que cria leads.lead_type
+        // ainda não rodou no banco (o filtro é código novo, mas o schema
+        // real pode estar atrasado em relação ao deploy do frontend).
+        // Sem o filtro, cai no comportamento de antes desta feature: mostra
+        // todos os leads. Evita sumir com o pipeline inteiro por causa de
+        // uma migration pendente.
+        if (error.code === "42703") {
+          const fallback = await supabase.from("leads").select("*").order("created_at", { ascending: false });
+          if (fallback.error) throw fallback.error;
+          toast({
+            title: "Aviso: banco de dados desatualizado",
+            description: "A coluna lead_type ainda não existe — rode as migrations pendentes. Mostrando todos os leads sem separar por tipo.",
+            variant: "destructive",
+          });
+          return fallback.data as Lead[];
+        }
+        throw error;
+      }
       return data as Lead[];
     },
     enabled: !!user,
   });
+
+  useEffect(() => {
+    if (!leadsQuery.error) return;
+    const err = leadsQuery.error as { code?: string; message?: string };
+    if (err.code === "42703") return; // já tratado (toast + fallback) dentro do queryFn
+    toast({ title: "Erro ao carregar leads", description: err.message, variant: "destructive" });
+  }, [leadsQuery.error]);
 
   const create = useMutation({
     mutationFn: async (lead: {

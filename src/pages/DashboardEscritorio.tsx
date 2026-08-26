@@ -56,8 +56,10 @@ export default function DashboardEscritorio() {
   const comercial = useComercialMetrics({ period: cmPeriod, origin: cmOrigin, projectType: cmType });
   const channelMetrics = useChannelMetrics();
   // Métricas de parceiros são isoladas do comercial — hook próprio, sem
-  // filtro de período/origem/tipo compartilhado com `comercial`.
-  const partnerMetrics = usePartnerMetrics();
+  // filtro de período/origem/tipo compartilhado com `comercial`. Só
+  // busca quando a aba é aberta (evita 2 queries a mais em toda visita
+  // ao dashboard, já que "Comercial" é a aba default).
+  const partnerMetrics = usePartnerMetrics(tab === "parceiros");
 
   if (comercial.isLoading) {
     return (

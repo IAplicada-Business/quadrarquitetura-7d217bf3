@@ -40,11 +40,15 @@ export function useChannelMetrics() {
       // .eq("lead_type", "comercial") — este bloco alimenta o dashboard
       // comercial; leads do pipeline de parceiros não entram aqui mesmo
       // que algum dia ganhem canal de aquisição.
-      const [channelsRes, leadsRes, proposalsRes] = await Promise.all([
+      const [channelsRes, leadsRes0, proposalsRes] = await Promise.all([
         supabase.from("acquisition_channels").select("id, name, color, is_active"),
         supabase.from("leads").select("id, status, created_at, channel_id").eq("lead_type", "comercial"),
         supabase.from("proposals").select("status, price_full, final_value, lead_id"),
       ]);
+      // 42703 = coluna lead_type ainda não existe (migration pendente).
+      const leadsRes = leadsRes0.error?.code === "42703"
+        ? await supabase.from("leads").select("id, status, created_at, channel_id")
+        : leadsRes0;
       return {
         channels: channelsRes.data ?? [],
         leads: (leadsRes.data ?? []) as LeadRow[],

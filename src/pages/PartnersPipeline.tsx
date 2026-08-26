@@ -145,7 +145,7 @@ export default function PartnersPipeline() {
       </div>
 
       {/* Kanban */}
-      <div className="flex gap-4 overflow-x-auto pb-4 flex-1 min-h-0 max-h-[calc(100vh-20rem)]">
+      <div className="flex gap-4 overflow-x-auto pb-4 flex-1 min-h-0 h-[calc(100vh-20rem)]">
         {PARTNER_STAGES.map((stage) => {
           const columnPartners = filtered.filter((p) => p.partner_stage === stage);
           const isOver = dragOverStage === stage;
