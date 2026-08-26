@@ -445,26 +445,26 @@ export default function LeadsPipeline() {
                           <Badge variant="outline" className="text-[10px]">{typeLabels[lead.project_type] || lead.project_type}</Badge>
                           <Badge variant="outline" className="text-[10px]">{originLabels[lead.origin] || lead.origin}</Badge>
                         </div>
-                        <div className="flex gap-1 pt-1">
-                          <Button size="icon" variant="ghost" className="h-7 w-7" title="Enviar mensagem" onClick={() => setMsgLead(lead)}>
+                        <div className="flex flex-wrap items-center gap-1 pt-1">
+                          <Button size="icon" variant="ghost" className="h-7 w-7 flex-shrink-0" title="Enviar mensagem" onClick={() => setMsgLead(lead)}>
                             <MessageSquare className="h-3.5 w-3.5" />
                           </Button>
                           {getNextStatus(lead.status) && (
-                            <Button size="sm" variant="outline" className="text-xs h-7 flex-1" onClick={() => moveStatus(lead, getNextStatus(lead.status)!)}>
+                            <Button size="sm" variant="outline" className="text-xs h-7 flex-shrink-0" onClick={() => moveStatus(lead, getNextStatus(lead.status)!)}>
                               <ArrowRight className="h-3 w-3 mr-1" /> Avançar
                             </Button>
                           )}
                           {lead.status === "proposta_enviada" && (
-                            <Button size="sm" variant="secondary" className="text-xs h-7" onClick={() => navigate("/leads/proposals")}>
+                            <Button size="sm" variant="secondary" className="text-xs h-7 flex-shrink-0" onClick={() => navigate("/leads/proposals")}>
                               Proposta
                             </Button>
                           )}
                           {!TERMINAL_STATUSES.has(lead.status) && (
                             <>
-                              <Button size="sm" variant="ghost" className="text-xs h-7 text-orange-700" title="Mover para backlog de recontato" onClick={() => moveStatus(lead, "backlog_recontato")}>
+                              <Button size="sm" variant="ghost" className="text-xs h-7 flex-shrink-0 text-orange-700" title="Mover para backlog de recontato" onClick={() => moveStatus(lead, "backlog_recontato")}>
                                 Backlog
                               </Button>
-                              <Button size="sm" variant="ghost" className="text-xs h-7 text-destructive" title="Marcar como perdido definitivo" onClick={() => moveStatus(lead, "perdido_definitivo")}>
+                              <Button size="sm" variant="ghost" className="text-xs h-7 flex-shrink-0 text-destructive" title="Marcar como perdido definitivo" onClick={() => moveStatus(lead, "perdido_definitivo")}>
                                 Perdido
                               </Button>
                             </>
