@@ -93,7 +93,7 @@ export default function PartnersPipeline() {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in flex flex-col min-h-[calc(100vh-12rem)]">
+    <div className="space-y-4 animate-fade-in flex flex-col h-full">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -145,7 +145,7 @@ export default function PartnersPipeline() {
       </div>
 
       {/* Kanban */}
-      <div className="flex gap-4 overflow-x-auto pb-4 flex-1 min-h-0 h-[calc(100vh-20rem)]">
+      <div className="flex gap-4 overflow-x-auto pb-4 flex-1 min-h-0">
         {PARTNER_STAGES.map((stage) => {
           const columnPartners = filtered.filter((p) => p.partner_stage === stage);
           const isOver = dragOverStage === stage;

@@ -57,7 +57,14 @@ export function AppLayout() {
           onToggleSidebar={toggleSidebar}
         />
         <main className="flex-1 overflow-y-auto scrollbar-elegant">
-          <div className="w-full px-6 py-6 lg:px-8 lg:py-8 animate-fade-in">
+          {/* h-full + flex: dá às páginas (ex. Pipeline de Leads/Parceiros)
+              uma altura definida pra preencher com flex-1, em vez de cada
+              uma tentar adivinhar via calc(100vh-Nrem) — que não sabe do
+              header, do padding ou de quanto os filtros ocupam ao quebrar
+              linha. Páginas que não usam essa altura (a maioria) continuam
+              exatamente iguais: sem flex-1 no filho, a altura dele
+              continua vindo do conteúdo. */}
+          <div className="w-full h-full px-6 py-6 lg:px-8 lg:py-8 animate-fade-in flex flex-col">
             <PermissionGate>
               <Outlet />
             </PermissionGate>
