@@ -337,7 +337,7 @@ export default function LeadsPipeline() {
 
       {/* Kanban View */}
       {view === "kanban" && (
-        <div className="flex gap-4 overflow-x-auto pb-4 flex-1 min-h-0 max-h-[calc(100vh-16rem)]">
+        <div className="flex gap-4 overflow-x-auto pb-4 flex-1 min-h-0 h-[calc(100vh-16rem)]">
           {LEAD_STATUSES.map((status) => {
             const columnLeads = filtered.filter((l) => l.status === status);
             // Hide legacy "perdido" column when empty — it's a migration artifact

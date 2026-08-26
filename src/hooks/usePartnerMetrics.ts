@@ -31,7 +31,7 @@ export interface TopPartner {
  * indicações). Não é misturado no dashboard comercial: consumido numa
  * aba própria em DashboardEscritorio.
  */
-export function usePartnerMetrics() {
+export function usePartnerMetrics(enabled: boolean = true) {
   const { user } = useAuth();
 
   const query = useQuery({
@@ -50,7 +50,10 @@ export function usePartnerMetrics() {
         referred: (referredRes.data ?? []) as ReferredLeadRow[],
       };
     },
-    enabled: !!user,
+    // Lazy: só busca quando a aba "Parceiros" do dashboard é aberta —
+    // antes disparava em toda visita ao Dashboard Comercial (aba
+    // default), duas queries a mais sem necessidade nenhuma.
+    enabled: !!user && enabled,
     staleTime: 60 * 1000,
   });
 
