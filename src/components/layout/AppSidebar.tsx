@@ -52,7 +52,6 @@ type MenuGroup = { label: string; items: MenuItem[] };
 const groupIcons: Record<string, LucideIcon> = {
   "Análises Quadra": LayoutDashboard,
   "Comercial": Users,
-  "Parceiros": Handshake,
   "Gestão de Obras": HardHat,
   "Gestão de Conteúdo": Film,
   "Administrativo": Settings,
@@ -81,7 +80,8 @@ const iconMap: Record<string, LucideIcon> = {
   "Kanban": ListChecks,
   "Kanban Projetos": Building2,
   "Kanban Quadra": ListChecks,
-  "Pipeline": Handshake,
+  "Pipeline": Users,
+  "Parceiros": Handshake,
   "Histórico de Voz": ListChecks,
   "Audio Tasks": Mic,
   "Fornecedores": Truck,
@@ -124,7 +124,14 @@ const menuGroups: MenuGroup[] = [
   {
     label: "Comercial",
     items: [
-      { title: "Leads", url: "/leads/pipeline" },
+      {
+        title: "Leads",
+        url: "/leads/pipeline",
+        subItems: [
+          { title: "Pipeline", url: "/leads/pipeline" },
+          { title: "Parceiros", url: "/partners/pipeline" },
+        ],
+      },
       { title: "Clientes", url: "/clients" },
       {
         title: "Documentos",
@@ -134,12 +141,6 @@ const menuGroups: MenuGroup[] = [
           { title: "Contratos", url: "/leads/contracts" },
         ],
       },
-    ],
-  },
-  {
-    label: "Parceiros",
-    items: [
-      { title: "Pipeline", url: "/partners/pipeline" },
     ],
   },
   {
