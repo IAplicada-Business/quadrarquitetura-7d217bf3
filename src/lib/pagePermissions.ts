@@ -45,15 +45,10 @@ export const PAGE_GROUPS: PageGroup[] = [
     group: "Comercial",
     pages: [
       { key: "leads_pipeline", label: "Leads (Pipeline)", url: "/leads/pipeline", prefixes: ["/leads/pipeline", "/leads/"] },
+      { key: "partners_pipeline", label: "Parceiros (Pipeline)", url: "/partners/pipeline", prefixes: ["/partners/pipeline", "/partners/"] },
       { key: "leads_proposals", label: "Propostas", url: "/leads/proposals", prefixes: ["/leads/proposals"] },
       { key: "leads_contracts", label: "Contratos", url: "/leads/contracts", prefixes: ["/leads/contracts"] },
       { key: "clients", label: "Clientes", url: "/clients", prefixes: ["/clients"] },
-    ],
-  },
-  {
-    group: "Parceiros",
-    pages: [
-      { key: "partners_pipeline", label: "Parceiros (Pipeline)", url: "/partners/pipeline", prefixes: ["/partners/pipeline", "/partners/"] },
     ],
   },
   {
