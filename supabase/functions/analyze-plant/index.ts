@@ -6,6 +6,129 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Limite alinhado ao que a UI promete ("PNG, JPG ou PDF, até 20MB").
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
+
+// btoa(String.fromCharCode(...bytes)) estoura o limite de argumentos do V8
+// (~64KB) e derruba a função com "Maximum call stack size exceeded" —
+// qualquer planta real passa disso. Converte em blocos.
+function bytesToBase64(bytes: Uint8Array): string {
+  const CHUNK = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+const EXT_CONTENT_TYPES: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  webp: "image/webp",
+  pdf: "application/pdf",
+};
+
+function resolveContentType(headerValue: string | null, fileUrl: string): string {
+  const fromHeader = (headerValue || "").split(";")[0].trim().toLowerCase();
+  if (fromHeader && fromHeader !== "application/octet-stream" && fromHeader !== "binary/octet-stream") {
+    return fromHeader;
+  }
+  const ext = fileUrl.split("?")[0].split(".").pop()?.toLowerCase() || "";
+  return EXT_CONTENT_TYPES[ext] || "image/jpeg";
+}
+
+// Baixa o arquivo e devolve a data URI pronta pro gateway, ou uma
+// resposta de erro já formatada com mensagem que a arquiteta entende.
+async function loadFileAsDataUrl(
+  fileUrl: string,
+): Promise<{ dataUrl: string } | { errorResponse: Response }> {
+  let fileResponse: Response;
+  try {
+    fileResponse = await fetch(fileUrl);
+  } catch (e) {
+    console.error("fetch do arquivo falhou:", e);
+    return {
+      errorResponse: new Response(
+        JSON.stringify({ error: "Não foi possível baixar o arquivo enviado. Tente enviar novamente." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      ),
+    };
+  }
+
+  if (!fileResponse.ok) {
+    console.error("arquivo inacessível:", fileResponse.status, fileUrl);
+    return {
+      errorResponse: new Response(
+        JSON.stringify({ error: "Não foi possível acessar o arquivo" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      ),
+    };
+  }
+
+  const fileBytes = new Uint8Array(await fileResponse.arrayBuffer());
+
+  if (fileBytes.byteLength === 0) {
+    return {
+      errorResponse: new Response(
+        JSON.stringify({ error: "O arquivo enviado está vazio." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      ),
+    };
+  }
+
+  if (fileBytes.byteLength > MAX_FILE_BYTES) {
+    const mb = (fileBytes.byteLength / (1024 * 1024)).toFixed(1);
+    return {
+      errorResponse: new Response(
+        JSON.stringify({ error: `Arquivo muito grande (${mb}MB). O limite é 20MB — reduza a resolução da planta.` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      ),
+    };
+  }
+
+  const contentType = resolveContentType(fileResponse.headers.get("content-type"), fileUrl);
+  return { dataUrl: `data:${contentType};base64,${bytesToBase64(fileBytes)}` };
+}
+
+// Propaga o motivo real do gateway em vez de "Erro ao analisar planta" seco —
+// sem isso o front só recebe "Edge Function returned a non-2xx status code".
+async function aiGatewayErrorResponse(response: Response): Promise<Response> {
+  const errorText = await response.text();
+  console.error("AI gateway error:", response.status, errorText);
+
+  if (response.status === 429) {
+    return new Response(
+      JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns instantes." }),
+      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+  if (response.status === 402) {
+    return new Response(
+      JSON.stringify({ error: "Créditos insuficientes. Adicione créditos em Configurações > Workspace > Uso." }),
+      { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
+  let detail = "";
+  try {
+    const parsed = JSON.parse(errorText);
+    detail = parsed?.error?.message || parsed?.error || parsed?.message || "";
+  } catch {
+    detail = errorText;
+  }
+  detail = String(detail).slice(0, 300);
+
+  return new Response(
+    JSON.stringify({
+      error: detail
+        ? `Erro ao analisar planta com IA (${response.status}): ${detail}`
+        : `Erro ao analisar planta com IA (${response.status})`,
+    }),
+    { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -31,17 +154,9 @@ serve(async (req) => {
         );
       }
 
-      const fileResponse = await fetch(file_url);
-      if (!fileResponse.ok) {
-        return new Response(
-          JSON.stringify({ error: "Não foi possível acessar o arquivo" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const fileBytes = await fileResponse.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(fileBytes)));
-      const contentType = fileResponse.headers.get("content-type") || "image/jpeg";
+      const loaded = await loadFileAsDataUrl(file_url);
+      if ("errorResponse" in loaded) return loaded.errorResponse;
+      const dataUrl = loaded.dataUrl;
 
       const obraLabel = obra_type || "reforma";
       const ambientesExtra = ambientes ? `\nAmbientes a considerar especificamente: ${ambientes}` : "";
@@ -67,7 +182,7 @@ Se uma atividade depende de outra, indique pelo nome da atividade predecessora.`
         {
           role: "user",
           content: [
-            { type: "image_url", image_url: { url: `data:${contentType};base64,${base64}` } },
+            { type: "image_url", image_url: { url: dataUrl } },
             { type: "text", text: userPrompt },
           ],
         },
@@ -131,24 +246,7 @@ Se uma atividade depende de outra, indique pelo nome da atividade predecessora.`
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("AI gateway error:", response.status, errorText);
-        if (response.status === 429) {
-          return new Response(
-            JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns instantes." }),
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        if (response.status === 402) {
-          return new Response(
-            JSON.stringify({ error: "Créditos insuficientes. Adicione créditos em Configurações > Workspace > Uso." }),
-            { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        return new Response(
-          JSON.stringify({ error: "Erro ao analisar planta com IA" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return await aiGatewayErrorResponse(response);
       }
 
       const result = await response.json();
@@ -184,17 +282,9 @@ Se uma atividade depende de outra, indique pelo nome da atividade predecessora.`
       );
     }
 
-    const fileResponse = await fetch(file_url);
-    if (!fileResponse.ok) {
-      return new Response(
-        JSON.stringify({ error: "Não foi possível acessar o arquivo" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const fileBytes = await fileResponse.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(fileBytes)));
-    const contentType = fileResponse.headers.get("content-type") || "image/jpeg";
+    const loaded = await loadFileAsDataUrl(file_url);
+    if ("errorResponse" in loaded) return loaded.errorResponse;
+    const dataUrl = loaded.dataUrl;
 
     const systemPrompt = `Você é um assistente especializado em análise de plantas de projetos de arquitetura e construção civil.
 
@@ -221,7 +311,7 @@ Extraia todas as atividades necessárias usando a ferramenta fornecida.`;
       {
         role: "user",
         content: [
-          { type: "image_url", image_url: { url: `data:${contentType};base64,${base64}` } },
+          { type: "image_url", image_url: { url: dataUrl } },
           { type: "text", text: userPrompt },
         ],
       },
@@ -273,24 +363,7 @@ Extraia todas as atividades necessárias usando a ferramenta fornecida.`;
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns instantes." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Adicione créditos em Configurações > Workspace > Uso." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      return new Response(
-        JSON.stringify({ error: "Erro ao analisar planta com IA" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return await aiGatewayErrorResponse(response);
     }
 
     const result = await response.json();

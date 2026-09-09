@@ -87,6 +87,120 @@ const PREREQ_BY_DISCIPLINE: Record<string, TaskBlueprint[]> = {
   ],
 };
 
+// ── Resolução da disciplina ────────────────────────────────────────────
+// Sprint 8 (Mariana): "esse aqui não tô conseguindo fazer pra marcenaria,
+// pra marmoraria deu e foi top". A busca era `PREREQ_BY_DISCIPLINE[discipline]`
+// — comparação exata, sensível a caixa, acento e a qualquer complemento no
+// campo (que é texto livre). "marcenaria", "Marcenaria sob medida" ou
+// "Marcenaria/Serralheria" caíam fora e o painel de pré-requisitos
+// simplesmente não aparecia, sem nenhum aviso.
+// Agora normalizamos (minúsculas, sem acento, sem pontuação) e aceitamos
+// apelidos comuns; se a disciplina não bater, tentamos o nome da atividade
+// (ex.: atividade "Marcenaria — 1º Pavimento" com disciplina "Acabamento").
+
+function normalize(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+// Apelidos → chave canônica de PREREQ_BY_DISCIPLINE.
+const DISCIPLINE_ALIASES: Record<string, string> = {
+  "marcenaria": "Marcenaria",
+  "marceneiro": "Marcenaria",
+  "moveis planejados": "Marcenaria",
+  "moveis sob medida": "Marcenaria",
+  "mobiliario": "Marcenaria",
+  "armarios": "Marcenaria",
+  "marmoraria": "Marmoraria",
+  "marmore": "Marmoraria",
+  "granito": "Marmoraria",
+  "pedras": "Marmoraria",
+  "bancadas": "Marmoraria",
+  "vidros": "Vidros",
+  "vidro": "Vidros",
+  "vidracaria": "Vidros",
+  "espelhos": "Vidros",
+  "esquadrias": "Esquadrias",
+  "esquadria": "Esquadrias",
+  "aluminio": "Esquadrias",
+  "portas e janelas": "Esquadrias",
+  "serralheria": "Serralheria",
+  "serralheiro": "Serralheria",
+  "metalon": "Serralheria",
+  "loucas e metais": "Louças e Metais",
+  "loucas": "Louças e Metais",
+  "metais": "Louças e Metais",
+  "iluminacao": "Iluminação",
+  "luminarias": "Iluminação",
+  "revestimento": "Revestimento",
+  "revestimentos": "Revestimento",
+  "azulejos": "Revestimento",
+  "piso": "Piso",
+  "pisos": "Piso",
+  "porcelanato": "Piso",
+};
+
+// Termos que, encontrados dentro de um texto maior, identificam a
+// disciplina. Ordenados do mais longo para o mais curto para desempate
+// ("moveis planejados" ganha de "moveis" na mesma posição).
+const DISCIPLINE_KEYWORDS: [string, string][] = Object.entries(DISCIPLINE_ALIASES)
+  .sort((a, b) => b[0].length - a[0].length);
+
+function matchDiscipline(text: string | null | undefined): string | null {
+  const normalized = normalize(text);
+  if (!normalized) return null;
+
+  const exact = DISCIPLINE_ALIASES[normalized];
+  if (exact) return exact;
+
+  // Vence o termo que aparece primeiro no texto: em "Marcenaria/Serralheria"
+  // a disciplina principal é a que a arquiteta escreveu primeiro.
+  let best: { index: number; canonical: string } | null = null;
+  for (const [term, canonical] of DISCIPLINE_KEYWORDS) {
+    // Só casa em limite de palavra: evita "piso" dentro de "epis".
+    const match = new RegExp(`(?:^| )${term}(?: |$)`).exec(normalized);
+    if (!match) continue;
+    if (!best || match.index < best.index) best = { index: match.index, canonical };
+  }
+  return best?.canonical ?? null;
+}
+
+// Disciplinas que reconhecidamente NÃO têm cadeia de pré-requisitos.
+// Existem só para travar o fallback pelo nome: uma atividade
+// "Demolição de piso" tem disciplina Demolição e não deve sugerir
+// "comprar piso" só porque a palavra aparece no nome.
+const DISCIPLINES_WITHOUT_CHAIN = new Set([
+  "demolicao", "alvenaria", "eletrica", "hidraulica", "pintura",
+  "estrutura", "gesso forro", "forro", "gesso", "impermeabilizacao",
+  "limpeza", "ar condicionado", "automacao", "acabamento", "fundacao",
+  "cobertura", "instalacoes",
+]);
+
+/**
+ * Disciplina canônica com blueprint de pré-requisitos, ou null.
+ * Tenta o campo `discipline` e, como fallback, o nome da atividade —
+ * a menos que a disciplina informada seja uma que sabidamente não tem
+ * cadeia (aí o nome não vale como pista).
+ */
+export function resolvePrerequisiteDiscipline(
+  activity: Pick<ActivityForTasks, "name" | "discipline">,
+): string | null {
+  const fromDiscipline = matchDiscipline(activity.discipline);
+  if (fromDiscipline) return fromDiscipline;
+  if (DISCIPLINES_WITHOUT_CHAIN.has(normalize(activity.discipline))) return null;
+  return matchDiscipline(activity.name);
+}
+
+/** A cadeia dessa disciplina é re-ancorada pela data de medição? */
+export function isMedicaoAnchored(discipline: string | null | undefined): boolean {
+  const canonical = matchDiscipline(discipline);
+  return !!canonical && MEDICAO_ANCHORED_DISCIPLINES.has(canonical);
+}
+
 function dateOffset(iso: string | null | undefined, days: number): string | null {
   if (!iso) return null;
   const d = new Date(iso + "T00:00:00Z");
@@ -95,7 +209,7 @@ function dateOffset(iso: string | null | undefined, days: number): string | null
 }
 
 export function getPrerequisitePreview(activity: ActivityForTasks) {
-  const discipline = activity.discipline ?? "";
+  const discipline = resolvePrerequisiteDiscipline(activity) ?? "";
   const blueprints = PREREQ_BY_DISCIPLINE[discipline] ?? [];
 
   // When medicao_date is set for a measurement-anchored discipline, we know

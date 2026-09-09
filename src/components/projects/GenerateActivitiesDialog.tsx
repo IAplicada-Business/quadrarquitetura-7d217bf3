@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { getDisciplineColor } from "@/lib/disciplineColors";
+import { edgeFunctionErrorMessage } from "@/lib/edgeFunctionError";
 import { useActivityTemplates } from "@/hooks/useActivityTemplates";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ProjectActivity } from "@/hooks/useProjectActivities";
@@ -317,7 +318,8 @@ export function GenerateActivitiesDialog({
         toast({ title: `${ambientes.length} ambientes e ${atividades.length} atividades identificados.` });
       }
     } catch (err: any) {
-      toast({ title: "Erro ao analisar planta", description: err.message, variant: "destructive" });
+      const description = await edgeFunctionErrorMessage(err, "Erro ao analisar planta");
+      toast({ title: "Erro ao analisar planta", description, variant: "destructive" });
     } finally {
       setIsGenerating(false);
     }
@@ -696,11 +698,20 @@ export function GenerateActivitiesDialog({
 
                 {plantPreview ? (
                   <div className="relative">
-                    <img
-                      src={plantPreview}
-                      alt="Planta"
-                      className="rounded-md max-h-40 object-contain mx-auto"
-                    />
+                    {plantFile?.type === "application/pdf" ? (
+                      /* <img> não renderiza PDF — mostra o nome do arquivo
+                         em vez de um ícone de imagem quebrada. */
+                      <div className="flex items-center justify-center gap-2 rounded-md border bg-muted/30 py-6 px-3 text-sm">
+                        <MapIcon className="h-5 w-5 text-muted-foreground shrink-0" />
+                        <span className="truncate">{plantFile.name}</span>
+                      </div>
+                    ) : (
+                      <img
+                        src={plantPreview}
+                        alt="Planta"
+                        className="rounded-md max-h-40 object-contain mx-auto"
+                      />
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"

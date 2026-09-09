@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ListChecks, Wand2 } from "lucide-react";
 import { ProjectActivity, computeCascade, CascadeChange } from "@/hooks/useProjectActivities";
 import { CascadePreviewDialog } from "./CascadePreviewDialog";
-import { getPrerequisitePreview, createPrerequisiteTasks, MEDICAO_ANCHORED_DISCIPLINES } from "@/lib/prerequisiteTasks";
+import { getPrerequisitePreview, createPrerequisiteTasks, isMedicaoAnchored, resolvePrerequisiteDiscipline } from "@/lib/prerequisiteTasks";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
@@ -167,7 +167,7 @@ export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialD
                 <Input value={discipline} onChange={e => setDiscipline(e.target.value)} placeholder="Ex: Elétrica" required />
               </div>
             </div>
-            {MEDICAO_ANCHORED_DISCIPLINES.has(discipline) && (
+            {isMedicaoAnchored(discipline) && (
               <div>
                 <Label>
                   Data de Medição
@@ -241,19 +241,23 @@ export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialD
                 Mostra preview e botão "Gerar pré-requisitos" só se
                 houver blueprint para a disciplina escolhida. */}
             {(() => {
-              const preview = getPrerequisitePreview({
+              const activityForTasks = {
                 id: initialData?.id,
                 name: name || initialData?.name || "",
                 discipline,
                 start_date: startDate || initialData?.start_date,
                 medicao_date: medicaoDate || (initialData as any)?.medicao_date || null,
-              });
+              };
+              const preview = getPrerequisitePreview(activityForTasks);
               if (preview.length === 0) return null;
+              // Mostra a disciplina canônica reconhecida (a digitada pode ser
+              // "marcenaria sob medida" e o blueprint aplicado é o de Marcenaria).
+              const resolvedDiscipline = resolvePrerequisiteDiscipline(activityForTasks);
               return (
                 <div className="rounded-md border p-3 bg-muted/20 space-y-2">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <ListChecks className="h-4 w-4" />
-                    Pré-requisitos para {discipline}
+                    Pré-requisitos para {resolvedDiscipline}
                   </div>
                   <ul className="space-y-1 text-xs text-muted-foreground">
                     {preview.map((p, i) => (
@@ -275,13 +279,7 @@ export function ActivityForm({ open, onOpenChange, onSubmit, onCascade, initialD
                       if (!user || !projectId) return;
                       try {
                         const created = await createPrerequisiteTasks({
-                          activity: {
-                            id: initialData?.id,
-                            name: name || initialData?.name || "",
-                            discipline,
-                            start_date: startDate || initialData?.start_date,
-                            medicao_date: medicaoDate || (initialData as any)?.medicao_date || null,
-                          },
+                          activity: activityForTasks,
                           projectId,
                           userId: user.id,
                         });

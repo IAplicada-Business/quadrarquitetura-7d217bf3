@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { edgeFunctionErrorMessage } from "@/lib/edgeFunctionError";
 import { Upload, Sparkles, Plus, Loader2, FileUp } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -147,7 +148,8 @@ export function ImportPlantDialog({ open, onOpenChange, projects }: Props) {
       setStep(3);
     } catch (err: any) {
       console.error("Analyze error:", err);
-      toast({ title: "Erro na análise", description: err.message, variant: "destructive" });
+      const description = await edgeFunctionErrorMessage(err, "Erro na análise da planta");
+      toast({ title: "Erro na análise", description, variant: "destructive" });
       setStep(1);
     } finally {
       setIsAnalyzing(false);
