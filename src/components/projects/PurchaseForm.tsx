@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,13 +11,13 @@ interface PurchaseFormProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: {
     name: string;
-    category?: string;
-    supplier_name?: string;
-    value?: number;
-    deadline?: string;
-    payment_info?: string;
-    product_link?: string;
-    specifications?: string;
+    category?: string | null;
+    supplier_name?: string | null;
+    value?: number | null;
+    deadline?: string | null;
+    payment_info?: string | null;
+    product_link?: string | null;
+    specifications?: string | null;
     status?: "pendente" | "comprado" | "entregue" | "instalado";
   }) => void;
   initialData?: Record<string, unknown> | null;
@@ -26,34 +26,58 @@ interface PurchaseFormProps {
 
 const CATEGORIES = ["Obra Civil", "Elétrica", "Hidráulica", "Tintas", "Marcenaria", "Vidros", "Revestimentos", "Diversos"];
 
+const str = (v: unknown): string => (v === null || v === undefined ? "" : String(v));
+
+// <input type="date"> só aceita "yyyy-MM-dd"; o banco pode devolver
+// timestamp completo ("2026-09-13T00:00:00+00:00"), que o input descarta
+// silenciosamente e o campo aparece vazio.
+const toDateInput = (v: unknown): string => str(v).slice(0, 10);
+
 export function PurchaseForm({ open, onOpenChange, onSubmit, initialData, isLoading }: PurchaseFormProps) {
-  const [name, setName] = useState(initialData?.name as string || "");
-  const [category, setCategory] = useState(initialData?.category as string || "");
-  const [supplierName, setSupplierName] = useState(initialData?.supplier_name as string || "");
-  const [value, setValue] = useState(initialData?.value ? String(initialData.value) : "");
-  const [deadline, setDeadline] = useState(initialData?.deadline as string || "");
-  const [paymentInfo, setPaymentInfo] = useState(initialData?.payment_info as string || "");
-  const [productLink, setProductLink] = useState(initialData?.product_link as string || "");
-  const [specifications, setSpecifications] = useState(initialData?.specifications as string || "");
-  const [status, setStatus] = useState(initialData?.status as string || "pendente");
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [supplierName, setSupplierName] = useState("");
+  const [value, setValue] = useState("");
+  const [deadline, setDeadline] = useState("");
+  const [paymentInfo, setPaymentInfo] = useState("");
+  const [productLink, setProductLink] = useState("");
+  const [specifications, setSpecifications] = useState("");
+  const [status, setStatus] = useState("pendente");
+
+  // O diálogo fica montado o tempo todo: o estado era inicializado só no
+  // primeiro mount (quando initialData ainda é null), então ao clicar em
+  // editar todos os campos apareciam vazios e salvar apagava a compra.
+  // Sincroniza sempre que abrir ou trocar o item em edição.
+  useEffect(() => {
+    if (!open) return;
+    setName(str(initialData?.name));
+    setCategory(str(initialData?.category));
+    setSupplierName(str(initialData?.supplier_name));
+    setValue(initialData?.value === null || initialData?.value === undefined ? "" : String(initialData.value));
+    setDeadline(toDateInput(initialData?.deadline));
+    setPaymentInfo(str(initialData?.payment_info));
+    setProductLink(str(initialData?.product_link));
+    setSpecifications(str(initialData?.specifications));
+    setStatus(str(initialData?.status) || "pendente");
+  }, [open, initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) return;
     onSubmit({
       name,
-      category: category || undefined,
-      supplier_name: supplierName || undefined,
-      value: value ? Number(value) : undefined,
-      deadline: deadline || undefined,
-      payment_info: paymentInfo || undefined,
-      product_link: productLink || undefined,
-      specifications: specifications || undefined,
+      // Campos limpos pela arquiteta precisam ir como null, não como
+      // undefined — undefined some do payload e o valor antigo persiste.
+      category: category || null,
+      supplier_name: supplierName || null,
+      value: value ? Number(value) : null,
+      deadline: deadline || null,
+      payment_info: paymentInfo || null,
+      product_link: productLink || null,
+      specifications: specifications || null,
       status: status as "pendente" | "comprado" | "entregue" | "instalado",
     });
     onOpenChange(false);
-    setName(""); setCategory(""); setSupplierName(""); setValue("");
-    setDeadline(""); setPaymentInfo(""); setProductLink(""); setSpecifications(""); setStatus("pendente");
   };
 
   return (

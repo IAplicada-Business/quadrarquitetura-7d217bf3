@@ -24,13 +24,13 @@ export function useProjectPurchases(projectId: string | undefined) {
   const create = useMutation({
     mutationFn: async (item: {
       name: string;
-      category?: string;
-      supplier_name?: string;
-      value?: number;
-      deadline?: string;
-      payment_info?: string;
-      product_link?: string;
-      specifications?: string;
+      category?: string | null;
+      supplier_name?: string | null;
+      value?: number | null;
+      deadline?: string | null;
+      payment_info?: string | null;
+      product_link?: string | null;
+      specifications?: string | null;
       status?: "pendente" | "comprado" | "entregue" | "instalado";
     }) => {
       const { error } = await supabase.from("purchases").insert({

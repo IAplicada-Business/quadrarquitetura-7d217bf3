@@ -6,6 +6,18 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// btoa(String.fromCharCode(...bytes)) estoura o limite de argumentos do V8
+// (~64KB) e derruba a função com "Maximum call stack size exceeded" —
+// qualquer documento real passa disso. Converte em blocos.
+function bytesToBase64(bytes: Uint8Array): string {
+  const CHUNK = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -33,7 +45,7 @@ serve(async (req) => {
         const resp = await fetch(doc.file_url!);
         if (!resp.ok) continue;
         const bytes = await resp.arrayBuffer();
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));
+        const base64 = bytesToBase64(new Uint8Array(bytes));
         const ct = resp.headers.get("content-type") || "image/jpeg";
         // Include images; skip unknown binary types
         if (ct.startsWith("image/") || ct === "application/pdf") {
