@@ -37,6 +37,7 @@ import ContentScripts from "./pages/ContentScripts";
 import ContentPosts from "./pages/ContentPosts";
 import ContentInstagram from "./pages/ContentInstagram";
 import TasksHub from "./pages/TasksHub";
+import BuddyBug from "./pages/BuddyBug";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -120,6 +121,11 @@ const App = () => (
               <Route path="/admin/invoices" element={<InvoicesPage />} />
               <Route path="/financeiro/lancamentos" element={<Lancamentos />} />
               <Route path="/notifications" element={<NotificationsPage />} />
+
+              {/* Buddy (plataforma base IAplicada) — liberado a todo usuário
+                  autenticado; mover card no Kanban é admin-only pelo trigger
+                  no banco. Vive só no menu superior, não na sidebar. */}
+              <Route path="/buddy/bug" element={<BuddyBug />} />
               {/* Gestão de Conteúdo */}
               <Route path="/content/calendar" element={<ContentCalendar />} />
               <Route path="/content/scripts" element={<ContentScripts />} />

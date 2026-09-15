@@ -8,6 +8,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+/** Opção de disciplina pra vincular a cotação. `scopeItemId` é null quando a
+ *  disciplina só existe nas atividades do Escopo (sem item de escopo ainda) —
+ *  nesse caso quem recebe o submit cria o item na hora. */
+export interface DisciplineOption {
+  discipline: string;
+  scopeItemId: string | null;
+}
+
+/* Radix <Select.Item> lança erro se value="" (ele reserva a string vazia pro
+   placeholder). Era exatamente isso que quebrava o "Editar para vincular":
+   a opção "Sem disciplina" derrubava o formulário inteiro ao abrir. */
+const NO_DISCIPLINE = "__sem_disciplina__";
+
 interface BudgetQuoteFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -17,10 +30,10 @@ interface BudgetQuoteFormProps {
   scopeItemName?: string;
   revisionNumber?: number;
   isLoading?: boolean;
-  allScopeItems?: { id: string; discipline: string | null }[];
+  disciplineOptions?: DisciplineOption[];
 }
 
-export function BudgetQuoteForm({ open, onOpenChange, onSubmit, initialData, scopeItemId, scopeItemName, revisionNumber = 1, isLoading, allScopeItems }: BudgetQuoteFormProps) {
+export function BudgetQuoteForm({ open, onOpenChange, onSubmit, initialData, scopeItemId, scopeItemName, revisionNumber = 1, isLoading, disciplineOptions = [] }: BudgetQuoteFormProps) {
   const [supplierId, setSupplierId] = useState("");
   const [supplierName, setSupplierName] = useState("");
   const [servicesDescription, setServicesDescription] = useState("");
@@ -29,7 +42,7 @@ export function BudgetQuoteForm({ open, onOpenChange, onSubmit, initialData, sco
   const [deliveryTime, setDeliveryTime] = useState("");
   const [paymentTerms, setPaymentTerms] = useState("");
   const [status, setStatus] = useState("pendente");
-  const [selectedScopeItemId, setSelectedScopeItemId] = useState("");
+  const [selectedDiscipline, setSelectedDiscipline] = useState("");
 
   const { data: suppliers } = useQuery({
     queryKey: ["suppliers"],
@@ -50,20 +63,35 @@ export function BudgetQuoteForm({ open, onOpenChange, onSubmit, initialData, sco
       setDeliveryTime((initialData.delivery_time as string) || "");
       setPaymentTerms((initialData.payment_terms as string) || "");
       setStatus((initialData.status as string) || "pendente");
-      setSelectedScopeItemId((initialData.scope_item_id as string) || "");
+      // A disciplina atual vem do item de escopo vinculado ou, na falta dele,
+      // da disciplina que a aba já derivou pela atividade (_discipline).
+      const fromScopeItem = initialData.scope_item_id
+        ? disciplineOptions.find(o => o.scopeItemId === initialData.scope_item_id)?.discipline
+        : undefined;
+      setSelectedDiscipline(fromScopeItem || (initialData._discipline as string) || "");
     } else {
       setSupplierId(""); setSupplierName(""); setServicesDescription("");
       setValue(""); setMaterialEstimate(""); setDeliveryTime(""); setPaymentTerms(""); setStatus("pendente");
-      setSelectedScopeItemId(scopeItemId || "");
+      setSelectedDiscipline(
+        (scopeItemId && disciplineOptions.find(o => o.scopeItemId === scopeItemId)?.discipline) || ""
+      );
     }
+    // disciplineOptions é derivado por useMemo na aba; não entra nas deps pra
+    // não resetar o formulário a cada render do pai.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, open, scopeItemId]);
 
-  const selectedScopeName = allScopeItems?.find(s => s.id === selectedScopeItemId)?.discipline;
+  const selectedOption = disciplineOptions.find(o => o.discipline === selectedDiscipline);
+  const selectedScopeName = selectedOption?.discipline;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
-      scope_item_id: selectedScopeItemId || null,
+      scope_item_id: selectedOption?.scopeItemId ?? null,
+      // Disciplina escolhida que ainda não tem item de escopo: a aba cria o
+      // item e usa o id dele, senão o vínculo se perderia no banco (não há
+      // coluna de disciplina em budget_quotes).
+      _link_discipline: selectedOption && !selectedOption.scopeItemId ? selectedDiscipline : null,
       supplier_id: supplierId || null,
       supplier_name: supplierName || null,
       services_description: servicesDescription || null,
@@ -91,22 +119,30 @@ export function BudgetQuoteForm({ open, onOpenChange, onSubmit, initialData, sco
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {allScopeItems && allScopeItems.length > 0 && (
-            <div>
-              <Label>Disciplina</Label>
-              <Select value={selectedScopeItemId} onValueChange={setSelectedScopeItemId}>
+          <div>
+            <Label>Disciplina</Label>
+            {disciplineOptions.length > 0 ? (
+              <Select
+                value={selectedDiscipline || NO_DISCIPLINE}
+                onValueChange={(v) => setSelectedDiscipline(v === NO_DISCIPLINE ? "" : v)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Sem disciplina vinculada" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem disciplina</SelectItem>
-                  {allScopeItems.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.discipline}</SelectItem>
+                  <SelectItem value={NO_DISCIPLINE}>Sem disciplina</SelectItem>
+                  {disciplineOptions.map(o => (
+                    <SelectItem key={o.discipline} value={o.discipline}>{o.discipline}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          )}
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">
+                Nenhuma disciplina cadastrada ainda. Cadastre atividades com disciplina na aba
+                “Escopo” para poder vincular esta cotação.
+              </p>
+            )}
+          </div>
           <div>
             <Label>Fornecedor (cadastrado)</Label>
             <Select value={supplierId} onValueChange={setSupplierId}>

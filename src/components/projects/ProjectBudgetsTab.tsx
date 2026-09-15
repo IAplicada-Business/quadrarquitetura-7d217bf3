@@ -117,6 +117,28 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
     return [...new Set([...fromActivities, ...fromQuotes])].sort((a, b) => a.localeCompare(b));
   }, [activities, quotesWithDiscipline]);
 
+  /* Opções do campo "Disciplina" ao editar uma cotação. A aba agrupa por
+     disciplina vinda das ATIVIDADES do escopo, mas o vínculo no banco só
+     existe via scope_item_id — então uma disciplina que só existe como
+     atividade entra aqui com scopeItemId null e o item é criado na hora do
+     salvamento. Antes só entravam itens de escopo "contratado", que nesta
+     obra estão vazios: por isso o campo nem aparecia e "vincular" era
+     impossível. */
+  const disciplineOptions = useMemo(() => {
+    const byDiscipline = new Map<string, string | null>();
+    for (const disc of disciplineSections) byDiscipline.set(disc, null);
+    for (const s of scopeItems) {
+      if (!s.discipline) continue;
+      const existing = [...byDiscipline.keys()].find(
+        d => d.toLowerCase() === s.discipline!.toLowerCase()
+      );
+      byDiscipline.set(existing ?? s.discipline, s.id);
+    }
+    return [...byDiscipline.entries()]
+      .map(([discipline, scopeItemId]) => ({ discipline, scopeItemId }))
+      .sort((a, b) => a.discipline.localeCompare(b.discipline));
+  }, [disciplineSections, scopeItems]);
+
   // Group quotes by derived discipline
   const groupedQuotes = useMemo(() => {
     const groups: Record<string, typeof quotesWithDiscipline> = {};
@@ -128,12 +150,17 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
     return groups;
   }, [quotesWithDiscipline]);
 
+  /* Soma TODOS os fornecedores aprovados de cada grupo, não só o primeiro.
+     Uma disciplina pode ser dividida entre fornecedores (e "Sem Disciplina"
+     junta fornecedores que não competem entre si — marmoraria, marcenaria,
+     construtora), então pegar só um zerava o resto da conta. */
   const totals = useMemo(() => {
     let total = 0;
     const byDiscipline: Record<string, number> = {};
     for (const [disc, qs] of Object.entries(groupedQuotes)) {
-      const approved = qs.find(q => q.status === "aprovado");
-      const subtotal = approved ? (approved.value || 0) + (approved.material_estimate || 0) : 0;
+      const subtotal = qs
+        .filter(q => q.status === "aprovado")
+        .reduce((sum, q) => sum + (q.value || 0) + (q.material_estimate || 0), 0);
       byDiscipline[disc] = subtotal;
       total += subtotal;
     }
@@ -152,25 +179,53 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
     setFormOpen(true);
   };
 
-  const handleSubmit = (data: Record<string, unknown>) => {
+  const handleSubmit = async (data: Record<string, unknown>) => {
+    const { _link_discipline: linkDiscipline, ...quoteData } = data as
+      { _link_discipline?: string | null } & Record<string, unknown>;
+
+    // Disciplina escolhida que ainda não tem item de escopo: cria o item
+    // (é o único lugar onde budget_quotes guarda o vínculo) e usa o id dele.
+    if (linkDiscipline && user) {
+      const { data: created, error } = await supabase
+        .from("scope_items")
+        .insert({
+          project_id: projectId,
+          user_id: user.id,
+          discipline: linkDiscipline,
+          scope_type: "contratado",
+        } as never)
+        .select("id")
+        .single();
+      if (error) {
+        toast({ title: "Erro ao vincular disciplina", description: error.message, variant: "destructive" });
+        return;
+      }
+      quoteData.scope_item_id = created.id;
+      queryClient.invalidateQueries({ queryKey: ["scope_items", projectId] });
+    }
+
     if (editingQuote) {
-      update.mutate({ id: editingQuote.id as string, ...data });
+      update.mutate({ id: editingQuote.id as string, ...quoteData });
     } else {
-      create.mutate(data as Parameters<typeof create.mutate>[0]);
+      create.mutate(quoteData as Parameters<typeof create.mutate>[0]);
     }
     setEditingQuote(null);
   };
 
   const handleApprove = async (quoteId: string, scopeItemId: string | null) => {
-    // Reject all others for same discipline in current revision
     const thisQuote = quotesWithDiscipline.find(q => q.id === quoteId);
     const thisDiscipline = thisQuote?._discipline;
-    const siblings = quotesWithDiscipline.filter(
-      (q) => q._discipline === thisDiscipline && q.id !== quoteId
-    );
-    for (const s of siblings) {
-      if (s.status === "aprovado") {
-        update.mutate({ id: s.id, status: "cotado" });
+    /* Só desaprova os concorrentes quando existe disciplina: em "Sem
+       Disciplina" caem fornecedores de serviços diferentes, e aprovar um
+       derrubava a aprovação dos outros (todos tinham _discipline null). */
+    if (thisDiscipline) {
+      const siblings = quotesWithDiscipline.filter(
+        (q) => q._discipline === thisDiscipline && q.id !== quoteId
+      );
+      for (const s of siblings) {
+        if (s.status === "aprovado") {
+          update.mutate({ id: s.id, status: "cotado" });
+        }
       }
     }
     update.mutate({ id: quoteId, status: "aprovado" });
@@ -385,9 +440,14 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
                         <CardTitle className="text-base text-display">Sem Disciplina</CardTitle>
                         <Badge variant="secondary" className="text-[10px]">Use Editar para vincular</Badge>
                       </div>
-                      <Button size="sm" variant="outline" onClick={() => handleAddQuote(null)}>
-                        <Plus className="h-3.5 w-3.5 mr-1" /> Cotação
-                      </Button>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold text-primary">
+                          {formatCurrency(totals.byDiscipline["sem_disciplina"] || 0)}
+                        </span>
+                        <Button size="sm" variant="outline" onClick={() => handleAddQuote(null)}>
+                          <Plus className="h-3.5 w-3.5 mr-1" /> Cotação
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -431,7 +491,7 @@ export function ProjectBudgetsTab({ projectId, projectName = "" }: ProjectBudget
             scopeItemName={activeScopeName}
             revisionNumber={currentRev}
             isLoading={create.isPending || update.isPending}
-            allScopeItems={contractedScopeItems}
+            disciplineOptions={disciplineOptions}
           />
 
           <ShoppingListDialog
