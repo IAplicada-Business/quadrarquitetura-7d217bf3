@@ -58,15 +58,14 @@ export function DocsProjetoMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
+        {/* Mesmo botão redondo dos vizinhos (microfone, sino, tema): h-9 w-9
+            com bg-muted. A logo da Quadra tem fundo transparente, então é o
+            círculo do botão que dá a forma. */}
         <button
-          className="h-8 w-8 rounded-full grid place-items-center opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+          className="h-9 w-9 rounded-full grid place-items-center bg-muted transition-colors hover:bg-muted/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
           aria-label="Docs do projeto"
           title="Docs do projeto"
         >
-          {/* 24px (e não 20 como o Buddy): a logo da Quadra é um lettering com
-              respiro interno, então no mesmo tamanho ela lê menor e mais
-              embaçada que a marca da IAplicada, que é um ícone cheio. O botão
-              continua 32px — o equilíbrio é óptico, não métrico. */}
           <img src={logoAzul} alt="" className="h-6 w-6 object-contain" />
         </button>
       </DropdownMenuTrigger>
