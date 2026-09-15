@@ -14,6 +14,210 @@ export type Database = {
   }
   public: {
     Tables: {
+      iaplicada_links: {
+        Row: {
+          atualizado_em: string
+          chave: string
+          descricao: string | null
+          label: string
+          ordem: number
+          url: string | null
+        }
+        Insert: {
+          atualizado_em?: string
+          chave: string
+          descricao?: string | null
+          label: string
+          ordem?: number
+          url?: string | null
+        }
+        Update: {
+          atualizado_em?: string
+          chave?: string
+          descricao?: string | null
+          label?: string
+          ordem?: number
+          url?: string | null
+        }
+        Relationships: []
+      }
+      oportunidades: {
+        Row: {
+          aprovado_autor_em: string | null
+          aprovado_autor_id: string | null
+          atualizado_em: string
+          autor_id: string | null
+          cerebro_conversa_id: string | null
+          cliente_id: string | null
+          criado_em: string
+          data_prevista: string | null
+          descricao: string
+          frequencia_uso: string | null
+          id: string
+          impacto: string | null
+          numero: string
+          prioridade: string
+          problema_resolve: string | null
+          status: string
+          tela_origem: string | null
+          tipo: string
+          titulo: string
+        }
+        Insert: {
+          aprovado_autor_em?: string | null
+          aprovado_autor_id?: string | null
+          atualizado_em?: string
+          autor_id?: string | null
+          cerebro_conversa_id?: string | null
+          cliente_id?: string | null
+          criado_em?: string
+          data_prevista?: string | null
+          descricao: string
+          frequencia_uso?: string | null
+          id?: string
+          impacto?: string | null
+          numero?: string
+          prioridade?: string
+          problema_resolve?: string | null
+          status?: string
+          tela_origem?: string | null
+          tipo: string
+          titulo: string
+        }
+        Update: {
+          aprovado_autor_em?: string | null
+          aprovado_autor_id?: string | null
+          atualizado_em?: string
+          autor_id?: string | null
+          cerebro_conversa_id?: string | null
+          cliente_id?: string | null
+          criado_em?: string
+          data_prevista?: string | null
+          descricao?: string
+          frequencia_uso?: string | null
+          id?: string
+          impacto?: string | null
+          numero?: string
+          prioridade?: string
+          problema_resolve?: string | null
+          status?: string
+          tela_origem?: string | null
+          tipo?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
+      oportunidade_anexos: {
+        Row: {
+          autor_id: string | null
+          comentario_id: string | null
+          content_type: string | null
+          criado_em: string
+          id: string
+          nome_arquivo: string
+          oportunidade_id: string
+          storage_path: string
+          tamanho_bytes: number | null
+        }
+        Insert: {
+          autor_id?: string | null
+          comentario_id?: string | null
+          content_type?: string | null
+          criado_em?: string
+          id?: string
+          nome_arquivo: string
+          oportunidade_id: string
+          storage_path: string
+          tamanho_bytes?: number | null
+        }
+        Update: {
+          autor_id?: string | null
+          comentario_id?: string | null
+          content_type?: string | null
+          criado_em?: string
+          id?: string
+          nome_arquivo?: string
+          oportunidade_id?: string
+          storage_path?: string
+          tamanho_bytes?: number | null
+        }
+        Relationships: []
+      }
+      oportunidade_comentarios: {
+        Row: {
+          autor_id: string | null
+          conteudo: string
+          criado_em: string
+          id: string
+          oportunidade_id: string
+          tipo: string
+        }
+        Insert: {
+          autor_id?: string | null
+          conteudo: string
+          criado_em?: string
+          id?: string
+          oportunidade_id: string
+          tipo?: string
+        }
+        Update: {
+          autor_id?: string | null
+          conteudo?: string
+          criado_em?: string
+          id?: string
+          oportunidade_id?: string
+          tipo?: string
+        }
+        Relationships: []
+      }
+      oportunidade_historico: {
+        Row: {
+          comentario: string | null
+          id: string
+          mudado_em: string
+          mudado_por: string | null
+          oportunidade_id: string
+          status_anterior: string | null
+          status_novo: string
+        }
+        Insert: {
+          comentario?: string | null
+          id?: string
+          mudado_em?: string
+          mudado_por?: string | null
+          oportunidade_id: string
+          status_anterior?: string | null
+          status_novo: string
+        }
+        Update: {
+          comentario?: string | null
+          id?: string
+          mudado_em?: string
+          mudado_por?: string | null
+          oportunidade_id?: string
+          status_anterior?: string | null
+          status_novo?: string
+        }
+        Relationships: []
+      }
+      oportunidade_votos: {
+        Row: {
+          oportunidade_id: string
+          user_id: string
+          votado_em: string
+        }
+        Insert: {
+          oportunidade_id: string
+          user_id: string
+          votado_em?: string
+        }
+        Update: {
+          oportunidade_id?: string
+          user_id?: string
+          votado_em?: string
+        }
+        Relationships: []
+      }
       acquisition_channels: {
         Row: {
           category: Database["public"]["Enums"]["acquisition_channel_category"]
@@ -3515,6 +3719,11 @@ export type Database = {
     }
     Functions: {
       get_team_user_ids: { Args: never; Returns: string[] }
+      is_admin: { Args: never; Returns: boolean }
+      recusar_entrega_oportunidade: {
+        Args: { p_id: string; p_motivo: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

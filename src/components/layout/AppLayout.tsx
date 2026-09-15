@@ -5,6 +5,7 @@ import { AppHeader } from "./AppHeader";
 import { PermissionGate } from "./PermissionGate";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AIChatBox } from "@/components/chat/AIChatBox";
+import { OportunidadesAprovacaoReminder } from "@/components/oportunidades-aprovacao-reminder";
 import {
   Sheet,
   SheetContent,
@@ -71,6 +72,10 @@ export function AppLayout() {
           </div>
         </main>
       </div>
+
+      {/* Buddy: lembra quem reportou de validar as entregas marcadas como
+          feitas. Fora do <main> de propósito — é global, não da tela. */}
+      <OportunidadesAprovacaoReminder />
 
       <AIChatBox />
     </div>

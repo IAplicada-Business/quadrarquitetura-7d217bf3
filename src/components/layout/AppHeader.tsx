@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { NotificationsPanel } from "@/components/layout/NotificationsPanel";
 import { VoiceAgentDialog } from "@/components/layout/VoiceAgentDialog";
+import { BuddyMenu } from "@/components/buddy/BuddyMenu";
+import { DocsProjetoMenu } from "@/components/buddy/DocsProjetoMenu";
 import logoAzul from "@/assets/logo-azul.png";
 
 interface AppHeaderProps {
@@ -55,6 +57,8 @@ const PATH_LABELS: Record<string, string> = {
   "financeiro": "Financeiro",
   "lancamentos": "Lançamentos",
   "comercial": "Comercial",
+  "buddy": "Buddy",
+  "bug": "Bug",
 };
 
 function humanize(segment: string): string {
@@ -177,6 +181,11 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
         >
           {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
+
+        {/* Plataforma base IAplicada: Docs do projeto + Buddy, nesta ordem,
+            logo antes do avatar. Discretos de propósito — só as logos. */}
+        <DocsProjetoMenu />
+        <BuddyMenu />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
