@@ -55,6 +55,28 @@ export function useSupplierScopes(projectId: string | undefined) {
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
+  /* Um fornecedor costuma pegar várias disciplinas (a construtora faz
+     alvenaria + hidráulica + cobertura). A tabela guarda uma disciplina por
+     linha, então grava-se uma linha por disciplina de uma vez só — sem
+     migration e sem um toast por disciplina. */
+  const createMany = useMutation({
+    mutationFn: async (items: Partial<SupplierScope>[]) => {
+      if (items.length === 0) return [];
+      const { data, error } = await supabase
+        .from("supplier_scopes" as never)
+        .insert(items.map(i => ({ ...i, project_id: projectId!, user_id: user!.id })) as never)
+        .select();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["supplier_scopes", projectId] });
+      const n = Array.isArray(data) ? data.length : 0;
+      toast({ title: n > 1 ? `Escopo salvo para ${n} disciplinas` : "Escopo salvo" });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
   const update = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<SupplierScope>) => {
       const { error } = await supabase
@@ -85,5 +107,5 @@ export function useSupplierScopes(projectId: string | undefined) {
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
-  return { scopes: query.data ?? [], isLoading: query.isLoading, create, update, remove };
+  return { scopes: query.data ?? [], isLoading: query.isLoading, create, createMany, update, remove };
 }
