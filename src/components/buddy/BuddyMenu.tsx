@@ -40,12 +40,21 @@ export function BuddyMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
+        {/* Mesmo botão redondo dos vizinhos (microfone, sino, tema): h-9 w-9
+            com bg-muted. */}
         <button
-          className="relative h-8 w-8 rounded-full grid place-items-center opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+          className="relative h-9 w-9 rounded-full grid place-items-center bg-muted transition-colors hover:bg-muted/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
           aria-label="Buddy IAplicada"
           title="Buddy"
         >
-          <img src="/buddy/iaplicada-logo.png" alt="" className="h-5 w-5 object-contain" />
+          {/* A marca da IAplicada é um ladrilho quadrado com fundo escuro
+              próprio — sem recortar em círculo ela aparece como um quadradinho
+              no meio dos botões redondos do header. */}
+          <img
+            src="/buddy/iaplicada-logo.png"
+            alt=""
+            className="h-6 w-6 rounded-full object-cover"
+          />
           {temPendentes && (
             <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
           )}
