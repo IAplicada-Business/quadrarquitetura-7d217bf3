@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { Bell, Check, CheckCheck, Clock, AlertTriangle, XCircle, Package, UserPlus, FileQuestion, Info, Plus, Trash2, CheckCircle } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
+import { Check, CheckCheck, Clock, AlertTriangle, XCircle, Package, UserPlus, FileQuestion, Info, Plus, Trash2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -81,11 +79,23 @@ function NotificationItem({ n, onRead, onDelete, onNavigate }: { n: Notification
   );
 }
 
-export function NotificationsPanel() {
+interface NotificationsDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+/**
+ * Painel de notificações.
+ *
+ * Virou diálogo controlado quando o sino saiu do header e foi para o menu do
+ * perfil: um Popover precisa de um gatilho visível para se ancorar, e o item
+ * do menu some no clique. Quem abre é quem guarda o estado.
+ */
+export function NotificationsDialog({ open, onOpenChange }: NotificationsDialogProps) {
   const { notifications, unreadCount, create, markAsRead, markAllAsRead, remove } = useNotifications();
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
-  const [open, setOpen] = useState(false);
+  const setOpen = onOpenChange;
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [type, setType] = useState("info");
@@ -111,38 +121,25 @@ export function NotificationsPanel() {
 
   return (
     <>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            className="relative p-2.5 rounded-full bg-secondary text-accent shadow-sm hover:bg-secondary/80 transition-colors"
-            aria-label="Notificações"
-          >
-            <Bell className="h-5 w-5" />
-            {unreadCount > 0 && (
-              <Badge
-                variant="default"
-                className="absolute -top-0.5 -right-0.5 h-4 min-w-4 p-0 flex items-center justify-center text-[10px] leading-none bg-accent text-accent-foreground"
-              >
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </Badge>
-            )}
-          </button>
-        </PopoverTrigger>
-        <PopoverContent align="end" className="w-80 p-0">
-          <div className="flex items-center justify-between p-3 border-b">
-            <h4 className="font-semibold text-sm">Notificações</h4>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md p-0 gap-0">
+          <DialogHeader className="flex-row items-center justify-between space-y-0 p-3 pr-12 border-b">
+            <DialogTitle className="text-sm">Notificações</DialogTitle>
+            <DialogDescription className="sr-only">
+              Avisos do sistema sobre tarefas, pagamentos, materiais e leads.
+            </DialogDescription>
             <div className="flex gap-1">
               {unreadCount > 0 && (
                 <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => markAllAsRead.mutate()}>
                   <CheckCheck className="h-3 w-3 mr-1" /> Marcar todas
                 </Button>
               )}
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowForm(true)}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowForm(true)} aria-label="Nova notificação">
                 <Plus className="h-3.5 w-3.5" />
               </Button>
             </div>
-          </div>
-          <ScrollArea className="max-h-80">
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
             <div className="p-2 space-y-1">
               {notifications.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-6">Nenhuma notificação</p>
@@ -169,8 +166,8 @@ export function NotificationsPanel() {
               Ver todas as notificações
             </Button>
           </div>
-        </PopoverContent>
-      </Popover>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-sm">
