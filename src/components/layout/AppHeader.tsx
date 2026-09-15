@@ -1,8 +1,10 @@
-import { ChevronLeft, ChevronRight, LogOut, Menu, Mic, Moon, Settings, Sun, User, ChevronRight as ChevronRightIcon } from "lucide-react";
+import { Bell, ChevronLeft, ChevronRight, LogOut, Menu, Mic, Moon, Settings, Sun, User, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/hooks/useNotifications";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { NotificationsPanel } from "@/components/layout/NotificationsPanel";
+import { NotificationsDialog } from "@/components/layout/NotificationsPanel";
 import { VoiceAgentDialog } from "@/components/layout/VoiceAgentDialog";
 import { BuddyMenu } from "@/components/buddy/BuddyMenu";
 import { DocsProjetoMenu } from "@/components/buddy/DocsProjetoMenu";
@@ -72,6 +74,8 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
   const navigate = useNavigate();
   const location = useLocation();
   const [voiceOpen, setVoiceOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const { unreadCount } = useNotifications();
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
 
   const breadcrumbs = useMemo(() => {
@@ -161,26 +165,8 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
       </div>
 
       <div className="flex items-center gap-2">
-        <button
-          onClick={() => setVoiceOpen(true)}
-          className="h-9 w-9 rounded-full grid place-items-center bg-muted text-accent hover:bg-accent/15 transition-colors"
-          aria-label="Assistente de Voz"
-          title="Assistente de voz"
-        >
-          <Mic className="h-4 w-4" />
-        </button>
         <VoiceAgentDialog open={voiceOpen} onOpenChange={setVoiceOpen} />
-
-        <NotificationsPanel />
-
-        <button
-          onClick={toggleTheme}
-          className="h-9 w-9 rounded-full grid place-items-center bg-muted text-foreground hover:bg-muted/80 transition-colors"
-          aria-label="Alternar tema"
-          title={theme === "dark" ? "Tema claro" : "Tema escuro"}
-        >
-          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </button>
+        <NotificationsDialog open={notifOpen} onOpenChange={setNotifOpen} />
 
         {/* Plataforma base IAplicada: Docs do projeto + Buddy, nesta ordem,
             logo antes do avatar. Discretos de propósito — só as logos. */}
@@ -189,7 +175,7 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 pl-1 pr-3 h-9 rounded-full bg-muted hover:bg-muted/80 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background">
+            <button className="relative flex items-center gap-2 pl-1 pr-3 h-9 rounded-full bg-muted hover:bg-muted/80 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background">
               <Avatar className="h-7 w-7">
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
                   {initials}
@@ -198,6 +184,11 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
               <span className="hidden sm:inline text-sm font-medium text-foreground truncate max-w-[140px]">
                 {fullName?.split(" ")[0] ?? email.split("@")[0]}
               </span>
+              {/* Com o sino dentro do menu, sem este ponto não haveria nenhum
+                  sinal de notificação nova sem abrir o menu. */}
+              {unreadCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-destructive ring-2 ring-background" />
+              )}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 z-50 bg-popover">
@@ -207,6 +198,32 @@ export function AppHeader({ onMenuClick, showMenuButton, sidebarCollapsed, onTog
                 <p className="text-xs leading-none text-muted-foreground">{email}</p>
               </div>
             </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setVoiceOpen(true)} className="cursor-pointer">
+              <Mic className="mr-2 h-4 w-4" />
+              Áudio
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setNotifOpen(true)} className="cursor-pointer">
+              <Bell className="mr-2 h-4 w-4" />
+              <span className="flex-1">Notificações</span>
+              {unreadCount > 0 && (
+                <Badge variant="default" className="h-5 min-w-5 justify-center px-1.5 text-[10px]">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </Badge>
+              )}
+            </DropdownMenuItem>
+            {/* Alternar tema sem fechar o menu: é um interruptor, dá pra ver o
+                rótulo virar e voltar atrás sem reabrir tudo. */}
+            <DropdownMenuItem
+              onSelect={(e) => { e.preventDefault(); toggleTheme(); }}
+              className="cursor-pointer"
+            >
+              {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+              <span className="flex-1">Visual</span>
+              <span className="text-xs text-muted-foreground">
+                {theme === "dark" ? "Escuro" : "Claro"}
+              </span>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
               <User className="mr-2 h-4 w-4" />
