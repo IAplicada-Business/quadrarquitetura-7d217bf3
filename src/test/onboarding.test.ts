@@ -120,6 +120,9 @@ describe("moveSection / visibleSections / starterSections", () => {
     expect(s).toHaveLength(4);
     expect(s[0].title).toContain("{cliente}");
     expect(new Set(s.map((x) => x.id)).size).toBe(4);
+    // Passos espelham a aba Cronograma: contagem regressiva e fechamento do cliente.
+    expect(s[1].body).toMatch(/contagem regressiva/i);
+    expect(s[2].body).toMatch(/data limite/i);
   });
 });
 

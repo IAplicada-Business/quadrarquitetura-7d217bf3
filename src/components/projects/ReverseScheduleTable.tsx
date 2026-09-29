@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useState, type KeyboardEvent } from "react";
-import { AlertTriangle, ArrowDownUp, Check, ChevronDown, ChevronUp, ClipboardCheck, Flag, Home, Pencil } from "lucide-react";
+import { AlertTriangle, ArrowDownUp, Check, CheckCircle2, ChevronDown, ChevronUp, Circle, ClipboardCheck, Flag, Home, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,6 +48,11 @@ interface Props {
   onChecklistToggle?: (item: DeliveryChecklistItem) => void;
   onChecklistRemove?: (id: string) => void;
   onChecklistAdd?: (activityId: string) => void;
+  /**
+   * "Quando entregar já dá o check ali": marca a atividade como concluída
+   * (ou reabre) direto na linha, sem abrir o formulário.
+   */
+  onToggleDone?: (activity: ProjectActivity, done: boolean) => void;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -193,6 +198,7 @@ export function ReverseScheduleTable({
   onChecklistToggle,
   onChecklistRemove,
   onChecklistAdd,
+  onToggleDone,
 }: Props) {
   const today = todayProp ?? todayIso();
   const [filter, setFilter] = useState<ReverseFilter>("all");
@@ -394,6 +400,7 @@ export function ReverseScheduleTable({
       <p className="text-xs text-muted-foreground">
         Clique em uma data ou no prazo para editar direto na tabela. Dias úteis excluem fins de semana, feriados nacionais e o recesso de fim de ano.
         Marcos críticos são as atividades sem folga no caminho crítico (mesmo cálculo do Gantt) e as atrasadas.
+        {onToggleDone && " O círculo antes do nome marca a atividade como entregue."}
         {hasChecklist && " Na coluna Entrega, marque as pendências de entrega de cada atividade."}
       </p>
 
@@ -433,6 +440,20 @@ export function ReverseScheduleTable({
                   >
                     <TableCell className="text-sm">
                       <div className="flex items-center gap-2 min-w-0">
+                        {onToggleDone && (
+                          <button
+                            type="button"
+                            data-testid={`done-toggle-${a.id}`}
+                            disabled={disabled}
+                            aria-pressed={m.isFinished}
+                            aria-label={m.isFinished ? `Reabrir ${a.name}` : `Marcar ${a.name} como entregue`}
+                            title={m.isFinished ? "Entregue — clique para reabrir" : "Marcar como entregue"}
+                            onClick={() => onToggleDone(a, !m.isFinished)}
+                            className="shrink-0 text-muted-foreground hover:text-success transition-colors disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-ring rounded-full"
+                          >
+                            {m.isFinished ? <CheckCircle2 className="h-5 w-5 text-success" /> : <Circle className="h-5 w-5" />}
+                          </button>
+                        )}
                         {isCritical && (
                           <TooltipProvider>
                             <Tooltip>
@@ -444,7 +465,7 @@ export function ReverseScheduleTable({
                           </TooltipProvider>
                         )}
                         <div className="min-w-0">
-                          <p className="font-medium truncate">{a.name}</p>
+                          <p className={`font-medium truncate ${m.isFinished ? "line-through text-muted-foreground" : ""}`}>{a.name}</p>
                           {a.discipline && (
                             <p className="text-[11px] text-muted-foreground flex items-center gap-1">
                               <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: getDisciplineColor(a.discipline) }} />

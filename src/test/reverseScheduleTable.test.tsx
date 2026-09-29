@@ -216,6 +216,27 @@ describe("Cronograma Reverso", () => {
     expect(onAdd).toHaveBeenCalledWith("a1");
   });
 
+  it("check na linha marca a atividade como entregue e reabre", () => {
+    const onToggleDone = vi.fn();
+    const concluida = act({ id: "a5", name: "Gesso", start_date: "2026-09-14", end_date: "2026-09-18", duration_days: 5, status: "concluida", position: 4 });
+    renderTable([demolicao, concluida], { onToggleDone });
+
+    const marcar = screen.getByRole("button", { name: "Marcar Demolição como entregue" });
+    expect(marcar).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(marcar);
+    expect(onToggleDone).toHaveBeenCalledWith(expect.objectContaining({ id: "a1" }), true);
+
+    const reabrir = screen.getByRole("button", { name: "Reabrir Gesso" });
+    expect(reabrir).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(reabrir);
+    expect(onToggleDone).toHaveBeenCalledWith(expect.objectContaining({ id: "a5" }), false);
+  });
+
+  it("sem onToggleDone o check de entrega não aparece", () => {
+    renderTable([demolicao]);
+    expect(screen.queryByRole("button", { name: /como entregue/ })).not.toBeInTheDocument();
+  });
+
   it("sem checklist informado a coluna Entrega não aparece", () => {
     renderTable([demolicao]);
     expect(screen.queryByRole("columnheader", { name: "Entrega" })).not.toBeInTheDocument();
