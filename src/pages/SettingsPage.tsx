@@ -294,7 +294,7 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Percentual usado no cálculo do DRE (Demonstrativo de Resultado).
+                  Percentual usado no Demonstrativo de Resultado do Projeto (Prestação de Contas) e no DRE do escritório.
                 </p>
                 <div className="flex items-center gap-3">
                   <Input

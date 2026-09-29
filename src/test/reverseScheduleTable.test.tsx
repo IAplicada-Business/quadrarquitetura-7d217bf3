@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { ReverseScheduleTable } from "@/components/projects/ReverseScheduleTable";
 import type { ProjectActivity } from "@/hooks/useProjectActivities";
+import type { DeliveryChecklistItem } from "@/hooks/useDeliveryChecklist";
 
 const HOJE = "2026-09-29";
 
@@ -21,6 +22,23 @@ function act(partial: Partial<ProjectActivity> & { id: string; name: string }): 
     discipline: null,
     position: 0,
     created_at: "2026-09-01T00:00:00Z",
+    ...partial,
+  };
+}
+
+function chk(partial: Partial<DeliveryChecklistItem> & { id: string; description: string }): DeliveryChecklistItem {
+  return {
+    project_id: "p1",
+    user_id: "u1",
+    activity_id: null,
+    discipline: null,
+    responsible: null,
+    due_date: null,
+    priority: "media",
+    resolved: false,
+    resolved_at: null,
+    created_at: "2026-09-01T00:00:00Z",
+    updated_at: "2026-09-01T00:00:00Z",
     ...partial,
   };
 }
@@ -138,8 +156,68 @@ describe("Cronograma Reverso", () => {
     expect(screen.getByTestId("days-to-move-in")).toHaveTextContent("5");
   });
 
-  it("sem atividades orienta a criar no Gantt", () => {
+  it("sem atividades orienta a gerar no Escopo (o Gantt deriva do reverso)", () => {
     renderTable([]);
     expect(screen.getByText(/Nenhuma atividade cadastrada/)).toBeInTheDocument();
+    expect(screen.getByText(/aba Escopo/)).toBeInTheDocument();
+  });
+
+  it("mostra no máximo 5 atividades e o restante atrás de Ver mais", () => {
+    const many = Array.from({ length: 7 }, (_, i) =>
+      act({ id: `m${i}`, name: `Atividade ${i}`, start_date: "2026-10-01", end_date: "2026-10-03", duration_days: 3, position: i }),
+    );
+    renderTable(many);
+    expect(screen.getAllByTestId(/^reverse-row-/)).toHaveLength(5);
+
+    const verMais = screen.getByRole("button", { name: /Ver mais \(2 atividades\)/ });
+    fireEvent.click(verMais);
+    expect(screen.getAllByTestId(/^reverse-row-/)).toHaveLength(7);
+
+    fireEvent.click(screen.getByRole("button", { name: /Ver menos/ }));
+    expect(screen.getAllByTestId(/^reverse-row-/)).toHaveLength(5);
+  });
+
+  it("com 5 ou menos atividades não oferece Ver mais", () => {
+    renderTable([demolicao, eletrica, pintura, atrasada]);
+    expect(screen.queryByRole("button", { name: /Ver mais/ })).not.toBeInTheDocument();
+  });
+
+  it("checklist de entrega fica na linha da atividade: contagem, marcar e adicionar", () => {
+    const onToggle = vi.fn();
+    const onAdd = vi.fn();
+    const items = [
+      chk({ id: "c1", activity_id: "a1", description: "Rejunte na pedra da bancada" }),
+      chk({ id: "c2", activity_id: "a1", description: "PU da soleira", resolved: true }),
+      chk({ id: "c3", activity_id: null, description: "Limpeza final" }),
+    ];
+    renderTable([demolicao, eletrica], {
+      checklistItems: items,
+      onChecklistToggle: onToggle,
+      onChecklistRemove: vi.fn(),
+      onChecklistAdd: onAdd,
+    });
+
+    expect(screen.getByRole("columnheader", { name: "Entrega" })).toBeInTheDocument();
+    const toggle = screen.getByTestId("checklist-toggle-a1");
+    expect(toggle).toHaveTextContent("1/2");
+    expect(screen.getByTestId("checklist-toggle-a2")).toHaveTextContent("—");
+
+    // Fechado por padrão; abre na linha da atividade.
+    expect(screen.queryByText("Rejunte na pedra da bancada")).not.toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(screen.getByTestId("checklist-row-a1")).toHaveTextContent("Rejunte na pedra da bancada");
+    // Pendência geral não aparece na atividade.
+    expect(screen.queryByText("Limpeza final")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: 'Marcar "Rejunte na pedra da bancada" como resolvida' }));
+    expect(onToggle).toHaveBeenCalledWith(expect.objectContaining({ id: "c1" }));
+
+    fireEvent.click(screen.getByRole("button", { name: /Adicionar pendência/ }));
+    expect(onAdd).toHaveBeenCalledWith("a1");
+  });
+
+  it("sem checklist informado a coluna Entrega não aparece", () => {
+    renderTable([demolicao]);
+    expect(screen.queryByRole("columnheader", { name: "Entrega" })).not.toBeInTheDocument();
   });
 });

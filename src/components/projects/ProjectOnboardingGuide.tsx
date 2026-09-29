@@ -6,6 +6,7 @@ import { CheckCircle, Circle, ArrowRight, PartyPopper } from "lucide-react";
 import { useProjectActivities } from "@/hooks/useProjectActivities";
 import { useMaterialTracking } from "@/hooks/useMaterialTracking";
 import { usePriceResearch } from "@/hooks/usePriceResearch";
+import { useClientClosingSchedule } from "@/hooks/useClientClosingSchedule";
 import { cn } from "@/lib/utils";
 
 interface Step {
@@ -26,20 +27,25 @@ export function ProjectOnboardingGuide({ project, onTabChange, onDismiss }: Proj
   const { activities } = useProjectActivities(projectId);
   const { items: materials } = useMaterialTracking(projectId);
   const { research } = usePriceResearch(projectId);
+  const { items: closingItems } = useClientClosingSchedule(projectId);
 
   const [celebrating, setCelebrating] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
+  // Espelha o fluxo das abas da obra: Escopo gera as atividades; em
+  // Cronograma, o Cronograma Reverso é a base (Gantt e Contagem
+  // Regressiva saem dele) e o checklist de entrega fica em cada
+  // atividade; Fechamento Cliente lista o que o cliente precisa fechar.
   const steps: Step[] = [
     {
       label: "Importar dados da proposta",
       description: "Vincule a proposta aprovada ao projeto",
-      tab: "cenarios",
+      tab: "orcamentos",
       completed: !!(project.source_proposal_id && project.cotacao_importada === true),
     },
     {
       label: "Gerar atividades da obra",
-      description: "Crie as atividades usando IA ou manualmente",
+      description: "Crie as atividades no Escopo (IA ou manual). Elas alimentam todo o cronograma.",
       tab: "escopo",
       completed: activities.length > 0,
     },
@@ -52,20 +58,26 @@ export function ProjectOnboardingGuide({ project, onTabChange, onDismiss }: Proj
     {
       label: "Pesquisar preços em BH",
       description: "Atualize os preços de referência dos materiais",
-      tab: "cenarios",
+      tab: "orcamentos",
       completed: research.length > 0,
     },
     {
       label: "Aprovar cotação",
       description: "Revise e aprove o cenário de cotação final",
-      tab: "cenarios",
+      tab: "orcamentos",
       completed: project.cotacao_aprovada === true,
     },
     {
-      label: "Montar cronograma",
-      description: "Defina datas de início e fim das atividades",
+      label: "Montar o Cronograma Reverso",
+      description: "Em Cronograma, aplique o calendário BR às atividades. O Gantt e a Contagem Regressiva saem daí; o checklist de entrega fica em cada atividade.",
       tab: "cronograma",
       completed: activities.some((a) => !!a.start_date),
+    },
+    {
+      label: "Cadastrar o fechamento do cliente",
+      description: "Em Cronograma → Fechamento Cliente, liste o que o cliente precisa fechar e até quando (marcenaria, mármores, eletros).",
+      tab: "cronograma",
+      completed: closingItems.length > 0,
     },
   ];
 
