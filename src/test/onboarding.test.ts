@@ -12,6 +12,7 @@ import {
   fillPlaceholders,
   applyOnboardingPlaceholders,
   splitHeroTitle,
+  onboardingMode,
   type OnboardingSectionRow,
 } from "@/lib/onboarding";
 
@@ -139,5 +140,15 @@ describe("placeholders e título da capa", () => {
   it("splitHeroTitle separa nome e complemento no travessão", () => {
     expect(splitHeroTitle("Madalena & João — esse é o acompanhamento")).toEqual({ lead: "Madalena & João", rest: "esse é o acompanhamento" });
     expect(splitHeroTitle("Bem-vindos")).toEqual({ lead: "Bem-vindos", rest: null });
+  });
+});
+
+describe("onboardingMode (regra da obra, igual à edge function)", () => {
+  it("sem override segue o modelo; cópia = custom; desligado = hidden", () => {
+    expect(onboardingMode(null)).toBe("template");
+    expect(onboardingMode({ is_enabled: true, sections_json: null })).toBe("template");
+    expect(onboardingMode({ is_enabled: true, sections_json: [] })).toBe("custom");
+    expect(onboardingMode({ is_enabled: true, sections_json: [{ id: "a" }] })).toBe("custom");
+    expect(onboardingMode({ is_enabled: false, sections_json: [{ id: "a" }] })).toBe("hidden");
   });
 });

@@ -1977,7 +1977,8 @@ export type Database = {
           id: string
           is_enabled: boolean
           project_id: string
-          sections_json: Json
+          sections_json: Json | null
+          template_id: string | null
           source_template_id: string | null
           team_id: string
           updated_at: string
@@ -1988,7 +1989,8 @@ export type Database = {
           id?: string
           is_enabled?: boolean
           project_id: string
-          sections_json?: Json
+          sections_json?: Json | null
+          template_id?: string | null
           source_template_id?: string | null
           team_id?: string
           updated_at?: string
@@ -1999,7 +2001,8 @@ export type Database = {
           id?: string
           is_enabled?: boolean
           project_id?: string
-          sections_json?: Json
+          sections_json?: Json | null
+          template_id?: string | null
           source_template_id?: string | null
           team_id?: string
           updated_at?: string
@@ -2011,6 +2014,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: true
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_project_overrides_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_templates"
             referencedColumns: ["id"]
           },
           {
@@ -2084,6 +2094,7 @@ export type Database = {
       onboarding_templates: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           is_default: boolean
           name: string
@@ -2093,6 +2104,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           is_default?: boolean
           name?: string
@@ -2102,6 +2114,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           is_default?: boolean
           name?: string

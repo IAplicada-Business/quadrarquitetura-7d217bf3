@@ -41,6 +41,7 @@ export interface OnboardingTemplateRow {
   team_id: string;
   user_id: string;
   name: string;
+  description?: string | null;
   is_default: boolean;
   created_at: string;
   updated_at: string;
@@ -52,10 +53,28 @@ export interface OnboardingOverrideRow {
   user_id: string;
   project_id: string;
   source_template_id: string | null;
+  /** Modelo que a obra segue ao vivo (null = modelo padrão do time). */
+  template_id?: string | null;
   is_enabled: boolean;
+  /** Lista = cópia personalizada da obra; null = segue o modelo em template_id. */
   sections_json: unknown;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Como a obra resolve o onboarding a partir do override (mesma regra da
+ * edge function get-client-portal-data):
+ *   hidden   -> is_enabled = false
+ *   custom   -> sections_json é uma lista (cópia da obra)
+ *   template -> segue o modelo em template_id (null = padrão do time)
+ */
+export type OnboardingMode = "hidden" | "custom" | "template";
+
+export function onboardingMode(override: Pick<OnboardingOverrideRow, "is_enabled" | "sections_json"> | null | undefined): OnboardingMode {
+  if (!override) return "template";
+  if (!override.is_enabled) return "hidden";
+  return Array.isArray(override.sections_json) ? "custom" : "template";
 }
 
 export function newSectionId(): string {
