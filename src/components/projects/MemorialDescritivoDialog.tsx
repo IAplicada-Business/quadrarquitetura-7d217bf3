@@ -41,10 +41,10 @@ export function MemorialDescritivoDialog({ open, onOpenChange, projectId, docume
     queryFn: async () => {
       const { data } = await supabase
         .from("projects")
-        .select("name, address, area_sqm, description, clients(name)")
+        .select("name, address, area_sqm, clients(name)")
         .eq("id", projectId)
         .maybeSingle();
-      return data;
+      return data as any;
     },
     enabled: !!projectId && open,
   });
