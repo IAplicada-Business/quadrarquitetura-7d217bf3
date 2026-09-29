@@ -388,7 +388,7 @@ export default function VoiceTasksPage() {
         projects={projects}
         defaultProjectId={filterProject !== "all" ? filterProject : undefined}
         isLoading={isCreatingOne}
-        onSubmit={(data) => createOne(data)}
+        onSubmit={async (data) => { await createOne(data); }}
       />
     </div>
   );

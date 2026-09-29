@@ -410,7 +410,7 @@ export default function TasksHub({ mode = "all", title }: TasksHubProps) {
         projects={projects}
         defaultProjectId={filterProject !== PROJECT_ALL && filterProject !== PROJECT_NONE ? filterProject : undefined}
         isLoading={isCreatingOne}
-        onSubmit={(data) => createOne(data as any)}
+        onSubmit={async (data) => { await createOne(data as any); }}
       />
     </div>
   );

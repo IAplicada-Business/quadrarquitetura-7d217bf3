@@ -32,7 +32,7 @@ export function useClientClosingSchedule(projectId: string) {
         .order("closing_date", { ascending: true })
         .order("display_order", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as ClosingScheduleItem[];
+      return (data ?? []) as unknown as ClosingScheduleItem[];
     },
     enabled: !!projectId,
   });
