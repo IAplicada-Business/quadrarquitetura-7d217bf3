@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ScheduleTaskForm } from "./ScheduleTaskForm";
 import { ProjectPendingTab } from "./ProjectPendingTab";
 import { GanttChart } from "./GanttChart";
+import { ReverseScheduleTable } from "./ReverseScheduleTable";
 import { ClientScheduleView } from "./ClientScheduleView";
 import { ActivityForm } from "./ActivityForm";
 import { CascadePreviewDialog, type CascadeChange } from "./CascadePreviewDialog";
@@ -46,7 +47,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 export function ProjectScheduleTab({ projectId }: { projectId: string }) {
   const { items, isLoading, create, update, remove } = useScheduleTasks(projectId);
   const { items: scopeItems } = useScopeItems(projectId);
-  const { activities, isLoading: activitiesLoading, create: createActivity, update: updateActivity, remove: removeActivity, batchUpdateDates } = useProjectActivities(projectId);
+  const { activities, isLoading: activitiesLoading, create: createActivity, update: updateActivity, remove: removeActivity, batchUpdateDates, updateDates } = useProjectActivities(projectId);
   const useActivitiesSource = activities.length > 0;
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -474,6 +475,7 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
       <Tabs defaultValue="gantt">
         <TabsList>
           <TabsTrigger value="gantt">Gantt</TabsTrigger>
+          <TabsTrigger value="reverso">Cronograma Reverso</TabsTrigger>
           <TabsTrigger value="lista_cliente">Lista Cliente</TabsTrigger>
           <TabsTrigger value="fechamento">Fechamento Cliente</TabsTrigger>
         </TabsList>
@@ -654,7 +656,25 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
           )}
         </TabsContent>
 
-        {/* ===== LISTA CLIENTE (Cronograma Reverso) ===== */}
+        {/* ===== CRONOGRAMA REVERSO (editável, lógica da planilha) ===== */}
+        <TabsContent value="reverso" className="space-y-4 mt-4">
+          <div>
+            <h3 className="text-base font-semibold">Cronograma Reverso</h3>
+            <p className="text-xs text-muted-foreground">
+              Mesma base do Gantt (atividades do projeto): editar aqui atualiza o Gantt, e vice-versa.
+            </p>
+          </div>
+          <ReverseScheduleTable
+            activities={activities}
+            isLoading={activitiesLoading}
+            moveInDate={moveInDate}
+            isSaving={updateDates.isPending || batchUpdateDates.isPending}
+            onUpdateDates={(patch) => updateDates.mutate(patch)}
+            onCascade={(updates) => batchUpdateDates.mutate(updates)}
+          />
+        </TabsContent>
+
+        {/* ===== LISTA CLIENTE (visão do cliente) ===== */}
         <TabsContent value="lista_cliente" className="space-y-4 mt-4">
           {(() => {
             const today = new Date();

@@ -294,5 +294,38 @@ export function useProjectActivities(projectId: string | undefined) {
     onError: (e: Error) => toast({ title: "Erro ao recalcular", description: e.message, variant: "destructive" }),
   });
 
-  return { activities: query.data ?? [], isLoading: query.isLoading, create, update, remove, batchUpdateDates };
+  /**
+   * Edição inline de datas (Cronograma Reverso). Otimista: o cache da
+   * query é atualizado na hora, então Gantt e tabela reversa refletem a
+   * mudança antes da resposta do banco; em erro, volta ao estado anterior.
+   * Sem toast de sucesso pra não poluir a tela a cada célula editada.
+   */
+  const updateDates = useMutation({
+    mutationFn: async ({ id, ...dates }: { id: string; start_date?: string | null; end_date?: string | null; duration_days?: number | null }) => {
+      const { error } = await supabase
+        .from("project_activities")
+        .update(dates)
+        .eq("id", id);
+      if (error) throw error;
+      return { id, ...dates };
+    },
+    onMutate: async ({ id, ...dates }) => {
+      const key = ["project_activities", projectId];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<ProjectActivity[]>(key);
+      queryClient.setQueryData<ProjectActivity[]>(key, (old) =>
+        (old ?? []).map((a) => (a.id === id ? { ...a, ...dates } : a)),
+      );
+      return { previous };
+    },
+    onError: (e: Error, _vars, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(["project_activities", projectId], ctx.previous);
+      toast({ title: "Erro ao salvar data", description: e.message, variant: "destructive" });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["project_activities", projectId] });
+    },
+  });
+
+  return { activities: query.data ?? [], isLoading: query.isLoading, create, update, remove, batchUpdateDates, updateDates };
 }
