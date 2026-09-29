@@ -10,214 +10,10 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
-      iaplicada_links: {
-        Row: {
-          atualizado_em: string
-          chave: string
-          descricao: string | null
-          label: string
-          ordem: number
-          url: string | null
-        }
-        Insert: {
-          atualizado_em?: string
-          chave: string
-          descricao?: string | null
-          label: string
-          ordem?: number
-          url?: string | null
-        }
-        Update: {
-          atualizado_em?: string
-          chave?: string
-          descricao?: string | null
-          label?: string
-          ordem?: number
-          url?: string | null
-        }
-        Relationships: []
-      }
-      oportunidades: {
-        Row: {
-          aprovado_autor_em: string | null
-          aprovado_autor_id: string | null
-          atualizado_em: string
-          autor_id: string | null
-          cerebro_conversa_id: string | null
-          cliente_id: string | null
-          criado_em: string
-          data_prevista: string | null
-          descricao: string
-          frequencia_uso: string | null
-          id: string
-          impacto: string | null
-          numero: string
-          prioridade: string
-          problema_resolve: string | null
-          status: string
-          tela_origem: string | null
-          tipo: string
-          titulo: string
-        }
-        Insert: {
-          aprovado_autor_em?: string | null
-          aprovado_autor_id?: string | null
-          atualizado_em?: string
-          autor_id?: string | null
-          cerebro_conversa_id?: string | null
-          cliente_id?: string | null
-          criado_em?: string
-          data_prevista?: string | null
-          descricao: string
-          frequencia_uso?: string | null
-          id?: string
-          impacto?: string | null
-          numero?: string
-          prioridade?: string
-          problema_resolve?: string | null
-          status?: string
-          tela_origem?: string | null
-          tipo: string
-          titulo: string
-        }
-        Update: {
-          aprovado_autor_em?: string | null
-          aprovado_autor_id?: string | null
-          atualizado_em?: string
-          autor_id?: string | null
-          cerebro_conversa_id?: string | null
-          cliente_id?: string | null
-          criado_em?: string
-          data_prevista?: string | null
-          descricao?: string
-          frequencia_uso?: string | null
-          id?: string
-          impacto?: string | null
-          numero?: string
-          prioridade?: string
-          problema_resolve?: string | null
-          status?: string
-          tela_origem?: string | null
-          tipo?: string
-          titulo?: string
-        }
-        Relationships: []
-      }
-      oportunidade_anexos: {
-        Row: {
-          autor_id: string | null
-          comentario_id: string | null
-          content_type: string | null
-          criado_em: string
-          id: string
-          nome_arquivo: string
-          oportunidade_id: string
-          storage_path: string
-          tamanho_bytes: number | null
-        }
-        Insert: {
-          autor_id?: string | null
-          comentario_id?: string | null
-          content_type?: string | null
-          criado_em?: string
-          id?: string
-          nome_arquivo: string
-          oportunidade_id: string
-          storage_path: string
-          tamanho_bytes?: number | null
-        }
-        Update: {
-          autor_id?: string | null
-          comentario_id?: string | null
-          content_type?: string | null
-          criado_em?: string
-          id?: string
-          nome_arquivo?: string
-          oportunidade_id?: string
-          storage_path?: string
-          tamanho_bytes?: number | null
-        }
-        Relationships: []
-      }
-      oportunidade_comentarios: {
-        Row: {
-          autor_id: string | null
-          conteudo: string
-          criado_em: string
-          id: string
-          oportunidade_id: string
-          tipo: string
-        }
-        Insert: {
-          autor_id?: string | null
-          conteudo: string
-          criado_em?: string
-          id?: string
-          oportunidade_id: string
-          tipo?: string
-        }
-        Update: {
-          autor_id?: string | null
-          conteudo?: string
-          criado_em?: string
-          id?: string
-          oportunidade_id?: string
-          tipo?: string
-        }
-        Relationships: []
-      }
-      oportunidade_historico: {
-        Row: {
-          comentario: string | null
-          id: string
-          mudado_em: string
-          mudado_por: string | null
-          oportunidade_id: string
-          status_anterior: string | null
-          status_novo: string
-        }
-        Insert: {
-          comentario?: string | null
-          id?: string
-          mudado_em?: string
-          mudado_por?: string | null
-          oportunidade_id: string
-          status_anterior?: string | null
-          status_novo: string
-        }
-        Update: {
-          comentario?: string | null
-          id?: string
-          mudado_em?: string
-          mudado_por?: string | null
-          oportunidade_id?: string
-          status_anterior?: string | null
-          status_novo?: string
-        }
-        Relationships: []
-      }
-      oportunidade_votos: {
-        Row: {
-          oportunidade_id: string
-          user_id: string
-          votado_em: string
-        }
-        Insert: {
-          oportunidade_id: string
-          user_id: string
-          votado_em?: string
-        }
-        Update: {
-          oportunidade_id?: string
-          user_id?: string
-          votado_em?: string
-        }
-        Relationships: []
-      }
       acquisition_channels: {
         Row: {
           category: Database["public"]["Enums"]["acquisition_channel_category"]
@@ -663,6 +459,59 @@ export type Database = {
           },
         ]
       }
+      client_closing_schedule: {
+        Row: {
+          closing_date: string | null
+          created_at: string | null
+          delivery_date: string | null
+          delivery_time: string | null
+          description: string
+          display_order: number | null
+          estimated_value: number | null
+          id: string
+          project_id: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          closing_date?: string | null
+          created_at?: string | null
+          delivery_date?: string | null
+          delivery_time?: string | null
+          description: string
+          display_order?: number | null
+          estimated_value?: number | null
+          id?: string
+          project_id: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          closing_date?: string | null
+          created_at?: string | null
+          delivery_date?: string | null
+          delivery_time?: string | null
+          description?: string
+          display_order?: number | null
+          estimated_value?: number | null
+          id?: string
+          project_id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_closing_schedule_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_pending_responses: {
         Row: {
           client_name: string | null
@@ -985,11 +834,25 @@ export type Database = {
           city: string | null
           clauses: string | null
           client_address: string | null
+          client_bairro: string | null
+          client_cep: string | null
+          client_cidade: string | null
+          client_complemento: string | null
           client_cpf_cnpj: string | null
           client_email: string | null
+          client_estado: string | null
           client_id: string | null
+          client_logradouro: string | null
+          client_marital_status: string | null
           client_name: string | null
+          client_nationality: string | null
+          client_numero: string | null
+          client_person_type: string | null
           client_phone: string | null
+          client_razao_social: string | null
+          client_representante_legal: string | null
+          client_rg: string | null
+          client_tipo_societario: string | null
           construction_neighborhood: string | null
           contract_number: string | null
           created_at: string
@@ -998,10 +861,12 @@ export type Database = {
           environments: string | null
           estimated_duration: string | null
           id: string
+          installments_schedule: Json | null
           lead_id: string | null
           notes: string | null
           payment_conditions: string | null
           payment_method: string | null
+          pdf_url: string | null
           project_id: string | null
           proposal_id: string
           sent_at: string | null
@@ -1011,6 +876,13 @@ export type Database = {
           status: string
           template_id: string | null
           template_name: string | null
+          timeline_anteprojeto: number | null
+          timeline_anteprojeto_aprovacao: number | null
+          timeline_briefing: number | null
+          timeline_gestao_pagamentos: number | null
+          timeline_levantamento: number | null
+          timeline_projeto_executivo: number | null
+          timeline_reuniao_prioridades: number | null
           title: string | null
           total_area: number | null
           updated_at: string
@@ -1024,11 +896,25 @@ export type Database = {
           city?: string | null
           clauses?: string | null
           client_address?: string | null
+          client_bairro?: string | null
+          client_cep?: string | null
+          client_cidade?: string | null
+          client_complemento?: string | null
           client_cpf_cnpj?: string | null
           client_email?: string | null
+          client_estado?: string | null
           client_id?: string | null
+          client_logradouro?: string | null
+          client_marital_status?: string | null
           client_name?: string | null
+          client_nationality?: string | null
+          client_numero?: string | null
+          client_person_type?: string | null
           client_phone?: string | null
+          client_razao_social?: string | null
+          client_representante_legal?: string | null
+          client_rg?: string | null
+          client_tipo_societario?: string | null
           construction_neighborhood?: string | null
           contract_number?: string | null
           created_at?: string
@@ -1037,10 +923,12 @@ export type Database = {
           environments?: string | null
           estimated_duration?: string | null
           id?: string
+          installments_schedule?: Json | null
           lead_id?: string | null
           notes?: string | null
           payment_conditions?: string | null
           payment_method?: string | null
+          pdf_url?: string | null
           project_id?: string | null
           proposal_id: string
           sent_at?: string | null
@@ -1050,6 +938,13 @@ export type Database = {
           status?: string
           template_id?: string | null
           template_name?: string | null
+          timeline_anteprojeto?: number | null
+          timeline_anteprojeto_aprovacao?: number | null
+          timeline_briefing?: number | null
+          timeline_gestao_pagamentos?: number | null
+          timeline_levantamento?: number | null
+          timeline_projeto_executivo?: number | null
+          timeline_reuniao_prioridades?: number | null
           title?: string | null
           total_area?: number | null
           updated_at?: string
@@ -1063,11 +958,25 @@ export type Database = {
           city?: string | null
           clauses?: string | null
           client_address?: string | null
+          client_bairro?: string | null
+          client_cep?: string | null
+          client_cidade?: string | null
+          client_complemento?: string | null
           client_cpf_cnpj?: string | null
           client_email?: string | null
+          client_estado?: string | null
           client_id?: string | null
+          client_logradouro?: string | null
+          client_marital_status?: string | null
           client_name?: string | null
+          client_nationality?: string | null
+          client_numero?: string | null
+          client_person_type?: string | null
           client_phone?: string | null
+          client_razao_social?: string | null
+          client_representante_legal?: string | null
+          client_rg?: string | null
+          client_tipo_societario?: string | null
           construction_neighborhood?: string | null
           contract_number?: string | null
           created_at?: string
@@ -1076,10 +985,12 @@ export type Database = {
           environments?: string | null
           estimated_duration?: string | null
           id?: string
+          installments_schedule?: Json | null
           lead_id?: string | null
           notes?: string | null
           payment_conditions?: string | null
           payment_method?: string | null
+          pdf_url?: string | null
           project_id?: string | null
           proposal_id?: string
           sent_at?: string | null
@@ -1089,6 +1000,13 @@ export type Database = {
           status?: string
           template_id?: string | null
           template_name?: string | null
+          timeline_anteprojeto?: number | null
+          timeline_anteprojeto_aprovacao?: number | null
+          timeline_briefing?: number | null
+          timeline_gestao_pagamentos?: number | null
+          timeline_levantamento?: number | null
+          timeline_projeto_executivo?: number | null
+          timeline_reuniao_prioridades?: number | null
           title?: string | null
           total_area?: number | null
           updated_at?: string
@@ -1159,6 +1077,69 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      delivery_checklist_items: {
+        Row: {
+          activity_id: string | null
+          created_at: string
+          description: string
+          discipline: string | null
+          due_date: string | null
+          id: string
+          priority: string | null
+          project_id: string
+          resolved: boolean
+          resolved_at: string | null
+          responsible: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_id?: string | null
+          created_at?: string
+          description: string
+          discipline?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          project_id: string
+          resolved?: boolean
+          resolved_at?: string | null
+          responsible?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string | null
+          created_at?: string
+          description?: string
+          discipline?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          project_id?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          responsible?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_checklist_items_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "project_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_checklist_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       discipline_material_estimates: {
         Row: {
@@ -1321,6 +1302,75 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      iaplicada_links: {
+        Row: {
+          atualizado_em: string
+          chave: string
+          descricao: string | null
+          label: string
+          ordem: number
+          url: string | null
+        }
+        Insert: {
+          atualizado_em?: string
+          chave: string
+          descricao?: string | null
+          label: string
+          ordem?: number
+          url?: string | null
+        }
+        Update: {
+          atualizado_em?: string
+          chave?: string
+          descricao?: string | null
+          label?: string
+          ordem?: number
+          url?: string | null
+        }
+        Relationships: []
+      }
+      instagram_inspirations: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          is_favorite: boolean
+          notes: string | null
+          source_url: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_favorite?: boolean
+          notes?: string | null
+          source_url?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_favorite?: boolean
+          notes?: string | null
+          source_url?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       invoices: {
         Row: {
@@ -1581,7 +1631,7 @@ export type Database = {
           source_detail: string | null
           status: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           channel_id?: string | null
@@ -1607,7 +1657,7 @@ export type Database = {
           source_detail?: string | null
           status?: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           channel_id?: string | null
@@ -1633,21 +1683,21 @@ export type Database = {
           source_detail?: string | null
           status?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "leads_converted_client_id_fkey"
-            columns: ["converted_client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "leads_channel_id_fkey"
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "acquisition_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_converted_client_id_fkey"
+            columns: ["converted_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
           {
@@ -1918,6 +1968,222 @@ export type Database = {
           title?: string
           type?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      oportunidade_anexos: {
+        Row: {
+          autor_id: string | null
+          comentario_id: string | null
+          content_type: string | null
+          criado_em: string
+          id: string
+          nome_arquivo: string
+          oportunidade_id: string
+          storage_path: string
+          tamanho_bytes: number | null
+        }
+        Insert: {
+          autor_id?: string | null
+          comentario_id?: string | null
+          content_type?: string | null
+          criado_em?: string
+          id?: string
+          nome_arquivo: string
+          oportunidade_id: string
+          storage_path: string
+          tamanho_bytes?: number | null
+        }
+        Update: {
+          autor_id?: string | null
+          comentario_id?: string | null
+          content_type?: string | null
+          criado_em?: string
+          id?: string
+          nome_arquivo?: string
+          oportunidade_id?: string
+          storage_path?: string
+          tamanho_bytes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oportunidade_anexos_comentario_id_fkey"
+            columns: ["comentario_id"]
+            isOneToOne: false
+            referencedRelation: "oportunidade_comentarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oportunidade_anexos_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "oportunidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oportunidade_comentarios: {
+        Row: {
+          autor_id: string | null
+          conteudo: string
+          criado_em: string
+          id: string
+          oportunidade_id: string
+          tipo: string
+        }
+        Insert: {
+          autor_id?: string | null
+          conteudo: string
+          criado_em?: string
+          id?: string
+          oportunidade_id: string
+          tipo?: string
+        }
+        Update: {
+          autor_id?: string | null
+          conteudo?: string
+          criado_em?: string
+          id?: string
+          oportunidade_id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oportunidade_comentarios_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "oportunidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oportunidade_historico: {
+        Row: {
+          comentario: string | null
+          id: string
+          mudado_em: string
+          mudado_por: string | null
+          oportunidade_id: string
+          status_anterior: string | null
+          status_novo: string
+        }
+        Insert: {
+          comentario?: string | null
+          id?: string
+          mudado_em?: string
+          mudado_por?: string | null
+          oportunidade_id: string
+          status_anterior?: string | null
+          status_novo: string
+        }
+        Update: {
+          comentario?: string | null
+          id?: string
+          mudado_em?: string
+          mudado_por?: string | null
+          oportunidade_id?: string
+          status_anterior?: string | null
+          status_novo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oportunidade_historico_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "oportunidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oportunidade_votos: {
+        Row: {
+          oportunidade_id: string
+          user_id: string
+          votado_em: string
+        }
+        Insert: {
+          oportunidade_id: string
+          user_id: string
+          votado_em?: string
+        }
+        Update: {
+          oportunidade_id?: string
+          user_id?: string
+          votado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oportunidade_votos_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "oportunidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oportunidades: {
+        Row: {
+          aprovado_autor_em: string | null
+          aprovado_autor_id: string | null
+          atualizado_em: string
+          autor_id: string | null
+          cerebro_conversa_id: string | null
+          cliente_id: string | null
+          criado_em: string
+          data_prevista: string | null
+          descricao: string
+          frequencia_uso: string | null
+          id: string
+          impacto: string | null
+          numero: string
+          prioridade: string | null
+          problema_resolve: string | null
+          status: string | null
+          tela_origem: string | null
+          tipo: string
+          titulo: string
+        }
+        Insert: {
+          aprovado_autor_em?: string | null
+          aprovado_autor_id?: string | null
+          atualizado_em?: string
+          autor_id?: string | null
+          cerebro_conversa_id?: string | null
+          cliente_id?: string | null
+          criado_em?: string
+          data_prevista?: string | null
+          descricao: string
+          frequencia_uso?: string | null
+          id?: string
+          impacto?: string | null
+          numero: string
+          prioridade?: string | null
+          problema_resolve?: string | null
+          status?: string | null
+          tela_origem?: string | null
+          tipo: string
+          titulo: string
+        }
+        Update: {
+          aprovado_autor_em?: string | null
+          aprovado_autor_id?: string | null
+          atualizado_em?: string
+          autor_id?: string | null
+          cerebro_conversa_id?: string | null
+          cliente_id?: string | null
+          criado_em?: string
+          data_prevista?: string | null
+          descricao?: string
+          frequencia_uso?: string | null
+          id?: string
+          impacto?: string | null
+          numero?: string
+          prioridade?: string | null
+          problema_resolve?: string | null
+          status?: string | null
+          tela_origem?: string | null
+          tipo?: string
+          titulo?: string
         }
         Relationships: []
       }
@@ -2318,6 +2584,7 @@ export type Database = {
           city: string | null
           client_budget: number | null
           client_id: string | null
+          client_move_in_date: string | null
           construction_type_estimate: string | null
           contingency_percentage: number | null
           contract_id: string | null
@@ -2354,6 +2621,7 @@ export type Database = {
           city?: string | null
           client_budget?: number | null
           client_id?: string | null
+          client_move_in_date?: string | null
           construction_type_estimate?: string | null
           contingency_percentage?: number | null
           contract_id?: string | null
@@ -2390,6 +2658,7 @@ export type Database = {
           city?: string | null
           client_budget?: number | null
           client_id?: string | null
+          client_move_in_date?: string | null
           construction_type_estimate?: string | null
           contingency_percentage?: number | null
           contract_id?: string | null
@@ -2493,45 +2762,6 @@ export type Database = {
           name?: string
           project_category?: string | null
           project_name?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      proposal_blocks: {
-        Row: {
-          content_json: Json
-          created_at: string
-          display_order: number
-          id: string
-          is_active: boolean
-          key: string
-          label: string
-          team_id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          content_json?: Json
-          created_at?: string
-          display_order?: number
-          id?: string
-          is_active?: boolean
-          key: string
-          label: string
-          team_id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          content_json?: Json
-          created_at?: string
-          display_order?: number
-          id?: string
-          is_active?: boolean
-          key?: string
-          label?: string
-          team_id?: string
           updated_at?: string
           user_id?: string
         }
@@ -2994,6 +3224,119 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "fk_scenarios_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_scenario_activities: {
+        Row: {
+          area_m2: number | null
+          created_at: string
+          depends_on: string[] | null
+          description: string | null
+          discipline: string | null
+          duration_days: number | null
+          end_date: string | null
+          id: string
+          name: string
+          position: number
+          scenario_id: string
+          source_activity_id: string | null
+          start_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          area_m2?: number | null
+          created_at?: string
+          depends_on?: string[] | null
+          description?: string | null
+          discipline?: string | null
+          duration_days?: number | null
+          end_date?: string | null
+          id?: string
+          name: string
+          position?: number
+          scenario_id: string
+          source_activity_id?: string | null
+          start_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          area_m2?: number | null
+          created_at?: string
+          depends_on?: string[] | null
+          description?: string | null
+          discipline?: string | null
+          duration_days?: number | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          position?: number
+          scenario_id?: string
+          source_activity_id?: string | null
+          start_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_scenario_activities_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_scenarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_scenario_activities_source_activity_id_fkey"
+            columns: ["source_activity_id"]
+            isOneToOne: false
+            referencedRelation: "project_activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_scenarios: {
+        Row: {
+          applied_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_baseline: boolean
+          name: string
+          project_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_baseline?: boolean
+          name: string
+          project_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_baseline?: boolean
+          name?: string
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_scenarios_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -3757,14 +4100,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_my_team_id: { Args: never; Returns: string }
-      get_my_team_ids: { Args: never; Returns: string[] }
       get_team_user_ids: { Args: never; Returns: string[] }
-      is_admin: { Args: never; Returns: boolean }
-      recusar_entrega_oportunidade: {
-        Args: { p_id: string; p_motivo: string }
-        Returns: undefined
-      }
+      has_acesso: { Args: { chave: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3772,9 +4109,19 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: never; Returns: boolean }
+      recusar_entrega_oportunidade: {
+        Args: { p_id: string; p_motivo: string }
+        Returns: undefined
+      }
     }
     Enums: {
-      acquisition_channel_category: "digital" | "indicacao" | "evento" | "parceria" | "outros"
+      acquisition_channel_category:
+        | "digital"
+        | "indicacao"
+        | "evento"
+        | "parceria"
+        | "outros"
       app_role: "admin" | "moderator" | "user"
       budget_status: "pendente" | "cotado" | "aprovado" | "rejeitado"
       client_origin: "indicacao" | "instagram" | "google" | "site" | "outro"
@@ -3820,12 +4167,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3849,11 +4196,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3874,11 +4221,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3899,11 +4246,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3916,11 +4263,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3932,6 +4279,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      acquisition_channel_category: [
+        "digital",
+        "indicacao",
+        "evento",
+        "parceria",
+        "outros",
+      ],
       app_role: ["admin", "moderator", "user"],
       budget_status: ["pendente", "cotado", "aprovado", "rejeitado"],
       client_origin: ["indicacao", "instagram", "google", "site", "outro"],
@@ -3943,6 +4297,15 @@ export const Constants = {
         "proposta",
         "relatorio",
         "orcamento",
+      ],
+      lead_type: ["comercial", "parceiro"],
+      partner_stage: [
+        "novo",
+        "primeira_conversa",
+        "parceria_ativa",
+        "trouxe_indicacao",
+        "fidelizado",
+        "inativo",
       ],
       payment_status: ["pendente", "notificado", "pago", "atrasado"],
       project_status: [
