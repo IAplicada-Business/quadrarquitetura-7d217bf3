@@ -70,7 +70,7 @@ function exportDREPdf(dre: DREData, projectName?: string) {
   doc.setFontSize(18);
   doc.text("Quadra Arquitetura", 20, 20);
   doc.setFontSize(12);
-  doc.text(`DRE — ${projectName || "Projeto"}`, 20, 30);
+  doc.text(`Demonstrativo de Resultado do Projeto — ${projectName || "Projeto"}`, 20, 30);
   doc.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")}`, 20, 38);
   doc.setFontSize(10);
   const lines: [string, string][] = [
@@ -96,7 +96,7 @@ function exportDREPdf(dre: DREData, projectName?: string) {
     doc.text(val, 190, y, { align: "right" });
     y += 7;
   }
-  doc.save(`DRE_${(projectName || "projeto").replace(/\s+/g, "_")}.pdf`);
+  doc.save(`Resultado_Projeto_${(projectName || "projeto").replace(/\s+/g, "_")}.pdf`);
 }
 
 export function ProjectFinancialTab({ projectId, projectName, clientName, clientPhone }: { projectId: string; projectName?: string; clientName?: string; clientPhone?: string }) {
@@ -278,8 +278,8 @@ export function ProjectFinancialTab({ projectId, projectName, clientName, client
       <Tabs defaultValue="pagamentos">
         <TabsList>
           <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
-          <TabsTrigger value="notas">NFs Compras</TabsTrigger>
-          <TabsTrigger value="dre">DRE</TabsTrigger>
+          <TabsTrigger value="notas">NF Compras</TabsTrigger>
+          <TabsTrigger value="dre">Resultado do Projeto</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pagamentos" className="space-y-4 mt-4">
@@ -411,7 +411,10 @@ export function ProjectFinancialTab({ projectId, projectName, clientName, client
 
         <TabsContent value="dre" className="space-y-4 mt-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-display">Demonstrativo de Resultado (DRE)</h3>
+            <div>
+              <h3 className="text-lg font-semibold text-display">Demonstrativo de Resultado do Projeto</h3>
+              <p className="text-sm text-muted-foreground">Receitas e despesas desta obra. O DRE do escritório fica no Dashboard Financeiro.</p>
+            </div>
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" disabled={aiLoading} onClick={async () => {
                 const progresso = activities.length > 0
@@ -426,7 +429,7 @@ export function ProjectFinancialTab({ projectId, projectName, clientName, client
                 Análise financeira com IA
               </Button>
               <Button size="sm" variant="outline" onClick={() => exportDREPdf(dre, projectName)}>
-                <Download className="h-4 w-4 mr-1" /> Exportar DRE
+                <Download className="h-4 w-4 mr-1" /> Exportar demonstrativo
               </Button>
             </div>
           </div>

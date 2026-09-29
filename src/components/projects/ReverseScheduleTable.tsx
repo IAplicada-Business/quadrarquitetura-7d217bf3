@@ -1,13 +1,16 @@
-import { useMemo, useState, type KeyboardEvent } from "react";
-import { AlertTriangle, ArrowDownUp, Check, Flag, Home, Pencil } from "lucide-react";
+import { Fragment, useMemo, useState, type KeyboardEvent } from "react";
+import { AlertTriangle, ArrowDownUp, Check, ChevronDown, ChevronUp, ClipboardCheck, Flag, Home, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CascadePreviewDialog } from "./CascadePreviewDialog";
+import { ActivityDeliveryChecklist } from "./ActivityDeliveryChecklist";
 import { computeCascade, type CascadeChange, type ProjectActivity } from "@/hooks/useProjectActivities";
+import type { DeliveryChecklistItem } from "@/hooks/useDeliveryChecklist";
 import { computeCriticalPath } from "@/lib/criticalPath";
+import { checklistProgress, groupChecklistByActivity } from "@/lib/deliveryChecklist";
 import {
   applyReverseEdit,
   businessDaysUntil,
@@ -19,6 +22,9 @@ import {
 import { getDisciplineColor } from "@/lib/disciplineColors";
 
 export type ReverseFilter = "all" | "critical" | "overdue" | "open";
+
+/** Quantas atividades aparecem antes do "Ver mais". */
+export const REVERSE_DEFAULT_LIMIT = 5;
 
 interface Props {
   activities: ProjectActivity[];
@@ -32,6 +38,16 @@ interface Props {
   isSaving?: boolean;
   /** Só para testes: fixa a data de hoje (YYYY-MM-DD). */
   today?: string;
+  /** Quantas linhas mostrar antes do "Ver mais" (padrão 5). */
+  initialLimit?: number;
+  /**
+   * Checklist de entrega: quando informado, cada atividade ganha a coluna
+   * "Entrega" com as pendências dela (marcar, excluir, adicionar).
+   */
+  checklistItems?: DeliveryChecklistItem[];
+  onChecklistToggle?: (item: DeliveryChecklistItem) => void;
+  onChecklistRemove?: (id: string) => void;
+  onChecklistAdd?: (activityId: string) => void;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -164,11 +180,32 @@ function InlineNumberCell({
 /* Tabela                                                              */
 /* ------------------------------------------------------------------ */
 
-export function ReverseScheduleTable({ activities, isLoading, moveInDate, onUpdateDates, onCascade, isSaving, today: todayProp }: Props) {
+export function ReverseScheduleTable({
+  activities,
+  isLoading,
+  moveInDate,
+  onUpdateDates,
+  onCascade,
+  isSaving,
+  today: todayProp,
+  initialLimit = REVERSE_DEFAULT_LIMIT,
+  checklistItems,
+  onChecklistToggle,
+  onChecklistRemove,
+  onChecklistAdd,
+}: Props) {
   const today = todayProp ?? todayIso();
   const [filter, setFilter] = useState<ReverseFilter>("all");
   const [reverseOrder, setReverseOrder] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+  const [openChecklists, setOpenChecklists] = useState<Set<string>>(new Set());
   const [pendingCascade, setPendingCascade] = useState<CascadeChange[]>([]);
+
+  const hasChecklist = checklistItems != null;
+  const checklistByActivity = useMemo(
+    () => groupChecklistByActivity(checklistItems ?? []),
+    [checklistItems],
+  );
 
   const cpm = useMemo(
     () =>
@@ -207,6 +244,9 @@ export function ReverseScheduleTable({ activities, isLoading, moveInDate, onUpda
     }
   }, [rows, filter]);
 
+  const visible = showAll ? filtered : filtered.slice(0, initialLimit);
+  const hiddenCount = filtered.length - visible.length;
+
   const summary = useMemo(() => {
     const dated = activities.filter((a) => a.end_date || a.start_date);
     const projectEnd = dated.reduce<string | null>((max, a) => {
@@ -244,6 +284,15 @@ export function ReverseScheduleTable({ activities, isLoading, moveInDate, onUpda
     setPendingCascade([]);
   };
 
+  const toggleChecklist = (id: string) => {
+    setOpenChecklists((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
@@ -254,8 +303,11 @@ export function ReverseScheduleTable({ activities, isLoading, moveInDate, onUpda
 
   if (activities.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-        Nenhuma atividade cadastrada. Crie etapas no Gantt (Nova Etapa ou Importar do Escopo) para montar o cronograma reverso.
+      <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg px-4">
+        <p>Nenhuma atividade cadastrada.</p>
+        <p className="text-xs mt-1">
+          Gere as atividades na aba Escopo: o Cronograma Reverso, o Gantt e a Contagem Regressiva são montados a partir delas.
+        </p>
       </div>
     );
   }
@@ -266,6 +318,8 @@ export function ReverseScheduleTable({ activities, isLoading, moveInDate, onUpda
     { value: "overdue", label: "Atrasadas", count: summary.overdueCount },
     { value: "open", label: "Em aberto", count: rows.filter((r) => !r.metrics.isFinished).length },
   ];
+
+  const colCount = hasChecklist ? 9 : 8;
 
   return (
     <div className="space-y-4">
@@ -340,6 +394,7 @@ export function ReverseScheduleTable({ activities, isLoading, moveInDate, onUpda
       <p className="text-xs text-muted-foreground">
         Clique em uma data ou no prazo para editar direto na tabela. Dias úteis excluem fins de semana, feriados nacionais e o recesso de fim de ano.
         Marcos críticos são as atividades sem folga no caminho crítico (mesmo cálculo do Gantt) e as atrasadas.
+        {hasChecklist && " Na coluna Entrega, marque as pendências de entrega de cada atividade."}
       </p>
 
       <div className="border rounded-lg overflow-x-auto">
@@ -354,113 +409,174 @@ export function ReverseScheduleTable({ activities, isLoading, moveInDate, onUpda
               <TableHead className="text-center">Dias faltantes</TableHead>
               <TableHead className="text-center">Folga</TableHead>
               <TableHead>Status</TableHead>
+              {hasChecklist && <TableHead className="text-center">Entrega</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">
+                <TableCell colSpan={colCount} className="text-center text-sm text-muted-foreground py-8">
                   Nenhuma atividade neste filtro.
                 </TableCell>
               </TableRow>
             )}
-            {filtered.map(({ activity: a, metrics: m, isCritical, float }) => {
+            {visible.map(({ activity: a, metrics: m, isCritical, float }) => {
               const disabled = !!isSaving;
+              const items = checklistByActivity.get(a.id) ?? [];
+              const progress = checklistProgress(items);
+              const checklistOpen = openChecklists.has(a.id);
               return (
-                <TableRow
-                  key={a.id}
-                  data-testid={`reverse-row-${a.id}`}
-                  className={m.isOverdue ? "bg-destructive/5" : isCritical ? "bg-warning/5" : undefined}
-                >
-                  <TableCell className="text-sm">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {isCritical && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Flag className="h-3.5 w-3.5 text-destructive shrink-0" aria-label="Marco crítico" />
-                            </TooltipTrigger>
-                            <TooltipContent>Marco crítico: sem folga, qualquer atraso adia o fim da obra.</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{a.name}</p>
-                        {a.discipline && (
-                          <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                            <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: getDisciplineColor(a.discipline) }} />
-                            {a.discipline}
-                          </p>
+                <Fragment key={a.id}>
+                  <TableRow
+                    data-testid={`reverse-row-${a.id}`}
+                    className={m.isOverdue ? "bg-destructive/5" : isCritical ? "bg-warning/5" : undefined}
+                  >
+                    <TableCell className="text-sm">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {isCritical && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Flag className="h-3.5 w-3.5 text-destructive shrink-0" aria-label="Marco crítico" />
+                              </TooltipTrigger>
+                              <TooltipContent>Marco crítico: sem folga, qualquer atraso adia o fim da obra.</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )}
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{a.name}</p>
+                          {a.discipline && (
+                            <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                              <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: getDisciplineColor(a.discipline) }} />
+                              {a.discipline}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <InlineDateCell
-                      value={a.start_date}
-                      label={`Editar início de ${a.name}`}
-                      disabled={disabled}
-                      onCommit={(iso) => handleEdit(a, "start_date", iso)}
-                    />
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <InlineNumberCell
-                      value={m.totalDays}
-                      label={`Editar prazo de ${a.name}`}
-                      disabled={disabled}
-                      onCommit={(n) => handleEdit(a, "duration_days", n)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <InlineDateCell
-                      value={a.end_date}
-                      label={`Editar término de ${a.name}`}
-                      disabled={disabled}
-                      onCommit={(iso) => handleEdit(a, "end_date", iso)}
-                    />
-                  </TableCell>
-                  <TableCell className="text-center text-sm tabular-nums" data-testid={`worked-${a.id}`}>
-                    {m.workedDays ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-center text-sm tabular-nums" data-testid={`remaining-${a.id}`}>
-                    {m.remainingDays == null ? (
-                      "—"
-                    ) : m.isOverdue ? (
-                      <span className="text-destructive font-semibold">−{m.overdueDays}</span>
-                    ) : m.isFinished ? (
-                      <Check className="h-4 w-4 text-success inline" aria-label="Concluída" />
-                    ) : (
-                      <span className={m.remainingDays <= 2 ? "text-warning font-semibold" : ""}>{m.remainingDays}</span>
+                    </TableCell>
+                    <TableCell>
+                      <InlineDateCell
+                        value={a.start_date}
+                        label={`Editar início de ${a.name}`}
+                        disabled={disabled}
+                        onCommit={(iso) => handleEdit(a, "start_date", iso)}
+                      />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <InlineNumberCell
+                        value={m.totalDays}
+                        label={`Editar prazo de ${a.name}`}
+                        disabled={disabled}
+                        onCommit={(n) => handleEdit(a, "duration_days", n)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <InlineDateCell
+                        value={a.end_date}
+                        label={`Editar término de ${a.name}`}
+                        disabled={disabled}
+                        onCommit={(iso) => handleEdit(a, "end_date", iso)}
+                      />
+                    </TableCell>
+                    <TableCell className="text-center text-sm tabular-nums" data-testid={`worked-${a.id}`}>
+                      {m.workedDays ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-center text-sm tabular-nums" data-testid={`remaining-${a.id}`}>
+                      {m.remainingDays == null ? (
+                        "—"
+                      ) : m.isOverdue ? (
+                        <span className="text-destructive font-semibold">−{m.overdueDays}</span>
+                      ) : m.isFinished ? (
+                        <Check className="h-4 w-4 text-success inline" aria-label="Concluída" />
+                      ) : (
+                        <span className={m.remainingDays <= 2 ? "text-warning font-semibold" : ""}>{m.remainingDays}</span>
+                      )}
+                      {!m.hasStarted && !m.isFinished && m.daysToStart != null && (
+                        <span className="block text-[10px] text-muted-foreground">começa em {m.daysToStart}d</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center text-sm tabular-nums text-muted-foreground">
+                      {float == null ? "—" : `${float}d`}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={
+                          m.isOverdue
+                            ? "text-[10px] bg-destructive/10 text-destructive border-destructive/30"
+                            : a.status === "concluida"
+                              ? "text-[10px] bg-success/15 text-success border-success/30"
+                              : a.status === "em_andamento"
+                                ? "text-[10px] bg-primary/10 text-primary border-primary/30"
+                                : "text-[10px]"
+                        }
+                      >
+                        {m.isOverdue ? "Atrasada" : STATUS_LABEL[a.status] ?? a.status}
+                      </Badge>
+                    </TableCell>
+                    {hasChecklist && (
+                      <TableCell className="text-center">
+                        <button
+                          type="button"
+                          data-testid={`checklist-toggle-${a.id}`}
+                          aria-expanded={checklistOpen}
+                          aria-label={`Checklist de entrega de ${a.name}`}
+                          onClick={() => toggleChecklist(a.id)}
+                          className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <ClipboardCheck
+                            className={`h-3.5 w-3.5 ${
+                              progress.total === 0 ? "text-muted-foreground" : progress.pending === 0 ? "text-success" : "text-warning"
+                            }`}
+                          />
+                          {progress.total > 0 ? (
+                            <span className="tabular-nums font-medium">{progress.resolved}/{progress.total}</span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                          <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${checklistOpen ? "rotate-180" : ""}`} />
+                        </button>
+                      </TableCell>
                     )}
-                    {!m.hasStarted && !m.isFinished && m.daysToStart != null && (
-                      <span className="block text-[10px] text-muted-foreground">começa em {m.daysToStart}d</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center text-sm tabular-nums text-muted-foreground">
-                    {float == null ? "—" : `${float}d`}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        m.isOverdue
-                          ? "text-[10px] bg-destructive/10 text-destructive border-destructive/30"
-                          : a.status === "concluida"
-                            ? "text-[10px] bg-success/15 text-success border-success/30"
-                            : a.status === "em_andamento"
-                              ? "text-[10px] bg-primary/10 text-primary border-primary/30"
-                              : "text-[10px]"
-                      }
-                    >
-                      {m.isOverdue ? "Atrasada" : STATUS_LABEL[a.status] ?? a.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
+                  </TableRow>
+                  {hasChecklist && checklistOpen && (
+                    <TableRow className="bg-muted/20 hover:bg-muted/20" data-testid={`checklist-row-${a.id}`}>
+                      <TableCell colSpan={colCount} className="py-3 pl-8">
+                        <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
+                          <ClipboardCheck className="h-3.5 w-3.5 text-primary" /> Checklist de entrega · {a.name}
+                        </p>
+                        <ActivityDeliveryChecklist
+                          items={items}
+                          disabled={disabled}
+                          onToggle={(item) => onChecklistToggle?.(item)}
+                          onRemove={(id) => onChecklistRemove?.(id)}
+                          onAdd={() => onChecklistAdd?.(a.id)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </Fragment>
               );
             })}
           </TableBody>
         </Table>
       </div>
+
+      {filtered.length > initialLimit && (
+        <div className="flex items-center justify-center gap-3">
+          <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setShowAll((v) => !v)} data-testid="reverse-toggle-all">
+            {showAll ? (
+              <>
+                <ChevronUp className="h-3.5 w-3.5 mr-1" /> Ver menos
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-3.5 w-3.5 mr-1" /> Ver mais ({hiddenCount} {hiddenCount === 1 ? "atividade" : "atividades"})
+              </>
+            )}
+          </Button>
+        </div>
+      )}
 
       <CascadePreviewDialog
         open={pendingCascade.length > 0}
