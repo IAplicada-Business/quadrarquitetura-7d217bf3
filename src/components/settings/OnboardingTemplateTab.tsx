@@ -53,7 +53,7 @@ export default function OnboardingTemplateTab() {
         <div className="rounded-lg border border-dashed p-6 text-center space-y-3">
           <p className="text-sm text-muted-foreground">O template ainda está vazio.</p>
           <Button size="sm" variant="outline" onClick={() => setDraft(starterSections())}>
-            <Sparkles className="h-4 w-4 mr-1" /> Começar com uma sugestão de 3 seções
+            <Sparkles className="h-4 w-4 mr-1" /> Começar com a sugestão do mockup (capa + 3 passos)
           </Button>
         </div>
       )}

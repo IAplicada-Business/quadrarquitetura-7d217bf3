@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       await Promise.all([
         supabase
           .from("projects")
-          .select("name, address, city, estimated_budget, ideal_budget, start_date, expected_end_date, client_move_in_date")
+          .select("name, address, city, estimated_budget, ideal_budget, start_date, expected_end_date, client_move_in_date, clients(name)")
           .eq("id", projectId)
           .single(),
         supabase
@@ -164,9 +164,11 @@ Deno.serve(async (req) => {
       }
     });
 
+    const { clients: projectClient, ...projectFields } = projectRes.data as Record<string, unknown> & { clients?: { name?: string } | null };
+
     return new Response(
       JSON.stringify({
-        project: projectRes.data,
+        project: { ...projectFields, client_name: projectClient?.name ?? null },
         tasks: tasksRes.data ?? [],
         payments: paymentsRes.data ?? [],
         invoices: invoicesRes.data ?? [],

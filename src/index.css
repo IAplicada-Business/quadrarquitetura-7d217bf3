@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Jost:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Poppins:wght@300;400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -206,4 +207,56 @@
   .scrollbar-sidebar::-webkit-scrollbar-thumb:hover {
     background-color: hsl(var(--sidebar-foreground) / 0.45);
   }
+}
+
+
+/* === Trilha do Cliente (portal /client/:token) ===
+   Paleta editorial navy/terracota do site novo e do mockup "Trilha do
+   Cliente": bege #F0EBE3, navy #1A1F4E, terracota #C4856A, areia #E6DDD0,
+   sálvia #8FAE8B. Lora nos títulos, Poppins no corpo. Escopado em .trilha
+   pra não mexer no app interno; vence o .dark do html por herança. */
+.trilha {
+  --background: 37 30% 92%;
+  --foreground: 234 50% 20%;
+  --card: 0 0% 100%;
+  --card-foreground: 234 50% 20%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 234 50% 20%;
+  --primary: 234 50% 20%;
+  --primary-foreground: 37 30% 92%;
+  --secondary: 35 30% 86%;
+  --secondary-foreground: 234 50% 20%;
+  --muted: 35 30% 90%;
+  --muted-foreground: 234 18% 42%;
+  --accent: 18 43% 59%;
+  --accent-foreground: 0 0% 100%;
+  --border: 35 22% 82%;
+  --input: 35 22% 82%;
+  --ring: 18 43% 59%;
+  --success: 113 18% 45%;
+  --warning: 18 43% 50%;
+  --radius: 0.5rem;
+  --font-display: 'Lora', serif;
+  --font-body: 'Poppins', sans-serif;
+  --trilha-terracota: #C4856A;
+  --trilha-navy: #1A1F4E;
+  --trilha-areia: #E6DDD0;
+  --trilha-salvia: #8FAE8B;
+  --trilha-creme: #FBF8F3;
+  font-family: 'Poppins', system-ui, sans-serif;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+.trilha .font-display,
+.trilha .font-serif,
+.trilha .text-display {
+  font-family: 'Lora', serif;
+}
+.trilha .trilha-eyebrow {
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--trilha-terracota);
+  font-weight: 500;
 }
