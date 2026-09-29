@@ -112,6 +112,48 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Onboarding configurado pela equipe: override da obra > template
+    // padrão do time (resolvido pelo dono do projeto -> team_members).
+    // Falha aqui não derruba o portal: onboarding volta null.
+    let onboarding: { sections: unknown[] } | null = null;
+    try {
+      const { data: override } = await supabase
+        .from("onboarding_project_overrides")
+        .select("is_enabled, sections_json")
+        .eq("project_id", projectId)
+        .maybeSingle();
+      if (override) {
+        onboarding = { sections: override.is_enabled && Array.isArray(override.sections_json) ? override.sections_json : [] };
+      } else {
+        const { data: owner } = await supabase.from("projects").select("user_id").eq("id", projectId).single();
+        const { data: membership } = owner
+          ? await supabase.from("team_members").select("team_id").eq("user_id", owner.user_id).order("created_at", { ascending: true }).limit(1).maybeSingle()
+          : { data: null };
+        if (membership) {
+          const { data: template } = await supabase
+            .from("onboarding_templates")
+            .select("id")
+            .eq("team_id", membership.team_id)
+            .eq("is_default", true)
+            .limit(1)
+            .maybeSingle();
+          if (template) {
+            const { data: sections } = await supabase
+              .from("onboarding_sections")
+              .select("id, title, body, video_url, image_urls, cta_label, cta_url, is_active, display_order")
+              .eq("template_id", template.id)
+              .eq("is_active", true)
+              .order("display_order", { ascending: true });
+            onboarding = { sections: sections ?? [] };
+          } else {
+            onboarding = { sections: [] };
+          }
+        }
+      }
+    } catch (_e) {
+      onboarding = null;
+    }
+
     // Extract photos from diary entries
     const photos: { url: string; date: string }[] = [];
     (diaryRes.data ?? []).forEach((entry: any) => {
@@ -131,6 +173,7 @@ Deno.serve(async (req) => {
         photos: photos.slice(0, 12),
         weekly_reports: reportsRes.data ?? [],
         pending_responses: pendingRes.data ?? [],
+        onboarding,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -12,8 +12,10 @@ import { ClientScheduleView } from "@/components/projects/ClientScheduleView";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Wallet, Camera, MessageCircle, AlertTriangle, FileBarChart, Check, Send } from "lucide-react";
+import { Calendar, Wallet, Camera, MessageCircle, AlertTriangle, FileBarChart, Check, Send, BookOpen } from "lucide-react";
 import { toast } from "sonner";
+import { OnboardingView } from "@/components/onboarding/OnboardingView";
+import { sectionsFromJson, visibleSections } from "@/lib/onboarding";
 
 function formatCurrency(v: number | null | undefined) {
   if (v == null) return "R$ 0,00";
@@ -61,6 +63,8 @@ interface PortalData {
   photos: { url: string; date: string }[];
   weekly_reports: WeeklyReport[];
   pending_responses: PendingResponse[];
+  /** Seções de onboarding configuradas pela equipe (template ou personalizadas por obra). */
+  onboarding?: { sections: unknown[] } | null;
 }
 
 export default function ClientPortal() {
@@ -175,6 +179,7 @@ export default function ClientPortal() {
   }
 
   const { project, tasks, payments, invoices, photos, weekly_reports, pending_responses = [] } = data;
+  const onboardingSections = visibleSections(sectionsFromJson(data.onboarding?.sections ?? []));
   const contracted = project.estimated_budget || 0;
   const paid = payments
     .filter((p: any) => p.status === "pago")
@@ -217,6 +222,17 @@ export default function ClientPortal() {
       </header>
 
       <main className="max-w-3xl mx-auto p-4 space-y-8 pb-16">
+        {/* Onboarding (configurável pela equipe) */}
+        {onboardingSections.length > 0 && (
+          <section id="onboarding">
+            <div className="flex items-center gap-2 mb-4">
+              <BookOpen className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Boas-vindas</h2>
+            </div>
+            <OnboardingView sections={onboardingSections} />
+          </section>
+        )}
+
         {/* Cronograma */}
         <section>
           <div className="flex items-center gap-2 mb-4">
