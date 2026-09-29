@@ -21,7 +21,11 @@ import {
   ArrowUp,
   ArrowDown,
   EyeOff,
+  Upload,
+  Loader2,
+  ImageIcon,
 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { useProposalBlocks } from "@/hooks/useProposalBlocks";
 import { useProposalAssets } from "@/hooks/useProposalAssets";
 import { buildProposalPages, proposalPageKeys } from "@/components/leads/ProposalPageRenderer";
@@ -33,6 +37,8 @@ import {
   proposalBlocksEqual,
   toProposalBlockUpserts,
   DEFAULT_ABOUT_TEXT,
+  newFlowStepKey,
+  FLOW_STEP_TIMELINE,
   type AboutContent,
   type BlockCard,
   type BlockFieldDef,
@@ -84,6 +90,7 @@ function CardsField({
 }) {
   const shape = field.cardShape ?? "desc";
   const labels = { title: "Título", desc: "Descrição", items: "Itens (um por linha)", ...field.cardLabels };
+  const isSteps = shape === "steps";
 
   const update = (i: number, patch: Partial<BlockCard>) => {
     onChange(cards.map((c, j) => (j === i ? { ...c, ...patch } : c)));
@@ -96,7 +103,11 @@ function CardsField({
     [next[i], next[j]] = [next[j], next[i]];
     onChange(next);
   };
-  const add = () => onChange([...cards, shape === "items" ? { title: "", items: [] } : { title: "", desc: "" }]);
+  const add = () =>
+    onChange([
+      ...cards,
+      shape === "items" ? { title: "", items: [] } : isSteps ? { key: newFlowStepKey(), title: "", desc: "", meta: "" } : { title: "", desc: "" },
+    ]);
 
   return (
     <div className="space-y-2">
@@ -106,9 +117,15 @@ function CardsField({
           <Plus className="h-3 w-3 mr-1" /> Adicionar
         </Button>
       </div>
+      {field.hint && <p className="text-[11px] text-muted-foreground">{field.hint}</p>}
       {cards.length === 0 && <p className="text-xs text-muted-foreground">Nenhum item. Adicione pelo menos um.</p>}
       {cards.map((card, i) => (
-        <div key={i} className="border rounded-md p-2.5 space-y-2 bg-background" data-testid={`${blockKey}-${field.key}-card-${i}`}>
+        <div key={card.key ?? i} className="border rounded-md p-2.5 space-y-2 bg-background" data-testid={`${blockKey}-${field.key}-card-${i}`}>
+          {isSteps && (
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              {card.key && FLOW_STEP_TIMELINE[card.key] ? "Etapa original · prazo vem da proposta" : "Etapa nova · prazo fixo abaixo"}
+            </p>
+          )}
           <div className="flex items-center gap-2">
             <Input
               value={card.title}
@@ -127,7 +144,7 @@ function CardsField({
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
-          {shape === "desc" ? (
+          {shape === "desc" || isSteps ? (
             <RichTextField
               value={card.desc ?? ""}
               rows={2}
@@ -145,8 +162,88 @@ function CardsField({
               onChange={(e) => update(i, { items: e.target.value.split("\n") })}
             />
           )}
+          {isSteps && !(card.key && FLOW_STEP_TIMELINE[card.key]) && (
+            <Input
+              value={card.meta ?? ""}
+              placeholder="Prazo exibido (ex.: 7 dias)"
+              aria-label={`${field.label} ${i + 1}: Prazo`}
+              onChange={(e) => update(i, { meta: e.target.value })}
+              className="h-8 text-sm"
+            />
+          )}
         </div>
       ))}
+    </div>
+  );
+}
+
+function ImageField({
+  id,
+  field,
+  value,
+  onChange,
+  suggestions,
+}: {
+  id: string;
+  field: BlockFieldDef;
+  value: string;
+  onChange: (url: string) => void;
+  suggestions: { id: string; name: string; url: string }[];
+}) {
+  const { uploadFile } = useProposalAssets();
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const url = await uploadFile(files[0], "blocos");
+      onChange(url);
+    } catch (e) {
+      toast({ title: "Erro no upload", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id} className="text-xs font-semibold flex items-center gap-1"><ImageIcon className="h-3.5 w-3.5" /> {field.label}</Label>
+      <div className="flex items-start gap-3">
+        <div className="h-20 w-28 shrink-0 overflow-hidden rounded border bg-muted/40 flex items-center justify-center">
+          {value ? <img src={value} alt={field.label} className="h-full w-full object-cover" /> : <span className="text-[10px] text-muted-foreground text-center px-1">padrão do app</span>}
+        </div>
+        <div className="flex-1 space-y-2">
+          <div className="flex gap-2">
+            <Input id={id} value={value} placeholder="URL da imagem ou envie um arquivo" className="h-8 text-sm" onChange={(e) => onChange(e.target.value)} />
+            <label className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border px-2 text-xs hover:bg-muted whitespace-nowrap">
+              {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              Upload
+              <input type="file" accept="image/*" className="hidden" disabled={uploading} aria-label={`Enviar ${field.label}`} onChange={(e) => handleUpload(e.target.files)} />
+            </label>
+            {value && (
+              <Button type="button" size="sm" variant="ghost" className="h-8 text-xs" onClick={() => onChange("")}>Usar padrão</Button>
+            )}
+          </div>
+          {suggestions.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {suggestions.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  title={s.name}
+                  aria-label={`Usar ${s.name}`}
+                  onClick={() => onChange(s.url)}
+                  className={`h-10 w-14 overflow-hidden rounded border hover:ring-2 hover:ring-primary ${value === s.url ? "ring-2 ring-primary" : ""}`}
+                >
+                  <img src={s.url} alt={s.name} className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+          {field.hint && <p className="text-[11px] text-muted-foreground">{field.hint}</p>}
+        </div>
+      </div>
     </div>
   );
 }
@@ -154,9 +251,11 @@ function CardsField({
 function BlockFields({
   block,
   onChange,
+  imageSuggestions,
 }: {
   block: ResolvedProposalBlock;
   onChange: (content: Record<string, unknown>) => void;
+  imageSuggestions: { id: string; name: string; url: string }[];
 }) {
   const def = getBlockDefinition(block.key);
   if (!def) return null;
@@ -167,6 +266,18 @@ function BlockFields({
     <div className="space-y-4">
       {def.fields.map((field) => {
         const id = `block-${block.key}-${field.key}`;
+        if (field.kind === "image") {
+          return (
+            <ImageField
+              key={field.key}
+              id={id}
+              field={field}
+              value={typeof content[field.key] === "string" ? (content[field.key] as string) : ""}
+              onChange={(url) => set(field.key, url)}
+              suggestions={imageSuggestions}
+            />
+          );
+        }
         if (field.kind === "cards") {
           return (
             <CardsField
@@ -428,6 +539,7 @@ export default function ProposalBlocksEditor() {
                               </div>
                               <BlockFields
                                 block={block}
+                                imageSuggestions={founderPhotos.filter((p) => p.file_url).map((p) => ({ id: p.id, name: p.name, url: p.file_url! }))}
                                 onChange={(content) => updateBlock(block.key, { content: content as unknown as ResolvedProposalBlock["content"] })}
                               />
                               <div className="flex justify-end">

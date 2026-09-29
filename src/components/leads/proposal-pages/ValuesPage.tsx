@@ -154,7 +154,7 @@ export function ProposalValuesPage(props: ProposalPageProps) {
         </p>
       </div>
       <ValidityFooter validUntil={props.validUntil} dark />
-      <LogoSmall url={logoUrl} position="br" />
+      <LogoSmall url={logoUrl} urlOnDark={props.logoOnDarkUrl} urlOnLight={props.logoOnLightUrl} variant="onDark" position="br" />
     </PageContainer>
   );
 }

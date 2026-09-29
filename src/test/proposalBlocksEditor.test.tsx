@@ -22,7 +22,8 @@ vi.mock("@/hooks/useProposalAssets", () => ({
     assets: [],
     isLoading: false,
     logos: [],
-    founderPhotos: [],
+    founderPhotos: [{ id: "f1", category: "founder_photo", name: "Sócias 2026", file_url: "https://cdn/socias-2026.jpg" }],
+    uploadFile: vi.fn(async () => "https://cdn/upload.jpg"),
     portfolio: [],
     feedbacks: [],
     texts: textoQuemSomosAssets
@@ -130,6 +131,49 @@ describe("editor de blocos do PDF", () => {
     const nomes = screen.getAllByRole("switch").map((s) => s.getAttribute("aria-label"));
     expect(nomes[0]).toBe("Ativar bloco Contato");
     expect(nomes[1]).toBe("Ativar bloco Capa");
+  });
+});
+
+describe("estruturas editáveis (etapas e fotos)", () => {
+  it("adiciona uma etapa nova ao fluxo, com prazo fixo, e salva com key própria", () => {
+    render(<ProposalBlocksEditor />);
+    fireEvent.click(screen.getByRole("button", { name: "Editar Escopo e Processo" }));
+    const bloco = screen.getByTestId("block-scope");
+    expect(within(bloco).getAllByTestId(/scope-steps-card-/)).toHaveLength(7);
+
+    fireEvent.click(within(bloco).getByRole("button", { name: /Adicionar/ }));
+    const cards = within(bloco).getAllByTestId(/scope-steps-card-/);
+    expect(cards).toHaveLength(8);
+    expect(cards[7]).toHaveTextContent("Etapa nova");
+    fireEvent.change(within(cards[7]).getByLabelText("Etapas do processo 8: Título"), { target: { value: "Vistoria final" } });
+    fireEvent.change(within(cards[7]).getByLabelText("Etapas do processo 8: Prazo"), { target: { value: "2 dias" } });
+
+    // Etapa original não tem campo de prazo (vem da proposta).
+    expect(within(cards[0]).queryByLabelText("Etapas do processo 1: Prazo")).not.toBeInTheDocument();
+    expect(cards[0]).toHaveTextContent("prazo vem da proposta");
+
+    fireEvent.click(botaoSalvar());
+    const scope = saveMutate.mock.calls[0][0].find((r) => r.key === "scope")!;
+    const steps = scope.content_json.steps as { key: string; title: string; meta?: string }[];
+    expect(steps).toHaveLength(8);
+    expect(steps[7]).toMatchObject({ title: "Vistoria final", meta: "2 dias" });
+    expect(steps[7].key).toMatch(/^etapa-/);
+  });
+
+  it("foto das sócias pode ser escolhida entre as enviadas em Configurações e volta ao padrão", () => {
+    render(<ProposalBlocksEditor />);
+    fireEvent.click(screen.getByRole("button", { name: "Editar Quem Somos" }));
+    fireEvent.click(screen.getByRole("button", { name: "Usar Sócias 2026" }));
+    expect((screen.getByLabelText("Foto das sócias") as HTMLInputElement).value).toBe("https://cdn/socias-2026.jpg");
+    // preview reflete
+    expect(screen.getByAltText("Camilla e Mariana")).toHaveAttribute("src", "https://cdn/socias-2026.jpg");
+
+    fireEvent.click(botaoSalvar());
+    const about = saveMutate.mock.calls[0][0].find((r) => r.key === "about")!;
+    expect(about.content_json.photoUrl).toBe("https://cdn/socias-2026.jpg");
+
+    fireEvent.click(screen.getByRole("button", { name: "Usar padrão" }));
+    expect((screen.getByLabelText("Foto das sócias") as HTMLInputElement).value).toBe("");
   });
 });
 

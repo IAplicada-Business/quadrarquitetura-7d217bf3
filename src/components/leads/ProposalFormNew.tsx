@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useProposalAssets } from "@/hooks/useProposalAssets";
+import { useProposalBlocks } from "@/hooks/useProposalBlocks";
+import { flowStepsFromBlocks, FLOW_STEP_TIMELINE, type FlowTimelineKey } from "@/lib/proposalBlocks";
 import { useLeads } from "@/hooks/useLeads";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -47,25 +49,19 @@ export interface ProposalFormData {
   valid_until: string | null;
 }
 
-const ALL_ETAPAS = [
-  "Briefing",
-  "Estudo Preliminar",
-  "Anteprojeto",
-  "Orçamento Executivo",
-  "Reunião de Prioridades",
-  "Mobilização de Obra",
-  "Conferência e Fiscalização de Obra",
-];
-
-const ETAPA_TIMELINE_MAP: { etapa: string; field: keyof ProposalFormData; label: string }[] = [
-  { etapa: "Briefing", field: "timeline_briefing", label: "Briefing (dias)" },
-  { etapa: "Estudo Preliminar", field: "timeline_study", label: "Estudo preliminar (dias)" },
-  { etapa: "Anteprojeto", field: "timeline_anteprojeto", label: "Anteprojeto (dias)" },
-  { etapa: "Orçamento Executivo", field: "timeline_budget", label: "Orçamento executivo (dias)" },
-  { etapa: "Reunião de Prioridades", field: "timeline_priorities", label: "Reunião prioridades (dias)" },
-  { etapa: "Mobilização de Obra", field: "timeline_mobilization", label: "Mobilização de obra (dias)" },
-  { etapa: "Conferência e Fiscalização de Obra", field: "timeline_fiscalization", label: "Conferência e fiscalização (dias)" },
-];
+// As etapas do fluxo vêm do bloco "Escopo e Processo" (Configurações →
+// Proposta → Blocos do PDF). As 7 originais têm campo de prazo na
+// proposta; etapas novas só entram/saem (o prazo é o texto do bloco).
+const TIMELINE_FIELD: Record<FlowTimelineKey, { field: keyof ProposalFormData; label: string; nullable: boolean }> = {
+  briefing: { field: "timeline_briefing", label: "Briefing (dias)", nullable: false },
+  study: { field: "timeline_study", label: "Estudo preliminar (dias)", nullable: false },
+  anteprojeto: { field: "timeline_anteprojeto", label: "Anteprojeto (dias)", nullable: true },
+  budget: { field: "timeline_budget", label: "Orçamento executivo (dias)", nullable: false },
+  priorities: { field: "timeline_priorities", label: "Reunião prioridades (dias)", nullable: false },
+  mobilization: { field: "timeline_mobilization", label: "Mobilização de obra (dias)", nullable: true },
+  fiscalization: { field: "timeline_fiscalization", label: "Conferência e fiscalização (dias)", nullable: true },
+};
+const ALL_ETAPAS = Object.keys(FLOW_STEP_TIMELINE);
 
 const DEFAULT_SCOPE = `Nosso papel será desenvolver o **projeto executivo** dos espaços definidos com todos os desenhos necessários para a realização da obra, considerando todas as ideias discutidas e aprovadas pelo cliente. Dando seguimento com **o gerenciamento**, que inclui a administração de todos os fornecedores envolvidos, cronograma, gestão de pagamentos, vistorias e conferências. Damos assistência no pós obra para garantir que tudo segue funcionando como entregue ou se necessário algum ajuste.`;
 
@@ -82,6 +78,10 @@ interface Props {
 export default function ProposalFormNew({ initialData, onSave, onPreview, onGeneratePdf, saving }: Props) {
   const { leads } = useLeads();
   const { portfolio, feedbacks } = useProposalAssets();
+  const { blocks: proposalBlocks, isFetched: blocksFetched } = useProposalBlocks();
+  const flowSteps = useMemo(() => flowStepsFromBlocks(proposalBlocks), [proposalBlocks]);
+  const allStepKeys = useMemo(() => flowSteps.map((s) => s.key!), [flowSteps]);
+  const [etapasTouched, setEtapasTouched] = useState(false);
 
   // Fetch user's projects for portfolio cards
   const { data: userProjects = [] } = useQuery({
@@ -125,6 +125,15 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
     etapas_ativas: initialData?.etapas_ativas || [...ALL_ETAPAS],
     valid_until: initialData?.valid_until ?? new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
   });
+
+  // Proposta nova: quando o bloco carrega, marca todas as etapas configuradas
+  // (inclusive as que o time criou), a menos que o usuário já tenha mexido.
+  useEffect(() => {
+    if (!blocksFetched || etapasTouched || initialData?.etapas_ativas) return;
+    setData(prev => ({ ...prev, etapas_ativas: [...allStepKeys] }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocksFetched, allStepKeys.join("|")]);
+
 
   const set = <K extends keyof ProposalFormData>(key: K, val: ProposalFormData[K]) =>
     setData(prev => ({ ...prev, [key]: val }));
@@ -294,27 +303,34 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
       <Card>
         <CardHeader><CardTitle className="text-base">4. Etapas do Projeto</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">Selecione as etapas que compõem esta proposta.</p>
-          <Button variant="outline" size="sm" onClick={() => set("etapas_ativas", [...ALL_ETAPAS])}>
+          <p className="text-sm text-muted-foreground">
+            Selecione as etapas que compõem esta proposta. A lista e os textos das etapas são editados em Configurações → Proposta → Blocos do PDF.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => { setEtapasTouched(true); set("etapas_ativas", [...allStepKeys]); }}>
             Selecionar todas
           </Button>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {ALL_ETAPAS.map(etapa => (
-              <div key={etapa} className="flex items-center gap-2 p-2 border rounded">
-                <Checkbox
-                  checked={data.etapas_ativas.includes(etapa)}
-                  onCheckedChange={() => {
-                    setData(prev => ({
-                      ...prev,
-                      etapas_ativas: prev.etapas_ativas.includes(etapa)
-                        ? prev.etapas_ativas.filter(e => e !== etapa)
-                        : [...prev.etapas_ativas, etapa],
-                    }));
-                  }}
-                />
-                <span className="text-sm">{etapa}</span>
-              </div>
-            ))}
+            {flowSteps.map(step => {
+              const etapa = step.key!;
+              return (
+                <div key={etapa} className="flex items-center gap-2 p-2 border rounded">
+                  <Checkbox
+                    checked={data.etapas_ativas.includes(etapa)}
+                    aria-label={`Etapa ${step.title.replace(/\n/g, " ")}`}
+                    onCheckedChange={() => {
+                      setEtapasTouched(true);
+                      setData(prev => ({
+                        ...prev,
+                        etapas_ativas: prev.etapas_ativas.includes(etapa)
+                          ? prev.etapas_ativas.filter(e => e !== etapa)
+                          : [...prev.etapas_ativas, etapa],
+                      }));
+                    }}
+                  />
+                  <span className="text-sm">{step.title.replace(/\n/g, " ")}</span>
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
@@ -325,8 +341,11 @@ export default function ProposalFormNew({ initialData, onSave, onPreview, onGene
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">Os campos exibidos seguem as etapas selecionadas acima.</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {ETAPA_TIMELINE_MAP.filter(item => data.etapas_ativas.includes(item.etapa)).map(item => {
-              const isNullable = item.field === "timeline_anteprojeto" || item.field === "timeline_mobilization" || item.field === "timeline_fiscalization";
+            {flowSteps
+              .filter(step => step.key && FLOW_STEP_TIMELINE[step.key] && data.etapas_ativas.includes(step.key))
+              .map(step => TIMELINE_FIELD[FLOW_STEP_TIMELINE[step.key!]])
+              .map(item => {
+              const isNullable = item.nullable;
               return (
                 <div key={item.field} className="space-y-1.5">
                   <Label>{item.label}</Label>

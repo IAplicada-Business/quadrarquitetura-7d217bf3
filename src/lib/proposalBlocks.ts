@@ -36,17 +36,25 @@ export interface BlockCard {
   title: string;
   desc?: string;
   items?: string[];
+  /** Identificador estável (etapas do fluxo: é o que a proposta guarda em etapas_ativas). */
+  key?: string;
+  /** Texto curto extra (etapas novas: prazo exibido, ex. "7 dias"). */
+  meta?: string;
 }
 
 export interface CoverContent {
   title: string;
   clientFallback: string;
+  /** Foto de fundo da capa. Vazio => foto padrão das sócias embutida no app. */
+  imageUrl: string;
 }
 
 export interface AboutContent {
   tag: string;
   title: string;
   body: string;
+  /** Foto das sócias na página Quem Somos. Vazio => foto padrão embutida. */
+  photoUrl: string;
   founders: BlockCard[];
 }
 
@@ -57,6 +65,65 @@ export interface ScopeContent {
   ambientesLabel: string;
   processTag: string;
   processTitle: string;
+  /** Etapas do fluxo "Nosso Processo". key = id usado em proposals.etapas_ativas. */
+  steps: BlockCard[];
+}
+
+/** Campo de prazo da proposta que alimenta o badge de dias de cada etapa original. */
+export type FlowTimelineKey =
+  | "briefing"
+  | "study"
+  | "anteprojeto"
+  | "budget"
+  | "priorities"
+  | "mobilization"
+  | "fiscalization";
+
+/**
+ * Etapas originais do fluxo -> campo de prazo da proposta. Etapas criadas
+ * pelo time no bloco não têm campo no formulário: mostram o texto `meta`.
+ */
+export const FLOW_STEP_TIMELINE: Record<string, FlowTimelineKey> = {
+  Briefing: "briefing",
+  "Estudo Preliminar": "study",
+  Anteprojeto: "anteprojeto",
+  "Orçamento Executivo": "budget",
+  "Reunião de Prioridades": "priorities",
+  "Mobilização de Obra": "mobilization",
+  "Conferência e Fiscalização de Obra": "fiscalization",
+};
+
+export function newFlowStepKey(): string {
+  return `etapa-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** Etapas do fluxo configuradas (do bloco "scope"), para o formulário da proposta. */
+export function flowStepsFromBlocks(blocks: ResolvedProposalBlock[] | undefined): BlockCard[] {
+  const scope = blocks?.find((b) => b.key === "scope");
+  const steps = scope ? (scope.content as ScopeContent).steps : BLOCK_DEFAULTS.scope.steps;
+  return steps.filter((s) => !!s.key);
+}
+
+/** Logos do time (proposal_assets, categoria "logo") separados por fundo. */
+export function pickProposalLogos(
+  logos: { file_url: string | null; name?: string | null; metadata?: unknown }[],
+): { onDark?: string; onLight?: string } {
+  const variantOf = (l: { name?: string | null; metadata?: unknown }): "light" | "dark" | null => {
+    const v = (l.metadata as { variant?: unknown } | null)?.variant;
+    if (v === "light" || v === "dark") return v;
+    const n = (l.name ?? "").toLowerCase();
+    if (/branc|clar|bege|white/.test(n)) return "light";
+    if (/azul|pret|escur|navy|dark/.test(n)) return "dark";
+    return null;
+  };
+  const withUrl = logos.filter((l) => !!l.file_url);
+  const light = withUrl.find((l) => variantOf(l) === "light")?.file_url ?? undefined;
+  const dark = withUrl.find((l) => variantOf(l) === "dark")?.file_url ?? undefined;
+  const single = withUrl.length === 1 ? withUrl[0].file_url ?? undefined : undefined;
+  return {
+    onDark: light ?? single ?? (withUrl.length && !dark ? withUrl[0].file_url ?? undefined : undefined),
+    onLight: dark ?? single ?? (withUrl.length && !light ? withUrl[0].file_url ?? undefined : undefined),
+  };
 }
 
 export interface InterioresContent {
@@ -125,11 +192,13 @@ export const BLOCK_DEFAULTS: BlockContentMap = {
   cover: {
     title: "PROPOSTA",
     clientFallback: "CLIENTE",
+    imageUrl: "",
   },
   about: {
     tag: "Sobre nós",
     title: "Quem Somos",
     body: DEFAULT_ABOUT_TEXT,
+    photoUrl: "",
     founders: [
       { title: "Camilla", desc: "Formada em Arquitetura pela FUMEC, 2018" },
       { title: "Mariana", desc: "Formada em Arquitetura pela UFMG, 2021\nPós-graduação em Arquitetura Hospitalar" },
@@ -142,6 +211,15 @@ export const BLOCK_DEFAULTS: BlockContentMap = {
     ambientesLabel: "Ambientes contemplados:",
     processTag: "Como funciona",
     processTitle: "Nosso Processo",
+    steps: [
+      { key: "Briefing", title: "Levantamento\n& Briefing", desc: "Alinhamento de conceito e necessidades" },
+      { key: "Estudo Preliminar", title: "Estudo\nPreliminar", desc: "Aprovação do layout" },
+      { key: "Anteprojeto", title: "Anteprojeto", desc: "Detalhamento do projeto" },
+      { key: "Orçamento Executivo", title: "Orçamento\nExecutivo", desc: "Valor total definido" },
+      { key: "Reunião de Prioridades", title: "Reunião de\nPrioridades", desc: "Budget x escopo" },
+      { key: "Mobilização de Obra", title: "Mobilização\nde Obra", desc: "Preparação para início" },
+      { key: "Conferência e Fiscalização de Obra", title: "Conferência\ne Fiscalização", desc: "Gerenciamento pleno" },
+    ],
   },
   interiores: {
     title: "Projeto de Interiores",
@@ -264,7 +342,7 @@ export const BLOCK_DEFAULTS: BlockContentMap = {
   },
 };
 
-export type BlockFieldKind = "text" | "richtext" | "cards";
+export type BlockFieldKind = "text" | "richtext" | "cards" | "image";
 
 export interface BlockFieldDef {
   key: string;
@@ -272,7 +350,7 @@ export interface BlockFieldDef {
   kind: BlockFieldKind;
   hint?: string;
   /** Para kind "cards": cada card tem descrição (desc) ou lista de itens (items). */
-  cardShape?: "desc" | "items";
+  cardShape?: "desc" | "items" | "steps";
   /** Rótulos dos campos do card, quando diferem de "Título"/"Descrição". */
   cardLabels?: { title?: string; desc?: string; items?: string };
 }
@@ -291,7 +369,10 @@ export const PROPOSAL_BLOCK_DEFINITIONS: ProposalBlockDefinition[] = [
     key: "cover",
     label: "Capa",
     description: "Foto das sócias com o nome do cliente e do projeto.",
-    fields: [{ key: "title", label: "Título", kind: "text" }],
+    fields: [
+      { key: "title", label: "Título", kind: "text" },
+      { key: "imageUrl", label: "Foto de fundo da capa", kind: "image", hint: "Vazio usa a foto padrão das sócias." },
+    ],
   },
   {
     key: "about",
@@ -301,6 +382,7 @@ export const PROPOSAL_BLOCK_DEFINITIONS: ProposalBlockDefinition[] = [
       { key: "tag", label: "Etiqueta", kind: "text" },
       { key: "title", label: "Título", kind: "text" },
       { key: "body", label: "Texto", kind: "richtext" },
+      { key: "photoUrl", label: "Foto das sócias", kind: "image", hint: "Vazio usa a foto padrão embutida." },
       { key: "founders", label: "Sócias", kind: "cards", cardShape: "desc", cardLabels: { title: "Nome", desc: "Formação" } },
     ],
   },
@@ -320,8 +402,15 @@ export const PROPOSAL_BLOCK_DEFINITIONS: ProposalBlockDefinition[] = [
       { key: "ambientesLabel", label: "Rótulo dos ambientes", kind: "text" },
       { key: "processTag", label: "Etiqueta do processo", kind: "text" },
       { key: "processTitle", label: "Título do processo", kind: "text" },
+      {
+        key: "steps",
+        label: "Etapas do processo",
+        kind: "cards",
+        cardShape: "steps",
+        hint: "Cada proposta escolhe quais destas etapas entram. As 7 originais mostram o prazo informado na proposta; etapas novas mostram o texto do campo Prazo.",
+      },
     ],
-    condition: "As etapas do processo continuam vindo da proposta (etapas ativas e prazos).",
+    condition: "Quais etapas entram e os prazos das 7 originais seguem cada proposta (seção Etapas do formulário).",
   },
   {
     key: "interiores",
@@ -436,6 +525,8 @@ function isBlockCard(v: unknown): v is BlockCard {
   if (typeof c.title !== "string") return false;
   if (c.desc !== undefined && typeof c.desc !== "string") return false;
   if (c.items !== undefined && !(Array.isArray(c.items) && c.items.every((i) => typeof i === "string"))) return false;
+  if (c.key !== undefined && typeof c.key !== "string") return false;
+  if (c.meta !== undefined && typeof c.meta !== "string") return false;
   return true;
 }
 

@@ -1,36 +1,31 @@
 import { PageContainer, COLORS, FONT_TITLE, ValidityFooter, type ProposalPageProps } from "./shared";
-import { blockContent } from "@/lib/proposalBlocks";
+import { blockContent, FLOW_STEP_TIMELINE } from "@/lib/proposalBlocks";
 import { RichText } from "./RichText";
-
-const ALL_FLOW_STEPS = [
-  { id: "Briefing", title: "Levantamento\n& Briefing", desc: "Alinhamento de conceito e necessidades", daysKey: "briefing" as const },
-  { id: "Estudo Preliminar", title: "Estudo\nPreliminar", desc: "Aprovação do layout", daysKey: "study" as const },
-  { id: "Anteprojeto", title: "Anteprojeto", desc: "Detalhamento do projeto", daysKey: "anteprojeto" as const },
-  { id: "Orçamento Executivo", title: "Orçamento\nExecutivo", desc: "Valor total definido", daysKey: "budget" as const },
-  { id: "Reunião de Prioridades", title: "Reunião de\nPrioridades", desc: "Budget x escopo", daysKey: "priorities" as const },
-  { id: "Mobilização de Obra", title: "Mobilização\nde Obra", desc: "Preparação para início", daysKey: "mobilization" as const },
-  { id: "Conferência e Fiscalização de Obra", title: "Conferência\ne Fiscalização", desc: "Gerenciamento pleno", daysKey: "fiscalization" as const },
-];
 
 export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelineAnteprojeto, timelineBudget, timelinePriorities, timelineConstruction, timelineMobilization, timelineFiscalization, ambientes, totalArea, etapasAtivas, pageWidth, pageHeight, validUntil, blockContent: raw }: ProposalPageProps) {
   const c = blockContent("scope", raw);
   const text = scopeDescription || c.defaultText;
 
-  const activeEtapas = etapasAtivas || ALL_FLOW_STEPS.map(s => s.id);
-  const steps = ALL_FLOW_STEPS.filter(s => activeEtapas.includes(s.id)).map((s, i) => {
-    const daysMap: Record<string, number | undefined> = {
-      briefing: timelineBriefing,
-      study: timelineStudy,
-      anteprojeto: timelineAnteprojeto,
-      budget: timelineBudget,
-      priorities: timelinePriorities,
-      construction: timelineConstruction,
-      mobilization: timelineMobilization,
-      fiscalization: timelineFiscalization,
-    };
-    const daysVal = s.daysKey ? daysMap[s.daysKey] : undefined;
-    return { ...s, num: i + 1, days: daysVal ? `${s.daysKey === "priorities" ? "~" : ""}${daysVal} dias` : "" };
-  });
+  // Etapas vêm do bloco (editáveis em Blocos do PDF). A proposta decide
+  // quais entram (etapas_ativas, por key) e os prazos das 7 originais.
+  const daysMap: Record<string, number | undefined> = {
+    briefing: timelineBriefing,
+    study: timelineStudy,
+    anteprojeto: timelineAnteprojeto,
+    budget: timelineBudget,
+    priorities: timelinePriorities,
+    construction: timelineConstruction,
+    mobilization: timelineMobilization,
+    fiscalization: timelineFiscalization,
+  };
+  const steps = c.steps
+    .filter((s) => !etapasAtivas || !s.key || etapasAtivas.includes(s.key))
+    .map((s, i) => {
+      const daysKey = s.key ? FLOW_STEP_TIMELINE[s.key] : undefined;
+      const daysVal = daysKey ? daysMap[daysKey] : undefined;
+      const days = daysVal ? `${daysKey === "priorities" ? "~" : ""}${daysVal} dias` : (s.meta ?? "").trim();
+      return { id: s.key ?? `step-${i}`, title: s.title, desc: s.desc ?? "", num: i + 1, days };
+    });
   const stepCount = steps.length;
   const compact = stepCount > 5;
 

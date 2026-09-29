@@ -57,6 +57,10 @@ export interface ProposalPageProps {
   validUntil?: string | null;
   /** Conteúdo editável do bloco (proposal_blocks.content_json). Ausente => padrão. */
   blockContent?: unknown;
+  /** Logo enviado em Configurações → Logo para fundos escuros (navy/rosé). */
+  logoOnDarkUrl?: string;
+  /** Logo enviado em Configurações → Logo para fundos claros (bege). */
+  logoOnLightUrl?: string;
 }
 
 export function ValidityFooter({ validUntil, dark }: { validUntil?: string | null; dark?: boolean }) {
@@ -156,8 +160,42 @@ export function LogoQuadra() {
   );
 }
 
-export function LogoSmall({ url, position = "br" }: { url?: string; position?: "br" | "bl" }) {
-  return <LogoQuadra />;
+/**
+ * Logo no canto da página. Usa a imagem enviada em Configurações → Logo
+ * (uma para fundo escuro, outra para fundo claro); sem imagem, cai no
+ * wordmark "QUA DRA" em texto.
+ */
+export function LogoSmall({
+  url,
+  urlOnDark,
+  urlOnLight,
+  variant = "onDark",
+  position = "br",
+}: {
+  url?: string;
+  urlOnDark?: string;
+  urlOnLight?: string;
+  variant?: "onDark" | "onLight";
+  position?: "br" | "bl";
+}) {
+  const src = (variant === "onDark" ? urlOnDark : urlOnLight) ?? url;
+  if (!src) return <LogoQuadra />;
+  return (
+    <img
+      src={src}
+      alt="Logo"
+      crossOrigin="anonymous"
+      style={{
+        position: "absolute",
+        bottom: 22,
+        ...(position === "bl" ? { left: 28 } : { right: 28 }),
+        height: 30,
+        maxWidth: 110,
+        objectFit: "contain",
+        opacity: 0.9,
+      }}
+    />
+  );
 }
 
 export function DecorativeShape({ position = "bl", color = COLORS.shapeBege }: { position?: "bl" | "br"; color?: string }) {

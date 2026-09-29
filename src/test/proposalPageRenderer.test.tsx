@@ -105,4 +105,65 @@ describe("buildProposalPages com blocos", () => {
     expect(screen.getByText("Escopo da proposta")).toBeInTheDocument();
     expect(screen.queryByText("editado")).not.toBeInTheDocument();
   });
+
+  it("etapas do fluxo vêm do bloco: renomear, remover e criar etapa com prazo fixo", () => {
+    const blocks = defaultProposalBlocks().map((b) =>
+      b.key === "scope"
+        ? {
+            ...b,
+            content: {
+              ...b.content,
+              steps: [
+                { key: "Briefing", title: "Imersão", desc: "Conversa inicial" },
+                { key: "etapa-nova", title: "Vistoria final", desc: "Entrega", meta: "2 dias" },
+              ],
+            },
+          }
+        : b,
+    ) as ResolvedProposalBlock[];
+
+    // Proposta com Briefing ativo e prazo de 4 dias; etapa nova também ativa.
+    const pages = buildProposalPages({ data: { ...baseData, etapasAtivas: ["Briefing", "etapa-nova"], timelineBriefing: 4 }, blocks });
+    const { unmount } = render(pages.find((p) => p.key === "scope")!);
+    expect(screen.getByText("Imersão")).toBeInTheDocument();
+    expect(screen.queryByText(/Estudo/)).not.toBeInTheDocument(); // removida do bloco
+    expect(screen.getByText("4 dias")).toBeInTheDocument(); // prazo da proposta
+    expect(screen.getByText("Vistoria final")).toBeInTheDocument();
+    expect(screen.getByText("2 dias")).toBeInTheDocument(); // prazo fixo da etapa nova
+    unmount();
+
+    // Proposta que desmarcou a etapa nova: ela some.
+    const pages2 = buildProposalPages({ data: { ...baseData, etapasAtivas: ["Briefing"] }, blocks });
+    render(pages2.find((p) => p.key === "scope")!);
+    expect(screen.queryByText("Vistoria final")).not.toBeInTheDocument();
+  });
+
+  it("foto da capa e das sócias vêm do bloco quando informadas", () => {
+    const blocks = defaultProposalBlocks().map((b) => {
+      if (b.key === "cover") return { ...b, content: { ...b.content, imageUrl: "https://cdn/capa.jpg" } };
+      if (b.key === "about") return { ...b, content: { ...b.content, photoUrl: "https://cdn/socias.jpg" } };
+      return b;
+    }) as ResolvedProposalBlock[];
+    const pages = buildProposalPages({ data: baseData, blocks });
+    const { container, unmount } = render(pages.find((p) => p.key === "cover")!);
+    expect(container.innerHTML).toContain("https://cdn/capa.jpg");
+    unmount();
+    render(pages.find((p) => p.key === "about")!);
+    expect(screen.getByAltText("Camilla e Mariana")).toHaveAttribute("src", "https://cdn/socias.jpg");
+  });
+
+  it("logo enviado substitui o wordmark, respeitando o fundo da página", () => {
+    const pages = buildProposalPages({ data: { ...baseData, logoOnDarkUrl: "https://cdn/claro.png", logoOnLightUrl: "https://cdn/escuro.png" } });
+    const { unmount } = render(pages.find((p) => p.key === "cover")!);
+    expect(screen.getByAltText("Logo")).toHaveAttribute("src", "https://cdn/claro.png"); // capa é navy
+    unmount();
+    render(pages.find((p) => p.key === "interiores")!);
+    expect(screen.getByAltText("Logo")).toHaveAttribute("src", "https://cdn/escuro.png"); // interiores é bege
+
+    // Sem logo enviado, continua o wordmark em texto.
+    const semLogo = buildProposalPages({ data: baseData });
+    const { container } = render(semLogo.find((p) => p.key === "values")!);
+    expect(container.querySelector("img[alt='Logo']")).toBeNull();
+    expect(container.textContent).toContain("QUA");
+  });
 });

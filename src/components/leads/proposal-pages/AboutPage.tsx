@@ -9,6 +9,7 @@ export function ProposalAboutPage({ aboutText, logoUrl, pageWidth, pageHeight, v
   // ainda não mexeu nele, vale o texto fixo "quem_somos" dos assets.
   const blockBodyEdited = c.body.trim() !== "" && c.body !== DEFAULT_ABOUT_TEXT;
   const body = blockBodyEdited ? c.body : aboutText || c.body || DEFAULT_ABOUT_TEXT;
+  const photo = c.photoUrl?.trim() || foundersPhoto;
   return (
     <PageContainer bg={COLORS.begeClaro} pageWidth={pageWidth} pageHeight={pageHeight}>
       <div
@@ -21,7 +22,8 @@ export function ProposalAboutPage({ aboutText, logoUrl, pageWidth, pageHeight, v
         {/* Left: photo column */}
         <div style={{ overflow: "hidden", height: PAGE_H, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <img
-            src={foundersPhoto}
+            src={photo}
+            crossOrigin={c.photoUrl?.trim() ? "anonymous" : undefined}
             alt="Camilla e Mariana"
             style={{
               width: "100%",

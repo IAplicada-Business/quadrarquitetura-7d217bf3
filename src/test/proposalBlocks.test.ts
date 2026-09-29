@@ -9,6 +9,9 @@ import {
   moveProposalBlock,
   toProposalBlockUpserts,
   proposalBlocksEqual,
+  pickProposalLogos,
+  flowStepsFromBlocks,
+  FLOW_STEP_TIMELINE,
   type ProposalBlockRow,
 } from "@/lib/proposalBlocks";
 import { renderRichText, stripRichText } from "@/components/leads/proposal-pages/RichText";
@@ -186,5 +189,49 @@ describe("rich text simples", () => {
 
   it("stripRichText remove os marcadores", () => {
     expect(stripRichText("**a** *b* c")).toBe("a b c");
+  });
+});
+
+
+describe("etapas do fluxo editáveis", () => {
+  it("padrão tem as 7 etapas originais com key ligada ao prazo da proposta", () => {
+    const steps = flowStepsFromBlocks(defaultProposalBlocks());
+    expect(steps).toHaveLength(7);
+    expect(steps.map((s) => s.key)).toEqual(Object.keys(FLOW_STEP_TIMELINE));
+  });
+
+  it("mantém key e meta ao sanitizar e descarta tipos errados", () => {
+    const c = blockContent("scope", {
+      steps: [
+        { key: "Briefing", title: "Briefing", desc: "x" },
+        { key: "etapa-abc", title: "Vistoria final", desc: "y", meta: "2 dias" },
+        { key: 5, title: "inválida" },
+      ],
+    });
+    expect(c.steps).toEqual([
+      { key: "Briefing", title: "Briefing", desc: "x" },
+      { key: "etapa-abc", title: "Vistoria final", desc: "y", meta: "2 dias" },
+    ]);
+  });
+
+  it("flowStepsFromBlocks lê o bloco salvo (etapas removidas somem do formulário)", () => {
+    const blocks = defaultProposalBlocks().map((b) =>
+      b.key === "scope" ? { ...b, content: { ...b.content, steps: [{ key: "Briefing", title: "Briefing" }, { key: "etapa-1", title: "Nova", meta: "3 dias" }] } } : b,
+    );
+    expect(flowStepsFromBlocks(blocks as ReturnType<typeof defaultProposalBlocks>).map((s) => s.key)).toEqual(["Briefing", "etapa-1"]);
+  });
+});
+
+describe("pickProposalLogos", () => {
+  it("separa por variante do metadata, depois pelo nome; um logo só vale para os dois fundos", () => {
+    expect(pickProposalLogos([])).toEqual({ onDark: undefined, onLight: undefined });
+    expect(pickProposalLogos([{ file_url: "u.png", name: "Logo Quadra" }])).toEqual({ onDark: "u.png", onLight: "u.png" });
+    expect(
+      pickProposalLogos([
+        { file_url: "claro.png", name: "Logo claro", metadata: { variant: "light" } },
+        { file_url: "escuro.png", name: "Logo escuro", metadata: { variant: "dark" } },
+      ]),
+    ).toEqual({ onDark: "claro.png", onLight: "escuro.png" });
+    expect(pickProposalLogos([{ file_url: "b.png", name: "logo-branco" }, { file_url: "a.png", name: "logo-azul" }])).toEqual({ onDark: "b.png", onLight: "a.png" });
   });
 });
