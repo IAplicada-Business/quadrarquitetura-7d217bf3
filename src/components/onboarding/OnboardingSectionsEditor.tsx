@@ -10,7 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { RichTextField } from "@/components/settings/proposal-blocks/RichTextField";
 import { OnboardingView } from "./OnboardingView";
 import { uploadOnboardingMedia } from "@/hooks/useOnboardingTemplate";
-import { emptySection, moveSection, parseVideoUrl, type OnboardingSection } from "@/lib/onboarding";
+import { emptySection, moveSection, parseVideoUrl, SAMPLE_PLACEHOLDERS, type OnboardingSection } from "@/lib/onboarding";
 
 interface Props {
   sections: OnboardingSection[];
@@ -180,6 +180,10 @@ export function OnboardingSectionsEditor({ sections, onChange, uploadFolder, dis
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(320px,440px)] gap-6 items-start">
       <div className="space-y-2">
+        <p className="text-xs text-muted-foreground rounded-md border border-dashed p-2.5">
+          A <strong>primeira seção é a capa</strong> (vídeo de boas-vindas em destaque); as seguintes viram os <strong>passos numerados</strong> 01, 02, 03.
+          Use <code>{"{cliente}"}</code> e <code>{"{projeto}"}</code> nos textos para puxar o nome do cliente e da obra.
+        </p>
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="onboarding-sections">
             {(provided) => (
@@ -200,7 +204,7 @@ export function OnboardingSectionsEditor({ sections, onChange, uploadFolder, dis
                             <span {...drag.dragHandleProps} className="cursor-grab text-muted-foreground/50 active:cursor-grabbing" aria-label={`Arrastar ${label}`}>
                               <GripVertical className="h-4 w-4" />
                             </span>
-                            <span className="w-6 text-xs tabular-nums text-muted-foreground">{index + 1}.</span>
+                            <span className="w-14 shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">{index === 0 ? "Capa" : `Passo ${String(index).padStart(2, "0")}`}</span>
                             <Switch checked={s.is_active} disabled={disabled} aria-label={`Mostrar ${label} ao cliente`} onCheckedChange={(v) => patch(s.id, { is_active: v })} />
                             <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setExpanded(isOpen ? null : s.id)}>
                               <p className="truncate text-sm font-medium">{label}</p>
@@ -245,13 +249,19 @@ export function OnboardingSectionsEditor({ sections, onChange, uploadFolder, dis
       <Card className="lg:sticky lg:top-14">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Preview: como o cliente vê</CardTitle>
-          <p className="text-[11px] text-muted-foreground">Seções desligadas aparecem esmaecidas aqui e somem no portal.</p>
+          <p className="text-[11px] text-muted-foreground">Tela de boas-vindas do portal, com nomes de exemplo. Seções desligadas aparecem esmaecidas aqui e somem no portal.</p>
         </CardHeader>
-        <CardContent className="max-h-[70vh] overflow-y-auto">
+        <CardContent className="max-h-[70vh] overflow-y-auto p-2">
           {sections.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma seção ainda.</p>
           ) : (
-            <OnboardingView sections={sections} heading={previewHeading} showInactive />
+            <OnboardingView
+              sections={sections}
+              placeholders={{ cliente: SAMPLE_PLACEHOLDERS.cliente, projeto: previewHeading || SAMPLE_PLACEHOLDERS.projeto }}
+              onEnter={() => undefined}
+              showInactive
+              compact
+            />
           )}
         </CardContent>
       </Card>

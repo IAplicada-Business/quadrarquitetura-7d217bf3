@@ -64,11 +64,11 @@ describe("Configurações → Onboarding (template padrão)", () => {
   it("template vazio oferece sugestão e salva as seções", () => {
     templateSections = [];
     render(<OnboardingTemplateTab />);
-    fireEvent.click(screen.getByRole("button", { name: /Começar com uma sugestão/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Começar com a sugestão/ }));
     expect(screen.getByText("Alterações não salvas")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Salvar template/ }));
     expect(templateSave).toHaveBeenCalledTimes(1);
-    expect(templateSave.mock.calls[0][0]).toHaveLength(3);
+    expect(templateSave.mock.calls[0][0]).toHaveLength(4); // capa + 3 passos
   });
 
   it("adicionar seções e salvar manda a lista completa em ordem", () => {

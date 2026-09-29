@@ -9,6 +9,9 @@ import {
   visibleSections,
   emptySection,
   starterSections,
+  fillPlaceholders,
+  applyOnboardingPlaceholders,
+  splitHeroTitle,
   type OnboardingSectionRow,
 } from "@/lib/onboarding";
 
@@ -112,9 +115,29 @@ describe("moveSection / visibleSections / starterSections", () => {
     expect(visibleSections(list).map((s) => s.id)).toEqual(["a", "d"]);
   });
 
-  it("sugestão inicial tem 3 seções com ids únicos", () => {
+  it("sugestão inicial segue o mockup: capa + 3 passos, ids únicos", () => {
     const s = starterSections();
-    expect(s).toHaveLength(3);
-    expect(new Set(s.map((x) => x.id)).size).toBe(3);
+    expect(s).toHaveLength(4);
+    expect(s[0].title).toContain("{cliente}");
+    expect(new Set(s.map((x) => x.id)).size).toBe(4);
+  });
+});
+
+describe("placeholders e título da capa", () => {
+  it("troca {cliente} e {projeto} e cai no genérico sem nome", () => {
+    expect(fillPlaceholders("{cliente} — obra {projeto}", { cliente: "Madalena & João", projeto: "Apto 101" })).toBe("Madalena & João — obra Apto 101");
+    expect(fillPlaceholders("{ Cliente } e {PROJETO}", {})).toBe("Bem-vindos e seu projeto");
+  });
+
+  it("applyOnboardingPlaceholders aplica em título, texto e botão", () => {
+    const [s] = applyOnboardingPlaceholders([emptySection({ title: "Oi {cliente}", body: "Sobre {projeto}", cta_label: "Falar sobre {projeto}" })], { cliente: "Ana", projeto: "Casa" });
+    expect(s.title).toBe("Oi Ana");
+    expect(s.body).toBe("Sobre Casa");
+    expect(s.cta_label).toBe("Falar sobre Casa");
+  });
+
+  it("splitHeroTitle separa nome e complemento no travessão", () => {
+    expect(splitHeroTitle("Madalena & João — esse é o acompanhamento")).toEqual({ lead: "Madalena & João", rest: "esse é o acompanhamento" });
+    expect(splitHeroTitle("Bem-vindos")).toEqual({ lead: "Bem-vindos", rest: null });
   });
 });

@@ -82,24 +82,71 @@ export function emptySection(partial: Partial<OnboardingSection> = {}): Onboardi
   };
 }
 
-/** Sugestão inicial quando o time ainda não montou o template. */
+/**
+ * Sugestão inicial quando o time ainda não montou o template. Segue a
+ * Tela 0 do mockup "Trilha do Cliente": a primeira seção é a capa (vídeo
+ * de boas-vindas) e as seguintes viram os passos numerados 01, 02, 03.
+ */
 export function starterSections(): OnboardingSection[] {
   return [
     emptySection({
-      title: "Bem-vindo à sua obra",
-      body: "Este é o seu espaço de acompanhamento. Aqui você encontra o cronograma, a prestação de contas e as fotos da obra, sempre atualizados pela equipe da Quadra.",
+      title: "{cliente} — esse é o acompanhamento do projeto de vocês",
+      body: "Um vídeo rápido da Mariana explicando como usar esse espaço ao longo do projeto.",
     }),
     emptySection({
-      title: "Como funciona o acompanhamento",
-      body: "Toda semana publicamos um **relatório** com o que foi feito, os próximos passos e o que precisamos de você. Quando houver uma pendência, ela aparece destacada para aprovação.",
+      title: "Veja em que etapa está",
+      body: "Uma linha do tempo mostra onde o projeto está agora e o que já foi concluído.",
     }),
     emptySection({
-      title: "Canais de contato",
-      body: "Dúvidas do dia a dia vão pelo WhatsApp da equipe. Decisões de projeto e aprovações ficam registradas aqui no portal.",
-      cta_label: "Falar no WhatsApp",
-      cta_url: "https://wa.me/5531972641970",
+      title: "Aprove o que for preciso",
+      body: "Quando algo depender de você, vai aparecer em destaque, com prazo claro.",
+    }),
+    emptySection({
+      title: "Entenda cada decisão",
+      body: "Vídeos curtos explicam o porquê de cada escolha técnica, sem jargão.",
     }),
   ];
+}
+
+/* ------------------------------------------------------------------ */
+/* Placeholders e título da capa                                        */
+/* ------------------------------------------------------------------ */
+
+export interface OnboardingPlaceholders {
+  cliente?: string | null;
+  projeto?: string | null;
+}
+
+/** Nomes usados no preview do editor (mesmos do mockup). */
+export const SAMPLE_PLACEHOLDERS: OnboardingPlaceholders = {
+  cliente: "Madalena & João",
+  projeto: "Anteprojeto residencial",
+};
+
+/** Troca {cliente} e {projeto} pelo nome real; sem nome, cai num genérico. */
+export function fillPlaceholders(text: string, p: OnboardingPlaceholders = {}): string {
+  const cliente = p.cliente?.trim() || "Bem-vindos";
+  const projeto = p.projeto?.trim() || "seu projeto";
+  return (text ?? "").replace(/\{\s*cliente\s*\}/gi, cliente).replace(/\{\s*projeto\s*\}/gi, projeto);
+}
+
+export function applyOnboardingPlaceholders(sections: OnboardingSection[], p: OnboardingPlaceholders = {}): OnboardingSection[] {
+  return sections.map((s) => ({
+    ...s,
+    title: fillPlaceholders(s.title, p),
+    body: fillPlaceholders(s.body, p),
+    cta_label: s.cta_label ? fillPlaceholders(s.cta_label, p) : s.cta_label,
+  }));
+}
+
+/**
+ * Título da capa no estilo do mockup: "Madalena & João — esse é o
+ * acompanhamento..." vira nome em peso normal + resto em itálico.
+ */
+export function splitHeroTitle(title: string): { lead: string; rest: string | null } {
+  const m = (title ?? "").match(/^(.*?)\s+[—–-]\s+(.+)$/s);
+  if (!m) return { lead: title ?? "", rest: null };
+  return { lead: m[1], rest: m[2] };
 }
 
 function str(v: unknown): string {
