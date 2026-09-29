@@ -18,6 +18,7 @@ import { ProjectDeliveryChecklistTab } from "@/components/projects/ProjectDelive
 import { ProjectFinancialTab } from "@/components/projects/ProjectFinancialTab";
 import { ProjectDocumentsTab } from "@/components/projects/ProjectDocumentsTab";
 import { ProjectTrackingTab } from "@/components/projects/ProjectTrackingTab";
+import { ProjectOnboardingTab } from "@/components/projects/ProjectOnboardingTab";
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +37,7 @@ export default function ProjectDetail() {
     { value: "financeiro", label: "Prestação de Contas" },
     { value: "documentos", label: "Documentos" },
     { value: "acompanhamento", label: "Acompanhamento" },
+    { value: "onboarding", label: "Onboarding" },
   ];
 
   if (isLoading) {
@@ -154,6 +156,9 @@ export default function ProjectDetail() {
           </TabsContent>
           <TabsContent value="acompanhamento">
             <ProjectTrackingTab projectId={project.id} />
+          </TabsContent>
+          <TabsContent value="onboarding">
+            <ProjectOnboardingTab projectId={project.id} projectName={project.name} />
           </TabsContent>
         </div>
       </Tabs>
