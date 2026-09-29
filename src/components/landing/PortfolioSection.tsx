@@ -1,36 +1,19 @@
 import { motion } from "framer-motion";
 import { ArrowUpRight, Instagram } from "lucide-react";
-import { useProposalAssets } from "@/hooks/useProposalAssets";
 import carousel1 from "@/assets/carousel-1.jpg";
 import carousel2 from "@/assets/carousel-2.jpg";
 import carousel3 from "@/assets/carousel-3.jpg";
+import { RichText } from "@/components/leads/proposal-pages/RichText";
+import { SITE_DEFAULTS, type PortfolioContent } from "@/lib/siteContent";
 
-// Fallback projects using local assets if portfolio from Supabase is empty
-const fallbackProjects = [
-  {
-    id: "fb-1",
-    file_url: carousel1,
-    project_name: "Residencia contemporanea",
-    project_category: "Residencial",
-  },
-  {
-    id: "fb-2",
-    file_url: carousel2,
-    project_name: "Clinica de saude integrativa",
-    project_category: "Comercial",
-  },
-  {
-    id: "fb-3",
-    file_url: carousel3,
-    project_name: "Banheiro assinado",
-    project_category: "Interiores",
-  },
-];
+// Foto padrão de cada posição quando o projeto ainda não tem imagem enviada.
+const FALLBACK_IMAGES = [carousel1, carousel2, carousel3];
 
-export function PortfolioSection() {
-  const { portfolio } = useProposalAssets();
-  const activePortfolio = portfolio?.filter((p) => p.is_active !== false) || [];
-  const projects = activePortfolio.length > 0 ? activePortfolio.slice(0, 3) : fallbackProjects;
+export function PortfolioSection({ content = SITE_DEFAULTS.portfolio }: { content?: PortfolioContent }) {
+  const projects = content.items.map((item, i) => ({
+    ...item,
+    image: item.image || FALLBACK_IMAGES[i % FALLBACK_IMAGES.length],
+  }));
 
   return (
     <section id="projetos" className="relative py-24 md:py-32 bg-[#F5E0D0]">
@@ -52,7 +35,7 @@ export function PortfolioSection() {
                 fontWeight: 500,
               }}
             >
-              NOSSO TRABALHO
+              {content.eyebrow}
             </p>
             <h2
               style={{
@@ -64,11 +47,11 @@ export function PortfolioSection() {
                 letterSpacing: "-0.01em",
               }}
             >
-              Projetos <em style={{ color: "#C4756E", fontStyle: "italic" }}>selecionados</em>
+              <RichText text={content.title} styles={{ em: { color: "#C4756E" } }} />
             </h2>
           </motion.div>
           <motion.a
-            href="https://instagram.com/quadraarq"
+            href={content.linkUrl}
             target="_blank"
             rel="noopener noreferrer"
             initial={{ opacity: 0 }}
@@ -84,7 +67,7 @@ export function PortfolioSection() {
             }}
           >
             <Instagram className="h-4 w-4" strokeWidth={1.5} />
-            Ver mais no Instagram
+            {content.linkLabel}
             <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
           </motion.a>
         </div>
@@ -93,7 +76,7 @@ export function PortfolioSection() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {projects.map((p, i) => (
             <motion.article
-              key={p.id}
+              key={i}
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-50px" }}
@@ -102,8 +85,8 @@ export function PortfolioSection() {
             >
               <div className="relative overflow-hidden aspect-[4/5] bg-[#1B2A4A]/10">
                 <img
-                  src={p.file_url}
-                  alt={p.project_name || "Projeto"}
+                  src={p.image}
+                  alt={p.title || "Projeto"}
                   className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                   loading="lazy"
                 />
@@ -128,7 +111,7 @@ export function PortfolioSection() {
               </div>
 
               <div className="pt-5">
-                {p.project_category && (
+                {p.desc && (
                   <p
                     className="text-xs mb-2"
                     style={{
@@ -139,7 +122,7 @@ export function PortfolioSection() {
                       fontWeight: 500,
                     }}
                   >
-                    {p.project_category}
+                    {p.desc}
                   </p>
                 )}
                 <h3
@@ -152,7 +135,7 @@ export function PortfolioSection() {
                     lineHeight: 1.3,
                   }}
                 >
-                  {p.project_name || "Projeto"}
+                  {p.title || "Projeto"}
                 </h3>
               </div>
             </motion.article>

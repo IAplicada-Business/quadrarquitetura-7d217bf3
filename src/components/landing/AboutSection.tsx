@@ -1,7 +1,10 @@
 import { motion } from "framer-motion";
+import { Fragment } from "react";
 import foundersPhoto from "@/assets/founders-photo.png";
+import { RichText, stripRichText } from "@/components/leads/proposal-pages/RichText";
+import { SITE_DEFAULTS, splitParagraphs, type AboutContent } from "@/lib/siteContent";
 
-export function AboutSection() {
+export function AboutSection({ content = SITE_DEFAULTS.about }: { content?: AboutContent }) {
   return (
     <section id="sobre" className="relative py-24 md:py-32 bg-[#F5E0D0]">
       <div className="max-w-7xl mx-auto px-6 md:px-10">
@@ -16,8 +19,8 @@ export function AboutSection() {
           >
             <div className="relative aspect-[3/4] overflow-hidden">
               <img
-                src={foundersPhoto}
-                alt="Camilla e Mariana"
+                src={content.photo || foundersPhoto}
+                alt={stripRichText(content.title) || "Quadra Arquitetura"}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -45,7 +48,7 @@ export function AboutSection() {
                 fontWeight: 500,
               }}
             >
-              QUEM SOMOS
+              {content.eyebrow}
             </p>
 
             <h2
@@ -58,7 +61,7 @@ export function AboutSection() {
                 fontWeight: 400,
               }}
             >
-              Camilla <span style={{ color: "#C4756E" }}>&</span> Mariana
+              <RichText text={content.title} styles={{ em: { color: "#C4756E", fontStyle: "normal" } }} />
             </h2>
 
             <div
@@ -76,22 +79,11 @@ export function AboutSection() {
                 fontWeight: 300,
               }}
             >
-              <p>
-                A Quadra nasceu do encontro de duas arquitetas com um proposito
-                em comum: fazer com que a obra saia do papel do jeito que foi
-                projetada, sem surpresas de prazo, orcamento ou acabamento.
-              </p>
-              <p>
-                Nosso diferencial e o gerenciamento de obra integrado ao
-                projeto. Cronograma, compras, fornecedores e supervisao de
-                canteiro passam pela nossa gestao direta. A escuta guia o
-                projeto; o processo garante a entrega. Atuamos em residencial,
-                corporativo e health care em Belo Horizonte e regiao.
-              </p>
-              <p>
-                Mais que entregar projetos, entregamos a tranquilidade de um
-                processo bem conduzido, do briefing a ultima peca instalada.
-              </p>
+              {splitParagraphs(content.body).map((p, i) => (
+                <p key={i}>
+                  <RichText text={p} />
+                </p>
+              ))}
             </div>
 
             <div
@@ -103,16 +95,23 @@ export function AboutSection() {
                 fontStyle: "italic",
               }}
             >
-              <span>Camilla Quadra</span>
-              <span style={{ color: "#C4756E" }}>&middot;</span>
-              <span>Arquiteta pela FUMEC</span>
-              <span
-                className="hidden md:inline w-8 h-px"
-                style={{ backgroundColor: "#C4756E" }}
-              />
-              <span>Mariana Marques</span>
-              <span style={{ color: "#C4756E" }}>&middot;</span>
-              <span>Arquiteta pela UFMG</span>
+              {content.credits.map((c, i) => (
+                <Fragment key={i}>
+                  {i > 0 && (
+                    <span
+                      className="hidden md:inline w-8 h-px"
+                      style={{ backgroundColor: "#C4756E" }}
+                    />
+                  )}
+                  <span>{c.title}</span>
+                  {c.desc && (
+                    <>
+                      <span style={{ color: "#C4756E" }}>&middot;</span>
+                      <span>{c.desc}</span>
+                    </>
+                  )}
+                </Fragment>
+              ))}
             </div>
           </motion.div>
         </div>

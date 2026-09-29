@@ -1,21 +1,29 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Instagram, Phone, Mail, MapPin, Loader2, Send } from "lucide-react";
+import { Instagram, Phone, Mail, MapPin, Loader2, Send, Link2, type LucideIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSiteLead, type SiteLeadPayload } from "@/hooks/useSiteLead";
+import { RichText } from "@/components/leads/proposal-pages/RichText";
+import { SITE_DEFAULTS, contactIconKind, type ContactContent, type ContactIconKind } from "@/lib/siteContent";
 
-const contacts = [
-  { icon: Instagram, label: "@quadraarq", href: "https://instagram.com/quadraarq" },
-  { icon: Phone, label: "(31) 97264-1970 · Camilla", href: "https://wa.me/5531972641970" },
-  { icon: Phone, label: "(31) 91244-672 · Mariana", href: "https://wa.me/553191244672" },
-  { icon: Mail, label: "contato@quadraarquitetura.com", href: "mailto:contato@quadraarquitetura.com" },
-  { icon: MapPin, label: "Rua Euler, 10 · sala 301 · Padre Eustaquio · BH/MG", href: "https://maps.google.com/?q=Rua+Euler+10+Belo+Horizonte" },
-];
+const CONTACT_ICONS: Record<ContactIconKind, LucideIcon> = {
+  instagram: Instagram,
+  phone: Phone,
+  mail: Mail,
+  map: MapPin,
+  link: Link2,
+};
 
-export function ContactSection() {
+interface ContactSectionProps {
+  content?: ContactContent;
+  /** No preview do admin o formulário não envia lead. */
+  preview?: boolean;
+}
+
+export function ContactSection({ content = SITE_DEFAULTS.contact, preview = false }: ContactSectionProps) {
   const { mutate: createLead, isPending } = useSiteLead();
   const [form, setForm] = useState<SiteLeadPayload>({
     name: "",
@@ -29,7 +37,7 @@ export function ContactSection() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValid) return;
+    if (!isValid || preview) return;
     createLead(form, {
       onSuccess: () => {
         setForm({ name: "", email: "", phone: "", projectType: "residencial", message: "" });
@@ -64,7 +72,7 @@ export function ContactSection() {
                 fontWeight: 500,
               }}
             >
-              VAMOS CONVERSAR
+              {content.eyebrow}
             </p>
 
             <h2
@@ -78,9 +86,7 @@ export function ContactSection() {
                 letterSpacing: "-0.01em",
               }}
             >
-              Tire sua obra
-              <br />
-              <em style={{ color: "#C4756E", fontStyle: "italic" }}>do papel</em>.
+              <RichText text={content.title} styles={{ em: { color: "#C4756E" } }} />
             </h2>
 
             <div className="w-12 h-px bg-[#C4756E] mb-8" />
@@ -96,17 +102,16 @@ export function ContactSection() {
                 fontWeight: 300,
               }}
             >
-              Conta pra gente sobre o seu projeto. Em ate 48 horas uteis agendamos
-              um diagnostico gratuito para entender o escopo, prazos e estimativa de investimento.
+              <RichText text={content.text} />
             </p>
 
             <ul className="space-y-4">
-              {contacts.map((c) => {
-                const Icon = c.icon;
+              {content.contacts.map((c, i) => {
+                const Icon = CONTACT_ICONS[contactIconKind(c.desc)];
                 return (
-                  <li key={c.label}>
+                  <li key={i}>
                     <a
-                      href={c.href}
+                      href={c.desc || undefined}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="group flex items-start gap-4 text-[#F0DCC8]/80 hover:text-[#F0DCC8] transition-colors"
@@ -124,7 +129,7 @@ export function ContactSection() {
                           fontWeight: 300,
                         }}
                       >
-                        {c.label}
+                        {c.title}
                       </span>
                     </a>
                   </li>
@@ -155,7 +160,7 @@ export function ContactSection() {
                   fontWeight: 400,
                 }}
               >
-                Solicite seu diagnostico gratuito
+                {content.formTitle}
               </h3>
 
               <div className="space-y-5">
