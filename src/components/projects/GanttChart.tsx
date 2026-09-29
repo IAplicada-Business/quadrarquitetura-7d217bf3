@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { addDays, startOfWeek, endOfWeek, format, differenceInDays, addWeeks, subWeeks, startOfMonth, endOfMonth, addMonths, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getDisciplineColor } from "@/lib/disciplineColors";
+import { computeCriticalPath, type CpmResult } from "@/lib/criticalPath";
 
 interface GanttTask {
   id: string;
@@ -35,96 +36,11 @@ interface GanttChartProps {
 const ROW_HEIGHT = 36;
 const HEADER_HEIGHT = 28;
 
-// ─── CPM calculation ───
-interface CpmResult {
-  criticalIds: Set<string>;
-  floatMap: Map<string, number>;
-  totalCriticalDays: number;
-  estimatedEndDate: Date | null;
-  criticalCount: number;
-  totalWithDeps: number;
-}
-
+// ─── CPM calculation (compartilhado com o Cronograma Reverso) ───
 function computeCpm(allTasks: GanttTask[]): CpmResult {
-  const empty: CpmResult = { criticalIds: new Set(), floatMap: new Map(), totalCriticalDays: 0, estimatedEndDate: null, criticalCount: 0, totalWithDeps: 0 };
-  const eligible = allTasks.filter(t => t.start_date && t.estimated_days && t.estimated_days > 0);
-  if (eligible.length === 0) return empty;
-
-  const taskMap = new Map<string, GanttTask>();
-  eligible.forEach(t => taskMap.set(t.id, t));
-
-  const dependentsOf = new Map<string, string[]>();
-  eligible.forEach(t => {
-    t.dependencies?.forEach(depId => {
-      if (taskMap.has(depId)) {
-        const arr = dependentsOf.get(depId) || [];
-        arr.push(t.id);
-        dependentsOf.set(depId, arr);
-      }
-    });
-  });
-
-  const refDate = new Date(Math.min(...eligible.map(t => new Date(t.start_date!).getTime())));
-  const esMap = new Map<string, number>();
-  const efMap = new Map<string, number>();
-  const toDayOffset = (d: string) => differenceInDays(new Date(d), refDate);
-
-  const inDegree = new Map<string, number>();
-  eligible.forEach(t => {
-    const deps = (t.dependencies || []).filter(d => taskMap.has(d));
-    inDegree.set(t.id, deps.length);
-  });
-  const queue: string[] = [];
-  inDegree.forEach((deg, id) => { if (deg === 0) queue.push(id); });
-  const topoOrder: string[] = [];
-  while (queue.length > 0) {
-    const id = queue.shift()!;
-    topoOrder.push(id);
-    (dependentsOf.get(id) || []).forEach(depId => {
-      const newDeg = (inDegree.get(depId) || 1) - 1;
-      inDegree.set(depId, newDeg);
-      if (newDeg === 0) queue.push(depId);
-    });
-  }
-  eligible.forEach(t => { if (!topoOrder.includes(t.id)) topoOrder.push(t.id); });
-
-  topoOrder.forEach(id => {
-    const task = taskMap.get(id)!;
-    const deps = (task.dependencies || []).filter(d => taskMap.has(d));
-    let es = toDayOffset(task.start_date!);
-    if (deps.length > 0) es = Math.max(es, ...deps.map(d => efMap.get(d) ?? 0));
-    esMap.set(id, es);
-    efMap.set(id, es + (task.estimated_days || 0));
-  });
-
-  const projectEnd = Math.max(...Array.from(efMap.values()));
-  const lfMap = new Map<string, number>();
-  const lsMap = new Map<string, number>();
-  for (let i = topoOrder.length - 1; i >= 0; i--) {
-    const id = topoOrder[i];
-    const task = taskMap.get(id)!;
-    const deps = dependentsOf.get(id) || [];
-    let lf = projectEnd;
-    if (deps.length > 0) lf = Math.min(...deps.map(d => lsMap.get(d) ?? projectEnd));
-    lfMap.set(id, lf);
-    lsMap.set(id, lf - (task.estimated_days || 0));
-  }
-
-  const floatMap = new Map<string, number>();
-  const criticalIds = new Set<string>();
-  topoOrder.forEach(id => {
-    const f = (lsMap.get(id) ?? 0) - (esMap.get(id) ?? 0);
-    floatMap.set(id, f);
-    if (f === 0) criticalIds.add(id);
-  });
-
-  const totalCriticalDays = projectEnd - Math.min(...Array.from(criticalIds).map(id => esMap.get(id) ?? 0));
-  return {
-    criticalIds, floatMap, totalCriticalDays,
-    estimatedEndDate: addDays(refDate, projectEnd),
-    criticalCount: criticalIds.size,
-    totalWithDeps: eligible.length,
-  };
+  return computeCriticalPath(
+    allTasks.map((t) => ({ id: t.id, start_date: t.start_date, duration: t.estimated_days, dependencies: t.dependencies })),
+  );
 }
 
 // ─── Flat row types ───
