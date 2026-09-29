@@ -1978,9 +1978,9 @@ export type Database = {
           is_enabled: boolean
           project_id: string
           sections_json: Json | null
-          template_id: string | null
           source_template_id: string | null
           team_id: string
+          template_id: string | null
           updated_at: string
           user_id: string
         }
@@ -1990,9 +1990,9 @@ export type Database = {
           is_enabled?: boolean
           project_id: string
           sections_json?: Json | null
-          template_id?: string | null
           source_template_id?: string | null
           team_id?: string
+          template_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -2002,9 +2002,9 @@ export type Database = {
           is_enabled?: boolean
           project_id?: string
           sections_json?: Json | null
-          template_id?: string | null
           source_template_id?: string | null
           team_id?: string
+          template_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -2017,15 +2017,15 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "onboarding_project_overrides_template_id_fkey"
-            columns: ["template_id"]
+            foreignKeyName: "onboarding_project_overrides_source_template_id_fkey"
+            columns: ["source_template_id"]
             isOneToOne: false
             referencedRelation: "onboarding_templates"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "onboarding_project_overrides_source_template_id_fkey"
-            columns: ["source_template_id"]
+            foreignKeyName: "onboarding_project_overrides_template_id_fkey"
+            columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "onboarding_templates"
             referencedColumns: ["id"]
@@ -3775,6 +3775,39 @@ export type Database = {
         }
         Relationships: []
       }
+      site_content: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          team_id: string
+          type: string
+          updated_at: string
+          updated_by: string | null
+          value_json: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          team_id?: string
+          type: string
+          updated_at?: string
+          updated_by?: string | null
+          value_json: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          team_id?: string
+          type?: string
+          updated_at?: string
+          updated_by?: string | null
+          value_json?: Json
+        }
+        Relationships: []
+      }
       site_diary_entries: {
         Row: {
           created_at: string
@@ -4294,6 +4327,15 @@ export type Database = {
     Functions: {
       get_my_team_id: { Args: never; Returns: string }
       get_my_team_ids: { Args: never; Returns: string[] }
+      get_public_site_content: {
+        Args: { p_team_id: string }
+        Returns: {
+          key: string
+          type: string
+          updated_at: string
+          value_json: Json
+        }[]
+      }
       get_team_user_ids: { Args: never; Returns: string[] }
       has_acesso: { Args: { chave: string }; Returns: boolean }
       has_role: {
