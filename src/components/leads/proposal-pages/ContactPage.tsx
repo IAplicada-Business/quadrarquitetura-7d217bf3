@@ -1,6 +1,9 @@
 import { PageContainer, COLORS, FONT_TITLE, ValidityFooter, type ProposalPageProps } from "./shared";
+import { blockContent } from "@/lib/proposalBlocks";
+import { RichText } from "./RichText";
 
-export function ProposalContactPage({ contactInstagram, contactPhone1, contactPhone2, pageWidth, pageHeight, validUntil }: ProposalPageProps) {
+export function ProposalContactPage({ contactInstagram, contactPhone1, contactPhone2, pageWidth, pageHeight, validUntil, blockContent: raw }: ProposalPageProps) {
+  const c = blockContent("contact", raw);
   return (
     <PageContainer bg={COLORS.roseMauve} pageWidth={pageWidth} pageHeight={pageHeight}>
       <div
@@ -25,7 +28,7 @@ export function ProposalContactPage({ contactInstagram, contactPhone1, contactPh
             marginBottom: 12,
           }}
         >
-          Siga nas redes sociais
+          {c.socialLabel}
         </div>
 
         {/* Instagram handle */}
@@ -38,7 +41,7 @@ export function ProposalContactPage({ contactInstagram, contactPhone1, contactPh
             marginBottom: 32,
           }}
         >
-          {contactInstagram || "@quadraarq"}
+          {contactInstagram || c.instagramFallback}
         </div>
 
         {/* Divider */}
@@ -55,12 +58,12 @@ export function ProposalContactPage({ contactInstagram, contactPhone1, contactPh
         {/* Contacts */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 48 }}>
           <div style={{ fontSize: 13, opacity: 0.85, letterSpacing: 1 }}>
-            <strong style={{ fontWeight: 600, opacity: 1 }}>Camilla</strong>
-            &nbsp;&nbsp;{contactPhone1 || "(31) 97264-1970"}
+            <strong style={{ fontWeight: 600, opacity: 1 }}>{c.contact1Name}</strong>
+            &nbsp;&nbsp;{contactPhone1 || c.contact1Fallback}
           </div>
           <div style={{ fontSize: 13, opacity: 0.85, letterSpacing: 1 }}>
-            <strong style={{ fontWeight: 600, opacity: 1 }}>Mariana</strong>
-            &nbsp;&nbsp;{contactPhone2 || "(31) 9124-4672"}
+            <strong style={{ fontWeight: 600, opacity: 1 }}>{c.contact2Name}</strong>
+            &nbsp;&nbsp;{contactPhone2 || c.contact2Fallback}
           </div>
         </div>
 
@@ -74,7 +77,7 @@ export function ProposalContactPage({ contactInstagram, contactPhone1, contactPh
             opacity: 0.65,
           }}
         >
-          Obrigada pela confiança.
+          <RichText text={c.thanks} />
         </div>
       </div>
       <ValidityFooter validUntil={validUntil} dark />

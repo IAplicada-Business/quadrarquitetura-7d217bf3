@@ -1,7 +1,9 @@
 import { PageContainer, COLORS, LogoQuadra, FONT_TITLE, FONT_BODY, ValidityFooter, type ProposalPageProps } from "./shared";
 import sociasCover from "@/assets/socias-cover.jpg";
+import { blockContent } from "@/lib/proposalBlocks";
 
-export function ProposalCoverPage({ clientName, projectName, logoUrl, pageWidth, pageHeight, validUntil }: ProposalPageProps) {
+export function ProposalCoverPage({ clientName, projectName, logoUrl, pageWidth, pageHeight, validUntil, blockContent: raw }: ProposalPageProps) {
+  const c = blockContent("cover", raw);
   return (
     <PageContainer bg={COLORS.azulMarinho} pageWidth={pageWidth} pageHeight={pageHeight}>
       {/* Background photo */}
@@ -45,7 +47,7 @@ export function ProposalCoverPage({ clientName, projectName, logoUrl, pageWidth,
             marginBottom: 10,
           }}
         >
-          PROPOSTA
+          {c.title}
         </span>
         <div
           style={{
@@ -66,7 +68,7 @@ export function ProposalCoverPage({ clientName, projectName, logoUrl, pageWidth,
             opacity: 0.85,
           }}
         >
-          {clientName || "CLIENTE"}
+          {clientName || c.clientFallback}
         </div>
         {projectName ? (
           <div

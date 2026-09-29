@@ -1,4 +1,5 @@
 import { PageContainer, COLORS, LogoSmall, FONT_TITLE, FONT_BODY, ValidityFooter, type ProposalPageProps } from "./shared";
+import { blockContent } from "@/lib/proposalBlocks";
 
 interface PortfolioCard {
   id: string;
@@ -8,6 +9,7 @@ interface PortfolioCard {
 }
 
 export function ProposalPortfolioCardsPage(props: ProposalPageProps) {
+  const c = blockContent("portfolio", props.blockContent);
   const cards = (props.portfolioCards || []).slice(0, 4);
   if (!cards.length) return null;
 
@@ -29,7 +31,7 @@ export function ProposalPortfolioCardsPage(props: ProposalPageProps) {
             marginBottom: 28,
           }}
         >
-          Nossos Projetos
+          {c.title}
         </h2>
 
         {/* Grid */}

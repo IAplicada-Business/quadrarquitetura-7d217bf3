@@ -55,6 +55,8 @@ export interface ProposalPageProps {
   pageWidth?: number;
   pageHeight?: number;
   validUntil?: string | null;
+  /** Conteúdo editável do bloco (proposal_blocks.content_json). Ausente => padrão. */
+  blockContent?: unknown;
 }
 
 export function ValidityFooter({ validUntil, dark }: { validUntil?: string | null; dark?: boolean }) {

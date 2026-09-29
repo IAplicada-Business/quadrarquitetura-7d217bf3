@@ -1,4 +1,6 @@
 import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, LogoQuadra, ValidityFooter, type ProposalPageProps } from "./shared";
+import { blockContent } from "@/lib/proposalBlocks";
+import { RichText } from "./RichText";
 
 const BriefingIcon = () => (
   <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke={COLORS.roseMauve} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -42,30 +44,12 @@ const ComputerIcon = () => (
   </svg>
 );
 
-const STEPS = [
-  {
-    icon: <BriefingIcon />,
-    title: "Briefing",
-    desc: "Reuniões de alinhamento com escuta ativa de todas as necessidades do cliente",
-  },
-  {
-    icon: <PlantaIcon />,
-    title: "Estudo Preliminar",
-    desc: "Estudos e opções em planta com possibilidade de revisões",
-  },
-  {
-    icon: <SofaIcon />,
-    title: "Anteprojeto",
-    desc: "Visualização do ambiente em 3D com materiais",
-  },
-  {
-    icon: <ComputerIcon />,
-    title: "Projeto Executivo",
-    desc: "Desenhos técnicos para viabilizar a obra",
-  },
-];
+const STEP_ICONS = [<BriefingIcon />, <PlantaIcon />, <SofaIcon />, <ComputerIcon />];
 
-export function ProposalInterioresPage({ pageWidth, pageHeight, validUntil }: ProposalPageProps) {
+export function ProposalInterioresPage({ pageWidth, pageHeight, validUntil, blockContent: raw }: ProposalPageProps) {
+  const c = blockContent("interiores", raw);
+  const steps = c.steps.map((s, i) => ({ ...s, icon: STEP_ICONS[i % STEP_ICONS.length] }));
+  const cols = Math.max(1, Math.min(steps.length, 4));
   return (
     <PageContainer bg={COLORS.begeClaro} pageWidth={pageWidth} pageHeight={pageHeight}>
       <div style={{ padding: "60px 44px 44px", height: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -82,7 +66,7 @@ export function ProposalInterioresPage({ pageWidth, pageHeight, validUntil }: Pr
             marginBottom: 16,
           }}
         >
-          Projeto de Interiores
+          {c.title}
         </h2>
 
         {/* Subtitle */}
@@ -99,22 +83,22 @@ export function ProposalInterioresPage({ pageWidth, pageHeight, validUntil }: Pr
             marginBottom: 60,
           }}
         >
-          Desenvolve toda parte conceitual, de fluxo, de organização e estética do local.
+          <RichText text={c.subtitle} />
         </p>
 
         {/* Grid 4 columns */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
+            gridTemplateColumns: `repeat(${cols}, 1fr)`,
             gap: 24,
             width: "100%",
             flex: 1,
             alignContent: "center",
           }}
         >
-          {STEPS.map((step) => (
-            <div key={step.title} style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+          {steps.map((step, i) => (
+            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
               <div style={{ marginBottom: 20 }}>{step.icon}</div>
               <h4
                 style={{
@@ -139,7 +123,7 @@ export function ProposalInterioresPage({ pageWidth, pageHeight, validUntil }: Pr
                   maxWidth: 110,
                 }}
               >
-                {step.desc}
+                <RichText text={step.desc || ""} />
               </p>
             </div>
           ))}

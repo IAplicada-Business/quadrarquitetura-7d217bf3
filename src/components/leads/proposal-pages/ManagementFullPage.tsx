@@ -1,67 +1,10 @@
 import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, ValidityFooter, type ProposalPageProps } from "./shared";
+import { blockContent } from "@/lib/proposalBlocks";
+import { RichText } from "./RichText";
 
-const CARDS = [
-  {
-    title: "Planejamento",
-    items: [
-      "Estudo do projeto 3D e executivo",
-      "Definição do escopo e sequências",
-      "Documento de responsabilidade",
-      "Contato com síndico e condomínio",
-      "Regras de execução do condomínio",
-    ],
-  },
-  {
-    title: "Orçamento",
-    items: [
-      "Alinhamento de fornecedores",
-      "Orçamento completo de todos os itens",
-      "Provisão de imprevistos",
-      "Comparação e correção de orçamentos",
-      "Tabela de acompanhamento para o cliente",
-    ],
-  },
-  {
-    title: "Aquisição de Material",
-    items: [
-      "Lista de compras online",
-      "Ajuste de datas com a logística",
-      "Conferência de links e itens",
-      "Gestão de pagamentos e lembretes",
-      "Conta numerário para pequenos itens",
-    ],
-  },
-  {
-    title: "Verificação de Qualidade",
-    items: [
-      "Acompanhamento constante em obra",
-      "Visitas com o cliente para alinhamento",
-      "Medições constantes para evitar retrabalho",
-      "Revisões de projeto com aval da projetista",
-    ],
-  },
-  {
-    title: "Acompanhamento da Execução",
-    items: [
-      "Revisão do cronograma durante a obra",
-      "Medições e liberações de pagamento",
-      "Conferência de NBRs e normas",
-      "Contato constante com a projetista",
-    ],
-  },
-  {
-    title: "Gestão de Pessoas",
-    items: [
-      "Orientação de mão de obra",
-      "Feedbacks e sugestões de execução",
-      "Gestão de retirada de lixo",
-      "Isolamento de piso",
-      "Limpeza durante a obra",
-    ],
-  },
-];
-
-export function ProposalManagementFullPage({ pageWidth, pageHeight, validUntil }: ProposalPageProps) {
+export function ProposalManagementFullPage({ pageWidth, pageHeight, validUntil, blockContent: raw }: ProposalPageProps) {
+  const c = blockContent("management", raw);
+  const cols = c.cards.length <= 4 ? 2 : 3;
   return (
     <PageContainer bg={COLORS.azulMarinho} pageWidth={pageWidth} pageHeight={pageHeight}>
       <div style={{ padding: "44px 44px 40px", color: COLORS.textoClaro, height: "100%" }}>
@@ -77,7 +20,7 @@ export function ProposalManagementFullPage({ pageWidth, pageHeight, validUntil }
             marginBottom: 6,
           }}
         >
-          Metodologia
+          {c.tag}
         </div>
         {/* Title */}
         <h2
@@ -90,7 +33,7 @@ export function ProposalManagementFullPage({ pageWidth, pageHeight, validUntil }
             color: COLORS.textoClaro,
           }}
         >
-          Gerenciamento de Obra
+          {c.title}
         </h2>
         {/* Subtitle */}
         <p
@@ -108,12 +51,12 @@ export function ProposalManagementFullPage({ pageWidth, pageHeight, validUntil }
             color: COLORS.textoClaro,
           }}
         >
-          Organizamos, coordenamos e controlamos todas as etapas da reforma para garantir prazo, orçamento e qualidade
+          <RichText text={c.subtitle} />
         </p>
 
         {/* Grid 3×2 */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-          {CARDS.map((card, i) => (
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 16 }}>
+          {c.cards.map((card, i) => (
             <div
               key={i}
               style={{
@@ -139,7 +82,7 @@ export function ProposalManagementFullPage({ pageWidth, pageHeight, validUntil }
                 {card.title}
               </h4>
               <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {card.items.map((item, j) => (
+                {(card.items || []).map((item, j) => (
                   <li
                     key={j}
                     style={{
@@ -163,7 +106,7 @@ export function ProposalManagementFullPage({ pageWidth, pageHeight, validUntil }
                     >
                       —
                     </span>
-                    {item}
+                    <RichText text={item} />
                   </li>
                 ))}
               </ul>
