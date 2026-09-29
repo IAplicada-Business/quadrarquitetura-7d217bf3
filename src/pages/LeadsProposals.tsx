@@ -18,6 +18,7 @@ import ProposalFormNew, { ProposalFormData } from "@/components/leads/ProposalFo
 import { ProposalPreviewModal } from "@/components/leads/ProposalPreviewModal";
 import { buildProposalPages } from "@/components/leads/ProposalPageRenderer";
 import { ProposalPageProps } from "@/components/leads/proposal-pages/shared";
+import { pickProposalLogos } from "@/lib/proposalBlocks";
 import { generateProposalPdf, waitForFonts } from "@/lib/generateProposalPdf";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -103,6 +104,7 @@ export default function LeadsProposals() {
       installmentValue: formData.installment_value,
       priceNote: formData.price_note,
       logoUrl: logos[0]?.file_url || undefined,
+      ...(() => { const l = pickProposalLogos(logos); return { logoOnDarkUrl: l.onDark, logoOnLightUrl: l.onLight }; })(),
       founderPhotos,
       aboutText,
       pillarTexts,

@@ -1,9 +1,10 @@
-import { PageContainer, COLORS, LogoQuadra, FONT_TITLE, FONT_BODY, ValidityFooter, type ProposalPageProps } from "./shared";
+import { PageContainer, COLORS, LogoSmall, FONT_TITLE, FONT_BODY, ValidityFooter, type ProposalPageProps } from "./shared";
 import sociasCover from "@/assets/socias-cover.jpg";
 import { blockContent } from "@/lib/proposalBlocks";
 
-export function ProposalCoverPage({ clientName, projectName, logoUrl, pageWidth, pageHeight, validUntil, blockContent: raw }: ProposalPageProps) {
+export function ProposalCoverPage({ clientName, projectName, logoUrl, logoOnDarkUrl, logoOnLightUrl, pageWidth, pageHeight, validUntil, blockContent: raw }: ProposalPageProps) {
   const c = blockContent("cover", raw);
+  const coverImage = c.imageUrl?.trim() || sociasCover;
   return (
     <PageContainer bg={COLORS.azulMarinho} pageWidth={pageWidth} pageHeight={pageHeight}>
       {/* Background photo */}
@@ -11,7 +12,7 @@ export function ProposalCoverPage({ clientName, projectName, logoUrl, pageWidth,
         style={{
           position: "absolute",
           inset: 0,
-          backgroundImage: `url(${sociasCover})`,
+          backgroundImage: `url(${coverImage})`,
           backgroundSize: "cover",
           backgroundPosition: "center top",
         }}
@@ -86,7 +87,7 @@ export function ProposalCoverPage({ clientName, projectName, logoUrl, pageWidth,
         ) : null}
       </div>
       <ValidityFooter validUntil={validUntil} dark />
-      <LogoQuadra />
+      <LogoSmall url={logoUrl} urlOnDark={logoOnDarkUrl} urlOnLight={logoOnLightUrl} variant="onDark" />
     </PageContainer>
   );
 }

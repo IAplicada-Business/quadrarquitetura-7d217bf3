@@ -1,4 +1,4 @@
-import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, LogoQuadra, ValidityFooter, type ProposalPageProps } from "./shared";
+import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, LogoSmall, ValidityFooter, type ProposalPageProps } from "./shared";
 import { blockContent } from "@/lib/proposalBlocks";
 import { RichText } from "./RichText";
 
@@ -46,7 +46,7 @@ const ComputerIcon = () => (
 
 const STEP_ICONS = [<BriefingIcon />, <PlantaIcon />, <SofaIcon />, <ComputerIcon />];
 
-export function ProposalInterioresPage({ pageWidth, pageHeight, validUntil, blockContent: raw }: ProposalPageProps) {
+export function ProposalInterioresPage({ pageWidth, pageHeight, validUntil, blockContent: raw, logoUrl, logoOnDarkUrl, logoOnLightUrl }: ProposalPageProps) {
   const c = blockContent("interiores", raw);
   const steps = c.steps.map((s, i) => ({ ...s, icon: STEP_ICONS[i % STEP_ICONS.length] }));
   const cols = Math.max(1, Math.min(steps.length, 4));
@@ -130,7 +130,7 @@ export function ProposalInterioresPage({ pageWidth, pageHeight, validUntil, bloc
         </div>
       </div>
       <ValidityFooter validUntil={validUntil} />
-      <LogoQuadra />
+      <LogoSmall url={logoUrl} urlOnDark={logoOnDarkUrl} urlOnLight={logoOnLightUrl} variant="onLight" />
     </PageContainer>
   );
 }

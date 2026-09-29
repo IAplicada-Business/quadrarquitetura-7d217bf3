@@ -134,17 +134,53 @@ export default function ProposalBrandingTab() {
       {/* Logo */}
       {activeCategory === "logo" && (
         <Card>
-          <CardHeader><CardTitle className="text-lg">Logo da Quadra</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-lg">Logo da Quadra</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              O PDF da proposta usa o logo claro nas páginas de fundo escuro (capa, valores) e o logo escuro nas de fundo bege. Sem logo enviado, sai o wordmark em texto.
+            </p>
+          </CardHeader>
           <CardContent className="space-y-4">
-            {logos.map(l => (
-              <div key={l.id} className="flex items-center gap-4">
-                {l.file_url && <img src={l.file_url} alt="Logo" className="h-16 object-contain" />}
-                <Button size="sm" variant="destructive" onClick={() => remove.mutate(l.id)}><Trash2 className="h-4 w-4" /></Button>
+            {logos.map(l => {
+              const variant = (l.metadata as { variant?: string } | null)?.variant;
+              return (
+                <div key={l.id} className="flex items-center gap-4">
+                  {l.file_url && (
+                    <div className={`rounded p-2 ${variant === "light" ? "bg-[#1B2A4A]" : "bg-[#F5E0D0]"}`}>
+                      <img src={l.file_url} alt="Logo" className="h-12 object-contain" />
+                    </div>
+                  )}
+                  <div className="flex-1 text-sm">
+                    <p className="font-medium">{l.name}</p>
+                    <Badge variant="outline" className="text-[10px] mt-1">
+                      {variant === "light" ? "Para fundo escuro" : variant === "dark" ? "Para fundo claro" : "Sem variante (usado nos dois)"}
+                    </Badge>
+                  </div>
+                  <Button size="sm" variant="destructive" onClick={() => remove.mutate(l.id)}><Trash2 className="h-4 w-4" /></Button>
+                </div>
+              );
+            })}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label>Logo claro (fundo escuro)</Label>
+                <Input type="file" accept="image/*" aria-label="Logo claro" disabled={uploading} onChange={async (e) => {
+                  const file = e.target.files?.[0]; if (!file) return;
+                  setUploading(true);
+                  try { const url = await uploadFile(file, "logo"); create.mutate({ category: "logo", name: "Logo claro", file_url: url, metadata: { variant: "light" } as never }); }
+                  catch (err) { toast({ title: "Erro no upload", description: (err as Error).message, variant: "destructive" }); }
+                  finally { setUploading(false); }
+                }} />
               </div>
-            ))}
-            <div>
-              <Label>Upload Logo</Label>
-              <Input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, "logo", "Logo Quadra")} disabled={uploading} />
+              <div>
+                <Label>Logo escuro (fundo claro)</Label>
+                <Input type="file" accept="image/*" aria-label="Logo escuro" disabled={uploading} onChange={async (e) => {
+                  const file = e.target.files?.[0]; if (!file) return;
+                  setUploading(true);
+                  try { const url = await uploadFile(file, "logo"); create.mutate({ category: "logo", name: "Logo escuro", file_url: url, metadata: { variant: "dark" } as never }); }
+                  catch (err) { toast({ title: "Erro no upload", description: (err as Error).message, variant: "destructive" }); }
+                  finally { setUploading(false); }
+                }} />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -153,7 +189,12 @@ export default function ProposalBrandingTab() {
       {/* Founder Photos */}
       {activeCategory === "founder_photo" && (
         <Card>
-          <CardHeader><CardTitle className="text-lg">Fotos das Sócias</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-lg">Fotos das Sócias</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              As fotos enviadas aqui ficam disponíveis para escolher na capa e na página Quem Somos, em Blocos do PDF. Trocar a foto do PDF é lá.
+            </p>
+          </CardHeader>
           <CardContent className="space-y-4">
             {founderPhotos.map(p => (
               <div key={p.id} className="flex items-center gap-4 p-3 border rounded-lg">

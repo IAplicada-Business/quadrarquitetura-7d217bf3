@@ -86,7 +86,7 @@ export function ProposalPortfolioCardsPage(props: ProposalPageProps) {
         </div>
       </div>
       <ValidityFooter validUntil={props.validUntil} />
-      <LogoSmall url={props.logoUrl} />
+      <LogoSmall url={props.logoUrl} urlOnDark={props.logoOnDarkUrl} urlOnLight={props.logoOnLightUrl} variant="onLight" />
     </PageContainer>
   );
 }

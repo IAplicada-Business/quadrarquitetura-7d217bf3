@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { useLeads, leadStatusLabels } from "@/hooks/useLeads";
 import { useProposalAssets } from "@/hooks/useProposalAssets";
 import { useProposalBlocks } from "@/hooks/useProposalBlocks";
+import { pickProposalLogos } from "@/lib/proposalBlocks";
 import { useContracts } from "@/hooks/useContracts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -137,6 +138,8 @@ export default function LeadDetail() {
         scopeDescription: proposal.scope_description || "",
         servicesIncluded: proposal.services_included || "ambos",
         logoUrl: logo,
+        logoOnDarkUrl: pickProposalLogos(logos).onDark,
+        logoOnLightUrl: pickProposalLogos(logos).onLight,
         founderPhotos,
         aboutText,
         contactPhone1: contactInfo?.description || "",
