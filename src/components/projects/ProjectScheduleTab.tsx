@@ -148,6 +148,16 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
     setActivityFormOpen(true);
   };
 
+  // Check "entregue" na linha do reverso: conclui (100%) ou reabre a atividade.
+  const handleToggleDone = (activity: ProjectActivity, done: boolean) => {
+    if (done) {
+      updateActivity.mutate({ id: activity.id, status: "concluida", progress_percent: 100 });
+      return;
+    }
+    const started = !!activity.start_date && activity.start_date <= todayIso();
+    updateActivity.mutate({ id: activity.id, status: started ? "em_andamento" : "pendente", progress_percent: 0 });
+  };
+
   const handleGanttEdit = (task: { id: string }) => {
     openActivityForm(activities.find((a) => a.id === task.id) ?? null);
   };
@@ -319,7 +329,7 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
               <h3 className="text-base font-semibold">Cronograma Reverso</h3>
               <p className="text-xs text-muted-foreground max-w-2xl">
                 Base única do cronograma: as atividades vêm do Escopo; o Gantt e a Contagem Regressiva são gerados daqui.
-                Marque as pendências de entrega de cada atividade na coluna Entrega.
+                Marque a atividade como entregue no círculo antes do nome e as pendências de entrega na coluna Entrega.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -377,6 +387,7 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
             onChecklistToggle={handleChecklistToggle}
             onChecklistRemove={(id) => checklist.remove.mutate(id)}
             onChecklistAdd={(activityId) => setChecklistDialog({ open: true, activityId })}
+            onToggleDone={handleToggleDone}
           />
 
           {(activities.length > 0 || checklist.items.length > 0) && (
@@ -453,7 +464,7 @@ export function ProjectScheduleTab({ projectId }: { projectId: string }) {
               <p className="text-xs mt-1">Use "Aplicar calendário BR" no Cronograma Reverso para gerar o Gantt.</p>
             </div>
           ) : (
-            <GanttChart tasks={ganttFiltered} allTasks={ganttAll} onEdit={handleGanttEdit} viewMode={ganttView} />
+            <GanttChart tasks={ganttFiltered} allTasks={ganttAll} onEdit={handleGanttEdit} viewMode={ganttView} showSummary={false} />
           )}
         </TabsContent>
       </Tabs>

@@ -31,6 +31,8 @@ interface GanttChartProps {
   allTasks?: GanttTask[];
   onEdit?: (task: GanttTask) => void;
   viewMode: "day" | "week" | "month";
+  /** Card de resumo do caminho crítico abaixo do gráfico (o reverso já mostra isso). */
+  showSummary?: boolean;
 }
 
 const ROW_HEIGHT = 36;
@@ -48,7 +50,7 @@ type FlatRow =
   | { type: "header"; discipline: string; tasks: GanttTask[]; yOffset: number }
   | { type: "task"; task: GanttTask; yOffset: number };
 
-export function GanttChart({ tasks, allTasks, onEdit, viewMode }: GanttChartProps) {
+export function GanttChart({ tasks, allTasks, onEdit, viewMode, showSummary = true }: GanttChartProps) {
   const [offset, setOffset] = useState(0);
   const [showCriticalPath, setShowCriticalPath] = useState(true);
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
@@ -443,7 +445,7 @@ export function GanttChart({ tasks, allTasks, onEdit, viewMode }: GanttChartProp
       </div>
 
       {/* Critical Path Summary Card */}
-      {showCriticalPath && cpm.criticalCount > 0 && (
+      {showSummary && showCriticalPath && cpm.criticalCount > 0 && (
         <Card className="border-destructive/30">
           <CardContent className="p-4">
             <div className="flex flex-wrap gap-6 text-sm">

@@ -105,6 +105,8 @@ export function emptySection(partial: Partial<OnboardingSection> = {}): Onboardi
  * Sugestão inicial quando o time ainda não montou o template. Segue a
  * Tela 0 do mockup "Trilha do Cliente": a primeira seção é a capa (vídeo
  * de boas-vindas) e as seguintes viram os passos numerados 01, 02, 03.
+ * Os passos espelham a aba Cronograma da obra: Contagem Regressiva
+ * (quanto falta até a mudança) e Fechamento Cliente (o que depende dele).
  */
 export function starterSections(): OnboardingSection[] {
   return [
@@ -113,12 +115,12 @@ export function starterSections(): OnboardingSection[] {
       body: "Um vídeo rápido da Mariana explicando como usar esse espaço ao longo do projeto.",
     }),
     emptySection({
-      title: "Veja em que etapa está",
-      body: "Uma linha do tempo mostra onde o projeto está agora e o que já foi concluído.",
+      title: "Veja quanto falta",
+      body: "Uma contagem regressiva mostra, do fim para o começo, o que falta até a mudança, o que já foi entregue e em que etapa a obra está.",
     }),
     emptySection({
-      title: "Aprove o que for preciso",
-      body: "Quando algo depender de você, vai aparecer em destaque, com prazo claro.",
+      title: "Feche o que depende de vocês",
+      body: "O que só vocês podem decidir ou contratar (marcenaria, mármores, eletros) aparece em destaque, com a data limite para fechar sem atrasar a obra.",
     }),
     emptySection({
       title: "Entenda cada decisão",
