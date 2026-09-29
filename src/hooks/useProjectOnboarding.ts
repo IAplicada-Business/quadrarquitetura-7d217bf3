@@ -3,23 +3,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { useOnboardingTemplate } from "@/hooks/useOnboardingTemplate";
-import { sectionsFromJson, type OnboardingOverrideRow, type OnboardingSection } from "@/lib/onboarding";
+import { PROJECT_ONBOARDING_KEY, useOnboardingTemplate } from "@/hooks/useOnboardingTemplate";
+import { onboardingMode, sectionsFromJson, type OnboardingOverrideRow, type OnboardingSection } from "@/lib/onboarding";
 
 /**
  * Onboarding de uma obra (aba Onboarding do projeto).
  *
- * - Sem override: a obra usa o template padrão do time ao vivo
- *   (mudou o template, mudou a obra).
- * - Com override: a obra tem a própria cópia das seções e não é afetada
- *   pelo template.
+ * - Sem override, ou override com sections_json nulo: a obra segue ao vivo
+ *   o modelo em template_id (null = modelo padrão do time). Mudou o
+ *   modelo, mudou a obra.
+ * - Override com sections_json: a obra tem a própria cópia das seções e
+ *   não é afetada pelos modelos.
  */
 export function useProjectOnboarding(projectId: string | undefined) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const templateQuery = useOnboardingTemplate();
 
-  const key = ["project-onboarding", projectId];
+  const key = [...PROJECT_ONBOARDING_KEY, projectId];
 
   const query = useQuery({
     queryKey: key,
@@ -36,20 +36,33 @@ export function useProjectOnboarding(projectId: string | undefined) {
   });
 
   const override = query.data ?? null;
-  const overrideSections = useMemo(() => (override ? sectionsFromJson(override.sections_json) : null), [override]);
+  const followedTemplateId = override?.template_id ?? null;
+  const templateQuery = useOnboardingTemplate(followedTemplateId);
+
+  const mode = onboardingMode(override);
+  const customSections = useMemo(
+    () => (override && Array.isArray(override.sections_json) ? sectionsFromJson(override.sections_json) : null),
+    [override],
+  );
   const templateSections = templateQuery.sections;
 
   /** O que vale hoje para a obra. */
-  const effectiveSections: OnboardingSection[] = overrideSections ?? templateSections;
-  const usesTemplate = !override;
+  const effectiveSections: OnboardingSection[] = customSections ?? templateSections;
+  const usesTemplate = customSections == null;
   const isEnabled = override ? override.is_enabled : true;
 
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: key });
+  const onError = (title: string) => (e: Error) => toast({ title, description: e.message, variant: "destructive" });
+
+  /** Grava uma cópia personalizada para a obra. */
   const saveOverride = useMutation({
     mutationFn: async ({ sections, is_enabled }: { sections: OnboardingSection[]; is_enabled?: boolean }) => {
+      const templateId = followedTemplateId ?? templateQuery.template?.id ?? null;
       const payload = {
         project_id: projectId!,
         user_id: user!.id,
-        source_template_id: templateQuery.template?.id ?? null,
+        template_id: templateId,
+        source_template_id: templateId,
         is_enabled: is_enabled ?? (override?.is_enabled ?? true),
         sections_json: sections as unknown as never,
       };
@@ -59,10 +72,33 @@ export function useProjectOnboarding(projectId: string | undefined) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: key });
+      invalidate();
       toast({ title: "Onboarding da obra salvo" });
     },
-    onError: (e: Error) => toast({ title: "Erro ao salvar onboarding", description: e.message, variant: "destructive" }),
+    onError: onError("Erro ao salvar onboarding"),
+  });
+
+  /** A obra passa a seguir este modelo ao vivo (descarta cópia personalizada, se houver). */
+  const setTemplate = useMutation({
+    mutationFn: async (templateId: string | null) => {
+      const payload = {
+        project_id: projectId!,
+        user_id: user!.id,
+        template_id: templateId,
+        source_template_id: templateId,
+        is_enabled: override?.is_enabled ?? true,
+        sections_json: null,
+      };
+      const { error } = await supabase
+        .from("onboarding_project_overrides")
+        .upsert(payload as never, { onConflict: "project_id" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidate();
+      toast({ title: "Modelo de onboarding da obra atualizado" });
+    },
+    onError: onError("Erro ao trocar modelo"),
   });
 
   const setEnabled = useMutation({
@@ -71,43 +107,42 @@ export function useProjectOnboarding(projectId: string | undefined) {
         const { error } = await supabase.from("onboarding_project_overrides").update({ is_enabled: enabled }).eq("id", override.id);
         if (error) throw error;
       } else {
-        // Sem override ainda: cria um com a cópia do template pra poder desligar.
+        // Sem override ainda: cria um que segue o modelo padrão, só pra guardar o interruptor.
         const { error } = await supabase.from("onboarding_project_overrides").upsert(
-          {
-            project_id: projectId!,
-            user_id: user!.id,
-            source_template_id: templateQuery.template?.id ?? null,
-            is_enabled: enabled,
-            sections_json: templateSections as unknown as never,
-          } as never,
+          { project_id: projectId!, user_id: user!.id, template_id: null, is_enabled: enabled, sections_json: null } as never,
           { onConflict: "project_id" },
         );
         if (error) throw error;
       }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
-    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+    onSuccess: invalidate,
+    onError: onError("Erro"),
   });
 
-  /** Volta a obra a seguir o template padrão ao vivo (apaga o override). */
+  /** Apaga a cópia personalizada; a obra volta a seguir o modelo escolhido ao vivo. */
   const resetToTemplate = useMutation({
     mutationFn: async () => {
       if (!override) return;
-      const { error } = await supabase.from("onboarding_project_overrides").delete().eq("id", override.id);
+      const { error } = await supabase.from("onboarding_project_overrides").update({ sections_json: null }).eq("id", override.id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: key });
-      toast({ title: "Obra voltou a usar o template padrão" });
+      invalidate();
+      toast({ title: "Obra voltou a seguir o modelo" });
     },
-    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+    onError: onError("Erro"),
   });
 
   return {
     override,
-    overrideSections,
+    mode,
+    customSections,
     templateSections,
+    /** Modelo que a obra segue (resolvido: escolhido ou padrão). */
     template: templateQuery.template,
+    templates: templateQuery.templates,
+    defaultTemplate: templateQuery.defaultTemplate,
+    followedTemplateId,
     effectiveSections,
     usesTemplate,
     isEnabled,
@@ -115,6 +150,7 @@ export function useProjectOnboarding(projectId: string | undefined) {
     isFetched: query.isFetched && templateQuery.isFetched,
     dataUpdatedAt: Math.max(query.dataUpdatedAt, templateQuery.dataUpdatedAt),
     saveOverride,
+    setTemplate,
     setEnabled,
     resetToTemplate,
   };

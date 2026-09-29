@@ -16,19 +16,23 @@ interface Props {
 }
 
 /**
- * Aba Onboarding da obra. Sem personalização, a obra segue o template
- * padrão ao vivo; ao salvar qualquer mudança, a obra ganha a própria
- * cópia (override) e deixa de ser afetada pelo template.
+ * Aba Onboarding da obra.
+ *
+ * A obra escolhe qual modelo de onboarding segue (Configurações →
+ * Onboarding). Sem escolha, segue o padrão do time. Ao salvar qualquer
+ * mudança nas seções, a obra ganha a própria cópia e deixa de ser afetada
+ * pelo modelo; "Voltar a seguir o modelo" apaga a cópia.
  */
 export function ProjectOnboardingTab({ projectId, projectName }: Props) {
   const {
-    effectiveSections, templateSections, usesTemplate, isEnabled,
-    isLoading, isFetched, dataUpdatedAt, saveOverride, setEnabled, resetToTemplate,
+    effectiveSections, templateSections, template, templates, defaultTemplate, followedTemplateId,
+    usesTemplate, isEnabled, isLoading, isFetched, dataUpdatedAt,
+    saveOverride, setTemplate, setEnabled, resetToTemplate,
   } = useProjectOnboarding(projectId);
   const { activeToken } = useClientPortalToken(projectId);
 
-  // Rascunho: quando a obra ainda segue o template, o rascunho é uma cópia
-  // com ids novos (é o que vira override ao salvar).
+  // Rascunho: quando a obra segue um modelo, o rascunho é uma cópia com
+  // ids novos (é o que vira cópia personalizada ao salvar).
   const baseline = useMemo(
     () => (usesTemplate ? cloneSectionsForProject(effectiveSections) : effectiveSections),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -37,6 +41,7 @@ export function ProjectOnboardingTab({ projectId, projectName }: Props) {
   const [draft, setDraft] = useState<OnboardingSection[] | null>(null);
   const [pulledFromTemplate, setPulledFromTemplate] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmSwitch, setConfirmSwitch] = useState<string | null>(null);
   const dirtyRef = useRef(false);
 
   const dirty = draft != null && (pulledFromTemplate || !sectionsEqual(draft, baseline));
@@ -61,6 +66,18 @@ export function ProjectOnboardingTab({ projectId, projectName }: Props) {
     );
   }
 
+  const selectedTemplateId = followedTemplateId ?? defaultTemplate?.id ?? null;
+
+  const chooseTemplate = (id: string) => {
+    if (id === selectedTemplateId && usesTemplate) return;
+    // Com cópia personalizada, trocar de modelo descarta a cópia: confirma antes.
+    if (!usesTemplate) {
+      setConfirmSwitch(id);
+      return;
+    }
+    setTemplate.mutate(id);
+  };
+
   const pullFromTemplate = () => {
     setDraft(cloneSectionsForProject(templateSections));
     setPulledFromTemplate(true);
@@ -70,6 +87,8 @@ export function ProjectOnboardingTab({ projectId, projectName }: Props) {
     saveOverride.mutate({ sections: draft }, { onSuccess: () => setPulledFromTemplate(false) });
   };
 
+  const templateName = template?.name ?? "padrão";
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -77,15 +96,15 @@ export function ProjectOnboardingTab({ projectId, projectName }: Props) {
           <h3 className="font-semibold flex items-center gap-2">
             Onboarding do cliente
             {usesTemplate ? (
-              <Badge variant="secondary" className="text-[10px]"><Layers className="h-3 w-3 mr-1" /> Usando template padrão</Badge>
+              <Badge variant="secondary" className="text-[10px]"><Layers className="h-3 w-3 mr-1" /> Modelo: {templateName}</Badge>
             ) : (
               <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">Personalizado para esta obra</Badge>
             )}
           </h3>
           <p className="text-xs text-muted-foreground">
             {usesTemplate
-              ? "Esta obra mostra o template padrão. Ao salvar qualquer alteração aqui, ela ganha a própria versão e o template não muda."
-              : "Alterações aqui valem só para esta obra. O template padrão continua igual."}
+              ? `Esta obra segue o modelo "${templateName}" ao vivo. Ao salvar qualquer alteração aqui, ela ganha a própria versão e o modelo não muda.`
+              : "Alterações aqui valem só para esta obra. Os modelos continuam iguais."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -106,6 +125,40 @@ export function ProjectOnboardingTab({ projectId, projectName }: Props) {
         </div>
       </div>
 
+      {/* Escolha do modelo */}
+      <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+        <p className="text-xs font-semibold">Modelo de onboarding desta obra</p>
+        {templates.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Nenhum modelo cadastrado ainda. Crie os modelos em Configurações → Onboarding, ou monte as seções só para esta obra abaixo.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Modelo de onboarding">
+            {templates.map((t) => {
+              const selected = t.id === selectedTemplateId;
+              return (
+                <Button
+                  key={t.id}
+                  role="radio"
+                  aria-checked={selected && usesTemplate}
+                  size="sm"
+                  variant={selected && usesTemplate ? "default" : "outline"}
+                  onClick={() => chooseTemplate(t.id)}
+                  disabled={setTemplate.isPending}
+                  title={t.description ?? undefined}
+                >
+                  {t.name}
+                  {t.is_default && <span className="ml-1.5 text-[10px] opacity-70">padrão</span>}
+                </Button>
+              );
+            })}
+          </div>
+        )}
+        {!usesTemplate && templates.length > 0 && (
+          <p className="text-[11px] text-muted-foreground">Esta obra tem uma cópia personalizada. Escolher um modelo descarta a cópia e volta a seguir o modelo ao vivo.</p>
+        )}
+      </div>
+
       {!portalUrl && (
         <p className="text-xs text-muted-foreground rounded-md border border-dashed p-3">
           Esta obra ainda não tem link do portal do cliente. Gere o link na aba Acompanhamento para o cliente acessar o onboarding.
@@ -114,12 +167,12 @@ export function ProjectOnboardingTab({ projectId, projectName }: Props) {
 
       <div className="flex flex-wrap items-center justify-between gap-3 sticky top-0 z-10 bg-background/95 backdrop-blur py-2 border-b">
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="outline" onClick={pullFromTemplate} disabled={saveOverride.isPending} title="Substitui o rascunho pelas seções do template padrão para você customizar em cima">
-            <Layers className="h-4 w-4 mr-1" /> Usar template padrão
+          <Button size="sm" variant="outline" onClick={pullFromTemplate} disabled={saveOverride.isPending || templateSections.length === 0} title={`Substitui o rascunho pelas seções do modelo "${templateName}" para você personalizar em cima`}>
+            <Layers className="h-4 w-4 mr-1" /> Copiar do modelo
           </Button>
           {!usesTemplate && (
             <Button size="sm" variant="ghost" onClick={() => setConfirmReset(true)} disabled={resetToTemplate.isPending}>
-              <RotateCcw className="h-4 w-4 mr-1" /> Voltar a seguir o template
+              <RotateCcw className="h-4 w-4 mr-1" /> Voltar a seguir o modelo
             </Button>
           )}
         </div>
@@ -136,7 +189,7 @@ export function ProjectOnboardingTab({ projectId, projectName }: Props) {
 
       {draft.length === 0 && templateSections.length === 0 && (
         <p className="text-sm text-muted-foreground rounded-lg border border-dashed p-6 text-center">
-          Nenhuma seção ainda. Monte o template padrão em Configurações → Onboarding, ou adicione seções só para esta obra.
+          Nenhuma seção ainda. Monte um modelo em Configurações → Onboarding, ou adicione seções só para esta obra.
         </p>
       )}
 
@@ -145,14 +198,37 @@ export function ProjectOnboardingTab({ projectId, projectName }: Props) {
       <AlertDialog open={confirmReset} onOpenChange={setConfirmReset}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Voltar a seguir o template padrão?</AlertDialogTitle>
+            <AlertDialogTitle>Voltar a seguir o modelo "{templateName}"?</AlertDialogTitle>
             <AlertDialogDescription>
-              A personalização desta obra será apagada e o portal passará a mostrar o template padrão, inclusive mudanças futuras nele.
+              A personalização desta obra será apagada e o portal passará a mostrar o modelo, inclusive mudanças futuras nele.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setConfirmReset(false); resetToTemplate.mutate(); }}>Voltar ao template</AlertDialogAction>
+            <AlertDialogAction onClick={() => { setConfirmReset(false); resetToTemplate.mutate(); }}>Voltar ao modelo</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmSwitch != null} onOpenChange={(o) => !o && setConfirmSwitch(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Trocar o modelo desta obra?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A cópia personalizada desta obra será apagada e o portal passará a mostrar o modelo "{templates.find((t) => t.id === confirmSwitch)?.name}" ao vivo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const id = confirmSwitch;
+                setConfirmSwitch(null);
+                if (id) setTemplate.mutate(id);
+              }}
+            >
+              Trocar modelo
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

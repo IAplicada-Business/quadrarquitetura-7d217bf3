@@ -112,42 +112,54 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Onboarding configurado pela equipe: override da obra > template
-    // padrão do time (resolvido pelo dono do projeto -> team_members).
+    // Onboarding configurado pela equipe. Mesma regra de onboardingMode()
+    // em src/lib/onboarding.ts:
+    //   override.is_enabled = false        -> nada
+    //   override.sections_json é lista     -> cópia personalizada da obra
+    //   override.template_id preenchido    -> seções ao vivo desse modelo
+    //   sem override / template_id nulo    -> modelo padrão do time
+    //     (resolvido pelo dono do projeto -> team_members)
     // Falha aqui não derruba o portal: onboarding volta null.
     let onboarding: { sections: unknown[] } | null = null;
     try {
       const { data: override } = await supabase
         .from("onboarding_project_overrides")
-        .select("is_enabled, sections_json")
+        .select("is_enabled, sections_json, template_id")
         .eq("project_id", projectId)
         .maybeSingle();
-      if (override) {
-        onboarding = { sections: override.is_enabled && Array.isArray(override.sections_json) ? override.sections_json : [] };
+
+      if (override && !override.is_enabled) {
+        onboarding = { sections: [] };
+      } else if (override && Array.isArray(override.sections_json)) {
+        onboarding = { sections: override.sections_json };
       } else {
-        const { data: owner } = await supabase.from("projects").select("user_id").eq("id", projectId).single();
-        const { data: membership } = owner
-          ? await supabase.from("team_members").select("team_id").eq("user_id", owner.user_id).order("created_at", { ascending: true }).limit(1).maybeSingle()
-          : { data: null };
-        if (membership) {
-          const { data: template } = await supabase
-            .from("onboarding_templates")
-            .select("id")
-            .eq("team_id", membership.team_id)
-            .eq("is_default", true)
-            .limit(1)
-            .maybeSingle();
-          if (template) {
-            const { data: sections } = await supabase
-              .from("onboarding_sections")
-              .select("id, title, body, video_url, image_urls, cta_label, cta_url, is_active, display_order")
-              .eq("template_id", template.id)
-              .eq("is_active", true)
-              .order("display_order", { ascending: true });
-            onboarding = { sections: sections ?? [] };
-          } else {
-            onboarding = { sections: [] };
+        let templateId: string | null = override?.template_id ?? null;
+        if (!templateId) {
+          const { data: owner } = await supabase.from("projects").select("user_id").eq("id", projectId).single();
+          const { data: membership } = owner
+            ? await supabase.from("team_members").select("team_id").eq("user_id", owner.user_id).order("created_at", { ascending: true }).limit(1).maybeSingle()
+            : { data: null };
+          if (membership) {
+            const { data: template } = await supabase
+              .from("onboarding_templates")
+              .select("id")
+              .eq("team_id", membership.team_id)
+              .eq("is_default", true)
+              .limit(1)
+              .maybeSingle();
+            templateId = template?.id ?? null;
           }
+        }
+        if (templateId) {
+          const { data: sections } = await supabase
+            .from("onboarding_sections")
+            .select("id, title, body, video_url, image_urls, cta_label, cta_url, is_active, display_order")
+            .eq("template_id", templateId)
+            .eq("is_active", true)
+            .order("display_order", { ascending: true });
+          onboarding = { sections: sections ?? [] };
+        } else {
+          onboarding = { sections: [] };
         }
       }
     } catch (_e) {
