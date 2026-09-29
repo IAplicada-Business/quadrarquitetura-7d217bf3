@@ -2005,7 +2005,22 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_project_overrides_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_project_overrides_source_template_id_fkey"
+            columns: ["source_template_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       onboarding_sections: {
         Row: {
@@ -2056,7 +2071,15 @@ export type Database = {
           user_id?: string
           video_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_sections_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       onboarding_templates: {
         Row: {
