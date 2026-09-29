@@ -8,8 +8,12 @@ import { PortfolioSection } from "@/components/landing/PortfolioSection";
 import { ProcessSection } from "@/components/landing/ProcessSection";
 import { ContactSection } from "@/components/landing/ContactSection";
 import { LandingFooter } from "@/components/landing/LandingFooter";
+import { usePublicSiteContent } from "@/hooks/useSiteContent";
 
 export default function Landing() {
+  // Textos e imagens editáveis vêm de site_content (Configurações → Site).
+  const { content, isLoading } = usePublicSiteContent();
+
   // Enable smooth scrolling globally for anchor links on the LP
   useEffect(() => {
     const original = document.documentElement.style.scrollBehavior;
@@ -19,19 +23,23 @@ export default function Landing() {
     };
   }, []);
 
+  // Segura a página na primeira leitura (limitada por timeout no hook) pra
+  // não piscar o texto padrão antes do publicado.
+  if (isLoading) return <div className="min-h-screen bg-[#1B2A4A]" aria-busy="true" />;
+
   return (
     <div className="min-h-screen bg-white">
       <LandingNavbar />
       <main>
-        <HeroSection />
-        <AboutSection />
+        <HeroSection content={content.hero} />
+        <AboutSection content={content.about} />
         <ResultsSection />
-        <ServicesSection />
-        <PortfolioSection />
+        <ServicesSection content={content.services} />
+        <PortfolioSection content={content.portfolio} />
         <ProcessSection />
-        <ContactSection />
+        <ContactSection content={content.contact} />
       </main>
-      <LandingFooter />
+      <LandingFooter content={content.footer} />
     </div>
   );
 }

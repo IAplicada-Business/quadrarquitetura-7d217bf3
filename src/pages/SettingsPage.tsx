@@ -13,6 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import CalculationRulesTab from "@/components/settings/CalculationRulesTab";
 import ProposalBrandingTab from "@/components/settings/ProposalBrandingTab";
 import OnboardingTemplateTab from "@/components/settings/OnboardingTemplateTab";
+import SiteContentTab from "@/components/settings/site/SiteContentTab";
 import { useContentSeries } from "@/hooks/useContentSeries";
 import SupplierCategoriesManager from "@/components/settings/SupplierCategoriesManager";
 import MessageTemplatesSettings from "@/components/settings/MessageTemplatesSettings";
@@ -190,6 +191,7 @@ export default function SettingsPage() {
           <TabsTrigger value="conteudo">Conteúdo</TabsTrigger>
           <TabsTrigger value="canais">Canais de Aquisição</TabsTrigger>
           <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
+          <TabsTrigger value="site">Site</TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral">
@@ -374,6 +376,10 @@ export default function SettingsPage() {
 
         <TabsContent value="onboarding">
           <OnboardingTemplateTab />
+        </TabsContent>
+
+        <TabsContent value="site">
+          <SiteContentTab />
         </TabsContent>
       </Tabs>
     </div>

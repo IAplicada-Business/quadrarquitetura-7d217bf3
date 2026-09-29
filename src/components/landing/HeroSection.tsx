@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import coverImg from "@/assets/carousel-1.jpg";
+import { RichText } from "@/components/leads/proposal-pages/RichText";
+import { SITE_DEFAULTS, type HeroContent } from "@/lib/siteContent";
 
-export function HeroSection() {
+export function HeroSection({ content = SITE_DEFAULTS.hero }: { content?: HeroContent }) {
   const smoothTo = (href: string) => {
     document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
   };
@@ -17,7 +19,7 @@ export function HeroSection() {
         transition={{ duration: 1.8, ease: [0.22, 1, 0.36, 1] }}
       >
         <img
-          src={coverImg}
+          src={content.image || coverImg}
           alt="Quadra Arquitetura"
           className="w-full h-full object-cover"
           style={{ objectPosition: "center center" }}
@@ -62,9 +64,7 @@ export function HeroSection() {
               letterSpacing: "-0.02em",
             }}
           >
-            A sua obra
-            <br />
-            <em style={{ fontStyle: "italic", color: "#C4756E" }}>sob controle.</em>
+            <RichText text={content.title} styles={{ em: { color: "#C4756E" } }} />
           </h1>
 
           {/* Subtitle */}
@@ -77,9 +77,7 @@ export function HeroSection() {
               fontWeight: 300,
             }}
           >
-            Gerenciamento de obra com design de interiores autoral.
-            Cronograma, orcamento e entrega sem surpresas, do briefing a ultima peca instalada.
-            Belo Horizonte e regiao.
+            <RichText text={content.subtitle} />
           </p>
 
           {/* CTAs */}
@@ -90,7 +88,7 @@ export function HeroSection() {
               style={{ letterSpacing: "3px", fontWeight: 500 }}
             >
               <span className="inline-block transition-transform group-hover:translate-x-1">
-                Fale conosco &nbsp;&rarr;
+                {content.ctaPrimary} &nbsp;&rarr;
               </span>
             </button>
             <button
@@ -98,7 +96,7 @@ export function HeroSection() {
               className="border border-[#F0DCC8]/40 text-[#F0DCC8] px-8 py-4 text-xs tracking-widest uppercase transition-all hover:bg-[#F0DCC8]/10"
               style={{ letterSpacing: "3px", fontWeight: 400 }}
             >
-              Nossos projetos
+              {content.ctaSecondary}
             </button>
           </div>
         </motion.div>

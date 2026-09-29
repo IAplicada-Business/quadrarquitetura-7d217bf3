@@ -1,28 +1,12 @@
 import { motion } from "framer-motion";
 import { Armchair, ClipboardList, Hammer } from "lucide-react";
+import { RichText } from "@/components/leads/proposal-pages/RichText";
+import { SITE_DEFAULTS, type ServicesContent } from "@/lib/siteContent";
 
-const services = [
-  {
-    icon: ClipboardList,
-    title: "Gerenciamento de Obra",
-    description:
-      "Nosso diferencial. Cronograma, orcamento, compras e supervisao semanal no canteiro — tudo sob nossa gestao direta, com relatorios e previsibilidade em cada etapa.",
-  },
-  {
-    icon: Armchair,
-    title: "Design de Interiores",
-    description:
-      "Projetos autorais com atencao a ambientacao, materiais, iluminacao e marcenaria sob medida — traduzindo a rotina e os afetos de cada cliente.",
-  },
-  {
-    icon: Hammer,
-    title: "Reformas turn-key",
-    description:
-      "Planejamento e execucao de reformas complexas com gestao integrada de fornecedores. Entregamos a chave, nao uma lista de pendencias.",
-  },
-];
+// Ícones seguem a ordem dos cards (repetem se houver mais de 3).
+const ICONS = [ClipboardList, Armchair, Hammer];
 
-export function ServicesSection() {
+export function ServicesSection({ content = SITE_DEFAULTS.services }: { content?: ServicesContent }) {
   return (
     <section id="servicos" className="relative py-24 md:py-32 bg-[#1B2A4A] overflow-hidden">
       {/* Decorative element */}
@@ -48,7 +32,7 @@ export function ServicesSection() {
               fontWeight: 500,
             }}
           >
-            NOSSOS SERVICOS
+            {content.eyebrow}
           </p>
           <h2
             style={{
@@ -60,7 +44,7 @@ export function ServicesSection() {
               letterSpacing: "-0.01em",
             }}
           >
-            O que fazemos de <em style={{ color: "#C4756E", fontStyle: "italic" }}>melhor</em>
+            <RichText text={content.title} styles={{ em: { color: "#C4756E" } }} />
           </h2>
           <div
             className="w-12 h-px mx-auto mt-8"
@@ -69,11 +53,11 @@ export function ServicesSection() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[#F0DCC8]/10">
-          {services.map((s, i) => {
-            const Icon = s.icon;
+          {content.items.map((s, i) => {
+            const Icon = ICONS[i % ICONS.length];
             return (
               <motion.div
-                key={s.title}
+                key={i}
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
@@ -89,7 +73,7 @@ export function ServicesSection() {
                     fontWeight: 300,
                   }}
                 >
-                  0{i + 1}
+                  {String(i + 1).padStart(2, "0")}
                 </span>
 
                 <div
@@ -124,7 +108,7 @@ export function ServicesSection() {
                     fontWeight: 300,
                   }}
                 >
-                  {s.description}
+                  {s.desc}
                 </p>
               </motion.div>
             );

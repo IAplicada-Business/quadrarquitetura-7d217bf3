@@ -1,9 +1,12 @@
 import { Instagram } from "lucide-react";
 import logoBege from "@/assets/logo-bege.png";
+import { RichText } from "@/components/leads/proposal-pages/RichText";
+import { SITE_DEFAULTS, type FooterContent } from "@/lib/siteContent";
 
 const year = new Date().getFullYear();
 
-export function LandingFooter() {
+export function LandingFooter({ content = SITE_DEFAULTS.footer }: { content?: FooterContent }) {
+  const addressLines = content.address.split(/\r?\n/).filter((l) => l.trim());
   const smoothTo = (href: string) =>
     document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
 
@@ -13,7 +16,7 @@ export function LandingFooter() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-16 pb-12 border-b border-[#F0DCC8]/10">
           {/* Brand */}
           <div>
-            <img src={logoBege} alt="Quadra Arquitetura" className="h-24 w-auto mb-6" />
+            <img src={content.logo || logoBege} alt="Quadra Arquitetura" className="h-24 w-auto mb-6" />
             <p
               className="max-w-xs"
               style={{
@@ -24,7 +27,7 @@ export function LandingFooter() {
                 fontWeight: 300,
               }}
             >
-              Gerenciamento de obra, interiores e reformas turn-key. Projetos em Belo Horizonte/MG.
+              <RichText text={content.tagline} />
             </p>
           </div>
 
@@ -81,28 +84,34 @@ export function LandingFooter() {
               className="space-y-3 text-sm"
               style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300 }}
             >
-              <li className="opacity-70">Rua Euler, 10 · sala 301</li>
-              <li className="opacity-70">Padre Eustaquio · Belo Horizonte/MG</li>
-              <li className="opacity-70">CEP 30720-160</li>
-              <li>
-                <a
-                  href="mailto:contato@quadraarquitetura.com"
-                  className="opacity-70 hover:opacity-100 transition-opacity"
-                >
-                  contato@quadraarquitetura.com
-                </a>
-              </li>
-              <li className="pt-2">
-                <a
-                  href="https://instagram.com/quadraarq"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 opacity-70 hover:opacity-100 transition-opacity"
-                >
-                  <Instagram className="h-4 w-4" strokeWidth={1.5} />
-                  @quadraarq
-                </a>
-              </li>
+              {addressLines.map((line, i) => (
+                <li key={i} className="opacity-70">
+                  <RichText text={line} />
+                </li>
+              ))}
+              {content.email && (
+                <li>
+                  <a
+                    href={`mailto:${content.email}`}
+                    className="opacity-70 hover:opacity-100 transition-opacity"
+                  >
+                    {content.email}
+                  </a>
+                </li>
+              )}
+              {content.instagramHandle && (
+                <li className="pt-2">
+                  <a
+                    href={content.instagramUrl || undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 opacity-70 hover:opacity-100 transition-opacity"
+                  >
+                    <Instagram className="h-4 w-4" strokeWidth={1.5} />
+                    {content.instagramHandle}
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
         </div>
@@ -112,9 +121,9 @@ export function LandingFooter() {
           className="pt-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs"
           style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, opacity: 0.5 }}
         >
-          <p>&copy; {year} Quadra Arquitetura Ltda &middot; CNPJ 46.731.679/0001-90</p>
+          <p>&copy; {year} {content.legal}</p>
           <p style={{ letterSpacing: "2px", textTransform: "uppercase" }}>
-            Belo Horizonte · MG · Brasil
+            {content.location}
           </p>
         </div>
       </div>
