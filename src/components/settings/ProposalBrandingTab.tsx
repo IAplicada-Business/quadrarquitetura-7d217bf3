@@ -7,10 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useProposalAssets, ProposalAsset } from "@/hooks/useProposalAssets";
-import { Upload, Trash2, Plus, Image, FileText, Phone, Save } from "lucide-react";
+import { Upload, Trash2, Plus, Image, FileText, Phone, Save, LayoutList } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import ProposalBlocksEditor from "@/components/settings/proposal-blocks/ProposalBlocksEditor";
 
 const CATEGORIES = [
+  { value: "blocks", label: "Blocos do PDF", icon: LayoutList },
   { value: "logo", label: "Logo", icon: Image },
   { value: "founder_photo", label: "Fotos das Sócias", icon: Image },
   { value: "portfolio", label: "Portfólio", icon: Image },
@@ -56,7 +58,7 @@ const DEFAULT_TEXTS: Record<string, { name: string; description: string }> = {
 
 export default function ProposalBrandingTab() {
   const { assets, isLoading, logos, founderPhotos, portfolio, feedbacks, texts, contacts, create, update, remove, uploadFile, byCategory } = useProposalAssets();
-  const [activeCategory, setActiveCategory] = useState("logo");
+  const [activeCategory, setActiveCategory] = useState("blocks");
   const [uploading, setUploading] = useState(false);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, category: string, name?: string) => {
@@ -125,6 +127,9 @@ export default function ProposalBrandingTab() {
           </Button>
         ))}
       </div>
+
+      {/* Blocos configuráveis do PDF */}
+      {activeCategory === "blocks" && <ProposalBlocksEditor />}
 
       {/* Logo */}
       {activeCategory === "logo" && (
@@ -241,7 +246,10 @@ export default function ProposalBrandingTab() {
       {activeCategory === "text" && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">Textos Institucionais</CardTitle>
+            <div>
+              <CardTitle className="text-lg">Textos Institucionais</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">O texto "Quem Somos" editado em Blocos do PDF tem prioridade sobre o daqui.</p>
+            </div>
             <Button size="sm" variant="outline" onClick={initializeTexts}><Plus className="h-4 w-4 mr-1" /> Inicializar Padrão</Button>
           </CardHeader>
           <CardContent className="space-y-4">

@@ -2498,6 +2498,45 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_blocks: {
+        Row: {
+          content_json: Json
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          key: string
+          label: string
+          team_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content_json?: Json
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          key: string
+          label: string
+          team_id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content_json?: Json
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          key?: string
+          label?: string
+          team_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       proposal_templates: {
         Row: {
           created_at: string
@@ -3718,6 +3757,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_my_team_id: { Args: never; Returns: string }
+      get_my_team_ids: { Args: never; Returns: string[] }
       get_team_user_ids: { Args: never; Returns: string[] }
       is_admin: { Args: never; Returns: boolean }
       recusar_entrega_oportunidade: {

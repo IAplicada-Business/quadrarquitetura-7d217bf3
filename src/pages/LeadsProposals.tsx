@@ -12,6 +12,7 @@ import { useProposals, Proposal } from "@/hooks/useProposals";
 import { useLeads } from "@/hooks/useLeads";
 import { useProposalTemplates } from "@/hooks/useProposalTemplates";
 import { useProposalAssets } from "@/hooks/useProposalAssets";
+import { useProposalBlocks } from "@/hooks/useProposalBlocks";
 import { TemplateManager } from "@/components/leads/TemplateManager";
 import ProposalFormNew, { ProposalFormData } from "@/components/leads/ProposalFormNew";
 import { ProposalPreviewModal } from "@/components/leads/ProposalPreviewModal";
@@ -50,6 +51,7 @@ export default function LeadsProposals() {
   const { leads } = useLeads();
   const { templates, create: createTemplate, update: updateTemplate, remove: removeTemplate } = useProposalTemplates();
   const { logos, founderPhotos, portfolio, feedbacks, texts, contacts } = useProposalAssets();
+  const { blocks: proposalBlocks } = useProposalBlocks();
 
   const [view, setView] = useState<"list" | "form" | "templates">("list");
   const [editingProposal, setEditingProposal] = useState<Proposal | null>(null);
@@ -120,13 +122,13 @@ export default function LeadsProposals() {
     const pageProps = buildPageProps(formData);
     return buildProposalPages({
       data: pageProps,
+      blocks: proposalBlocks,
       portfolioImages: portfolio,
       feedbackImages: feedbacks,
       selectedPortfolioProjects: formData.portfolio_projects,
       selectedFeedbackIds: formData.feedback_items,
-      
     });
-  }, [buildPageProps, portfolio, feedbacks]);
+  }, [buildPageProps, portfolio, feedbacks, proposalBlocks]);
 
   const handleSave = (formData: ProposalFormData, status: string) => {
     const payload: Record<string, unknown> = {

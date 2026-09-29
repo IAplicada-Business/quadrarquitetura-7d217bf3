@@ -1,4 +1,6 @@
 import { PageContainer, COLORS, FONT_TITLE, ValidityFooter, type ProposalPageProps } from "./shared";
+import { blockContent } from "@/lib/proposalBlocks";
+import { RichText } from "./RichText";
 
 const ALL_FLOW_STEPS = [
   { id: "Briefing", title: "Levantamento\n& Briefing", desc: "Alinhamento de conceito e necessidades", daysKey: "briefing" as const },
@@ -10,17 +12,9 @@ const ALL_FLOW_STEPS = [
   { id: "Conferência e Fiscalização de Obra", title: "Conferência\ne Fiscalização", desc: "Gerenciamento pleno", daysKey: "fiscalization" as const },
 ];
 
-const DEFAULT_SCOPE =
-  "Desenvolvemos o **projeto executivo** com todos os desenhos necessários à obra, considerando cada ideia discutida com o cliente. Em seguida, conduzimos o **gerenciamento completo** — administração de fornecedores, cronograma, pagamentos, vistorias e conferências. Acompanhamos também o **pós-obra**, garantindo que tudo funcione como entregue.";
-
-export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelineAnteprojeto, timelineBudget, timelinePriorities, timelineConstruction, timelineMobilization, timelineFiscalization, ambientes, totalArea, etapasAtivas, pageWidth, pageHeight, validUntil }: ProposalPageProps) {
-  const text = scopeDescription || DEFAULT_SCOPE;
-
-  function parseSimpleMarkdown(t: string): string {
-    return t
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>');
-  }
+export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, timelineStudy, timelineAnteprojeto, timelineBudget, timelinePriorities, timelineConstruction, timelineMobilization, timelineFiscalization, ambientes, totalArea, etapasAtivas, pageWidth, pageHeight, validUntil, blockContent: raw }: ProposalPageProps) {
+  const c = blockContent("scope", raw);
+  const text = scopeDescription || c.defaultText;
 
   const activeEtapas = etapasAtivas || ALL_FLOW_STEPS.map(s => s.id);
   const steps = ALL_FLOW_STEPS.filter(s => activeEtapas.includes(s.id)).map((s, i) => {
@@ -56,7 +50,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
               marginBottom: 12,
             }}
           >
-            O que está sendo contemplado
+            {c.tag}
           </div>
           <h2
             style={{
@@ -70,9 +64,8 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
               letterSpacing: 2,
             }}
           >
-            Nosso Escopo
+            {c.title}
           </h2>
-          <style>{`.scope-markdown strong { font-weight: 600; color: #8B4557; } .scope-markdown em { font-style: italic; }`}</style>
           <div
             className="scope-markdown"
             style={{
@@ -83,14 +76,15 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
               maxWidth: 440,
               margin: "0 auto",
             }}
-            dangerouslySetInnerHTML={{ __html: parseSimpleMarkdown(text) }}
-          />
+          >
+            <RichText text={text} styles={{ strong: { fontWeight: 600, color: COLORS.textoTituloVinho } }} />
+          </div>
 
           {/* Ambientes */}
           {ambientes && ambientes.length > 0 && (
             <div style={{ marginTop: 16, textAlign: "center" }}>
               <p style={{ fontSize: 11, fontWeight: 600, color: COLORS.textoTituloVinho, marginBottom: 4 }}>
-                Ambientes contemplados:
+                {c.ambientesLabel}
               </p>
               <p style={{ fontSize: 11, color: COLORS.azulMarinho, lineHeight: 1.6 }}>
                 {ambientes.join(" · ")}
@@ -119,7 +113,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
             marginBottom: 12,
           }}
         >
-          Como funciona
+          {c.processTag}
         </div>
         <h3
           style={{
@@ -133,7 +127,7 @@ export function ProposalScopeFlowPage({ scopeDescription, timelineBriefing, time
             letterSpacing: 2,
           }}
         >
-          Nosso Processo
+          {c.processTitle}
         </h3>
 
         {/* Flow grid */}

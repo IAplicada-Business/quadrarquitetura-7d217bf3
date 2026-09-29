@@ -10,43 +10,77 @@ import { ProposalValuesPage } from "./proposal-pages/ValuesPage";
 import { ProposalContactPage } from "./proposal-pages/ContactPage";
 import { ProposalPortfolioCardsPage } from "./proposal-pages/PortfolioCardsPage";
 import { ProposalAsset } from "@/hooks/useProposalAssets";
+import { defaultProposalBlocks, type ProposalBlockKey, type ResolvedProposalBlock } from "@/lib/proposalBlocks";
 
 interface RendererProps {
   data: ProposalPageProps;
-  portfolioImages: ProposalAsset[];
-  feedbackImages: ProposalAsset[];
-  selectedPortfolioProjects: string[];
-  selectedFeedbackIds: string[];
+  /**
+   * Blocos configurados pelo time (useProposalBlocks). Ausente => padrão:
+   * as 9 páginas de sempre, na ordem de sempre.
+   */
+  blocks?: ResolvedProposalBlock[];
+  portfolioImages?: ProposalAsset[];
+  feedbackImages?: ProposalAsset[];
+  selectedPortfolioProjects?: string[];
+  selectedFeedbackIds?: string[];
 }
 
-export function buildProposalPages({ data }: RendererProps): React.ReactElement[] {
+/**
+ * Monta as páginas do PDF a partir dos blocos ativos, na ordem salva.
+ * Cada elemento devolvido tem `key` igual à chave do bloco, o que permite
+ * ao preview localizar a página de um bloco específico.
+ *
+ * Condições por proposta continuam valendo por cima do toggle do bloco:
+ * "interiores" só entra com serviço projeto/ambos e "portfolio" só entra
+ * quando a proposta tem cards selecionados.
+ */
+export function buildProposalPages({ data, blocks }: RendererProps): React.ReactElement[] {
+  const resolved = blocks ?? defaultProposalBlocks();
   const showInteriores = !data.servicesIncluded || data.servicesIncluded === "ambos" || data.servicesIncluded === "projeto";
+  const hasPortfolio = !!(data.portfolioCards && data.portfolioCards.length > 0);
 
-  const pageData = data;
+  const pages: React.ReactElement[] = [];
 
-  const pages: React.ReactElement[] = [
-    <ProposalCoverPage key="cover" {...pageData} />,
-    <ProposalAboutPage key="about" {...pageData} />,
-    <ProposalScopeFlowPage key="scope-flow" {...pageData} />,
-  ];
+  for (const block of resolved) {
+    if (!block.is_active) continue;
+    const props: ProposalPageProps = { ...data, blockContent: block.content };
+    const key: ProposalBlockKey = block.key;
 
-  if (showInteriores) {
-    pages.push(<ProposalInterioresPage key="interiores" {...pageData} />);
+    switch (key) {
+      case "cover":
+        pages.push(<ProposalCoverPage key={key} {...props} />);
+        break;
+      case "about":
+        pages.push(<ProposalAboutPage key={key} {...props} />);
+        break;
+      case "scope":
+        pages.push(<ProposalScopeFlowPage key={key} {...props} />);
+        break;
+      case "interiores":
+        if (showInteriores) pages.push(<ProposalInterioresPage key={key} {...props} />);
+        break;
+      case "management":
+        pages.push(<ProposalManagementFullPage key={key} {...props} />);
+        break;
+      case "whyhire":
+        pages.push(<ProposalWhyHireValuesPage key={key} {...props} />);
+        break;
+      case "portfolio":
+        if (hasPortfolio) pages.push(<ProposalPortfolioCardsPage key={key} {...props} />);
+        break;
+      case "values":
+        pages.push(<ProposalValuesPage key={key} {...props} />);
+        break;
+      case "contact":
+        pages.push(<ProposalContactPage key={key} {...props} />);
+        break;
+    }
   }
-
-  pages.push(
-    <ProposalManagementFullPage key="management" {...pageData} />,
-    <ProposalWhyHireValuesPage key="whyhire" {...pageData} />,
-  );
-
-  if (pageData.portfolioCards && pageData.portfolioCards.length > 0) {
-    pages.push(<ProposalPortfolioCardsPage key="portfolio-cards" {...pageData} />);
-  }
-
-  pages.push(
-    <ProposalValuesPage key="values" {...pageData} />,
-    <ProposalContactPage key="contact" {...pageData} />,
-  );
 
   return pages;
+}
+
+/** Chaves de bloco das páginas montadas, na ordem em que saem no PDF. */
+export function proposalPageKeys(pages: React.ReactElement[]): ProposalBlockKey[] {
+  return pages.map((p) => String(p.key) as ProposalBlockKey);
 }

@@ -1,21 +1,24 @@
 import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, LogoSmall, formatBRL, ValidityFooter, type ProposalPageProps } from "./shared";
+import { blockContent } from "@/lib/proposalBlocks";
+import { RichText } from "./RichText";
 
 export function ProposalValuesPage(props: ProposalPageProps) {
   const { priceFull, priceCash, installmentsCount, installmentEntry, installmentValue, priceNote, logoUrl } = props;
+  const c = blockContent("values", props.blockContent);
 
-  const investmentLabel = priceFull ? formatBRL(priceFull) : "A consultar";
+  const investmentLabel = priceFull ? formatBRL(priceFull) : c.consultLabel;
   const investmentSub = priceCash != null && priceFull != null && priceCash < priceFull
-    ? `À vista: ${formatBRL(priceCash)}`
+    ? `${c.cashPrefix} ${formatBRL(priceCash)}`
     : "";
 
   const paymentLabel =
     installmentsCount && installmentValue
       ? `${installmentsCount}x de ${formatBRL(installmentValue)}`
-      : "Boleto ou Pix";
+      : c.paymentFallback;
   const paymentSub =
     installmentsCount && installmentEntry && installmentEntry > 0
-      ? `Entrada: ${formatBRL(installmentEntry)}`
-      : installmentsCount ? "" : "Parcelamento disponível";
+      ? `${c.entryPrefix} ${formatBRL(installmentEntry)}`
+      : installmentsCount ? "" : c.paymentFallbackSub;
 
   return (
     <PageContainer bg={COLORS.azulMarinho} pageWidth={props.pageWidth} pageHeight={props.pageHeight}>
@@ -39,7 +42,7 @@ export function ProposalValuesPage(props: ProposalPageProps) {
           marginBottom: 24,
           color: COLORS.textoClaro,
         }}>
-          Valores
+          {c.title}
         </h2>
 
         {/* Divider */}
@@ -76,7 +79,7 @@ export function ProposalValuesPage(props: ProposalPageProps) {
               marginBottom: 14,
               display: "block",
             }}>
-              Investimento Total
+              {c.investmentLabel}
             </span>
             <div style={{
               fontFamily: FONT_TITLE,
@@ -116,7 +119,7 @@ export function ProposalValuesPage(props: ProposalPageProps) {
               marginBottom: 14,
               display: "block",
             }}>
-              Formas de Pagamento
+              {c.paymentLabel}
             </span>
             <div style={{
               fontFamily: FONT_TITLE,
@@ -147,7 +150,7 @@ export function ProposalValuesPage(props: ProposalPageProps) {
           color: COLORS.textoClaro,
           maxWidth: 400,
         }}>
-          {priceNote || "* Mão de obra e materiais de execução não estão inclusos neste valor."}
+          <RichText text={priceNote || c.defaultNote} />
         </p>
       </div>
       <ValidityFooter validUntil={props.validUntil} dark />

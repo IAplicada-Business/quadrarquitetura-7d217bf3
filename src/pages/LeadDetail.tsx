@@ -11,6 +11,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { useLeads, leadStatusLabels } from "@/hooks/useLeads";
 import { useProposalAssets } from "@/hooks/useProposalAssets";
+import { useProposalBlocks } from "@/hooks/useProposalBlocks";
 import { useContracts } from "@/hooks/useContracts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -57,6 +58,7 @@ export default function LeadDetail() {
   const queryClient = useQueryClient();
   const { leads, isLoading: leadsLoading, convertToClient } = useLeads();
   const { logos, founderPhotos, portfolio, feedbacks, texts, contacts } = useProposalAssets();
+  const { blocks: proposalBlocks } = useProposalBlocks();
   const { contracts } = useContracts();
   const [convertProposal, setConvertProposal] = useState<any>(null);
   const [msgOpen, setMsgOpen] = useState(false);
@@ -164,6 +166,7 @@ export default function LeadDetail() {
 
       const pages = buildProposalPages({
         data: pageProps,
+        blocks: proposalBlocks,
         portfolioImages: portfolio,
         feedbackImages: feedbacks,
         selectedPortfolioProjects: portfolio.map(p => p.id),
@@ -199,7 +202,7 @@ export default function LeadDetail() {
     } catch (err: any) {
       toast({ title: "Erro ao gerar PDF", description: err.message, variant: "destructive" });
     }
-  }, [logos, founderPhotos, portfolio, feedbacks, texts, contacts, lead]);
+  }, [logos, founderPhotos, portfolio, feedbacks, texts, contacts, lead, proposalBlocks]);
 
   if (leadsLoading || proposalsLoading || contractsLoading) {
     return (

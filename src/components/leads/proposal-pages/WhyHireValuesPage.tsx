@@ -1,29 +1,9 @@
 import { PageContainer, COLORS, FONT_TITLE, FONT_BODY, ValidityFooter, type ProposalPageProps } from "./shared";
-
-const WHY_CARDS = [
-  {
-    num: "01",
-    title: "Alinhamento Técnico e Estético",
-    desc: "Unimos a precisão técnica à sensibilidade projetual — garantindo fidelidade ao conceito em cada etapa da execução.",
-  },
-  {
-    num: "02",
-    title: "Fidelidade Total ao Projeto",
-    desc: "Conhecemos o projeto de dentro para fora. Nenhum detalhe é perdido na transição do papel para a obra.",
-  },
-  {
-    num: "03",
-    title: "Transformamos Conceito em Solução",
-    desc: "Resolvemos imprevistos com visão de projeto, sem comprometer a estética aprovada.",
-  },
-  {
-    num: "04",
-    title: "Presença Constante na Obra",
-    desc: "Da fase inicial até a instalação de eletros, metais e pequenos detalhes — estamos lá para cada decisão.",
-  },
-];
+import { blockContent } from "@/lib/proposalBlocks";
+import { RichText } from "./RichText";
 
 export function ProposalWhyHireValuesPage(props: ProposalPageProps) {
+  const c = blockContent("whyhire", props.blockContent);
   return (
     <PageContainer bg={COLORS.azulMarinho} pageWidth={props.pageWidth} pageHeight={props.pageHeight}>
       <div style={{ padding: "52px 52px 44px", color: COLORS.textoClaro, height: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
@@ -40,12 +20,12 @@ export function ProposalWhyHireValuesPage(props: ProposalPageProps) {
             color: COLORS.textoClaro,
           }}
         >
-          Por que Contratar Arquitetos para Gerenciar sua Obra?
+          {c.title}
         </h2>
 
         {/* 2×2 grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-          {WHY_CARDS.map((card, i) => (
+          {c.cards.map((card, i) => (
             <div
               key={i}
               style={{
@@ -68,7 +48,7 @@ export function ProposalWhyHireValuesPage(props: ProposalPageProps) {
                   flexShrink: 0,
                 }}
               >
-                {card.num}
+                {String(i + 1).padStart(2, "0")}
               </span>
               <div>
                 <h4
@@ -84,7 +64,7 @@ export function ProposalWhyHireValuesPage(props: ProposalPageProps) {
                 >
                   {card.title}
                 </h4>
-                <p style={{ fontSize: 11, opacity: 0.7, lineHeight: 1.5, color: COLORS.textoClaro }}>{card.desc}</p>
+                <p style={{ fontSize: 11, opacity: 0.7, lineHeight: 1.5, color: COLORS.textoClaro }}><RichText text={card.desc || ""} /></p>
               </div>
             </div>
           ))}
