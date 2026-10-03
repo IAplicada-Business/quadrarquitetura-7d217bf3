@@ -3,6 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // Função de uso único: copia todos os arquivos de um bucket do banco ANTIGO
 // (onde ela roda, lendo via SUPABASE_SERVICE_ROLE_KEY auto-injetado) para o
 // banco NOVO (via MIGRATION_TARGET_URL + MIGRATION_TARGET_SERVICE_KEY).
+// Faz streaming direto (download -> upload) sem bufferizar o arquivo
+// inteiro na memória, para aguentar arquivos grandes (centenas de MB).
 // Apague esta function depois de migrar — ela guarda uma service role key
 // de outro projeto como secret.
 
@@ -40,6 +42,50 @@ async function listAllObjects(
   return paths;
 }
 
+// Copia um objeto sem bufferizar o arquivo inteiro na memória: assina uma
+// URL de leitura no projeto antigo, abre o stream de download, e repassa
+// esse stream direto no corpo da requisição de upload do projeto novo.
+// deno-lint-ignore no-explicit-any
+async function streamCopy(
+  source: any,
+  targetUrl: string,
+  targetKey: string,
+  bucket: string,
+  path: string,
+): Promise<number> {
+  const { data: signed, error: signError } = await source.storage.from(bucket).createSignedUrl(path, 300);
+  if (signError || !signed?.signedUrl) throw signError ?? new Error("falha ao assinar URL de origem");
+
+  const downloadResp = await fetch(signed.signedUrl);
+  if (!downloadResp.ok || !downloadResp.body) {
+    throw new Error(`download falhou: HTTP ${downloadResp.status}`);
+  }
+
+  const contentType = downloadResp.headers.get("content-type") || "application/octet-stream";
+  const contentLength = downloadResp.headers.get("content-length");
+
+  const uploadUrl = `${targetUrl}/storage/v1/object/${encodeURIComponent(bucket)}/${path.split("/").map(encodeURIComponent).join("/")}`;
+  const uploadResp = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${targetKey}`,
+      apikey: targetKey,
+      "Content-Type": contentType,
+      "x-upsert": "true",
+      ...(contentLength ? { "Content-Length": contentLength } : {}),
+    },
+    body: downloadResp.body,
+    // Streaming request bodies exigem duplex "half" no fetch do Deno/undici.
+    duplex: "half",
+    // deno-lint-ignore no-explicit-any
+  } as any);
+  if (!uploadResp.ok) {
+    const text = await uploadResp.text().catch(() => "");
+    throw new Error(`upload falhou: HTTP ${uploadResp.status} ${text.slice(0, 300)}`);
+  }
+  return contentLength ? Number(contentLength) : -1;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -54,8 +100,7 @@ Deno.serve(async (req) => {
 
     const url = new URL(req.url);
     const onlyBucket = url.searchParams.get("bucket");
-    const maxBytesParam = url.searchParams.get("max_mb");
-    const maxBytes = maxBytesParam ? Number(maxBytesParam) * 1024 * 1024 : 500 * 1024 * 1024; // default: pula arquivos > 500MB
+    const onlyPath = url.searchParams.get("path"); // migra só esse arquivo específico
 
     const sourceUrl = Deno.env.get("SUPABASE_URL")!;
     const sourceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!; // auto-injetado = este projeto (antigo)
@@ -66,39 +111,33 @@ Deno.serve(async (req) => {
     }
 
     const source = createClient(sourceUrl, sourceKey);
-    const target = createClient(targetUrl, targetKey);
-
-    const buckets = onlyBucket ? [onlyBucket] : REAL_BUCKETS;
     const results: Array<{ bucket: string; path: string; status: string; bytes?: number; error?: string }> = [];
 
-    for (const bucket of buckets) {
-      let paths: string[];
+    if (onlyBucket && onlyPath) {
+      // Modo arquivo único — para isolar um arquivo problemático.
       try {
-        paths = await listAllObjects(source.storage, bucket);
+        const bytes = await streamCopy(source, targetUrl, targetKey, onlyBucket, onlyPath);
+        results.push({ bucket: onlyBucket, path: onlyPath, status: "ok", bytes });
       } catch (e) {
-        results.push({ bucket, path: "(list)", status: "error", error: e instanceof Error ? e.message : String(e) });
-        continue;
+        results.push({ bucket: onlyBucket, path: onlyPath, status: "error", error: e instanceof Error ? e.message : String(e) });
       }
-
-      for (const path of paths) {
+    } else {
+      const buckets = onlyBucket ? [onlyBucket] : REAL_BUCKETS;
+      for (const bucket of buckets) {
+        let paths: string[];
         try {
-          const { data: blob, error: downloadError } = await source.storage.from(bucket).download(path);
-          if (downloadError || !blob) throw downloadError ?? new Error("download vazio");
-
-          if (blob.size > maxBytes) {
-            results.push({ bucket, path, status: "skipped_too_large", bytes: blob.size });
-            continue;
-          }
-
-          const { error: uploadError } = await target.storage.from(bucket).upload(path, blob, {
-            contentType: blob.type || "application/octet-stream",
-            upsert: true,
-          });
-          if (uploadError) throw uploadError;
-
-          results.push({ bucket, path, status: "ok", bytes: blob.size });
+          paths = await listAllObjects(source.storage, bucket);
         } catch (e) {
-          results.push({ bucket, path, status: "error", error: e instanceof Error ? e.message : String(e) });
+          results.push({ bucket, path: "(list)", status: "error", error: e instanceof Error ? e.message : String(e) });
+          continue;
+        }
+        for (const path of paths) {
+          try {
+            const bytes = await streamCopy(source, targetUrl, targetKey, bucket, path);
+            results.push({ bucket, path, status: "ok", bytes });
+          } catch (e) {
+            results.push({ bucket, path, status: "error", error: e instanceof Error ? e.message : String(e) });
+          }
         }
       }
     }
@@ -106,7 +145,6 @@ Deno.serve(async (req) => {
     const summary = {
       total: results.length,
       ok: results.filter((r) => r.status === "ok").length,
-      skipped_too_large: results.filter((r) => r.status === "skipped_too_large").length,
       errors: results.filter((r) => r.status === "error").length,
     };
 
