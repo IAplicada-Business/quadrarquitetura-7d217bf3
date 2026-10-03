@@ -16,7 +16,7 @@ O repositório novo foi criado na transição GitHub do Lovable. Comparado com o
 | Commit `main` | Idêntico (`bf621bd`) |
 | Histórico | 1188 commits em ambos |
 | Árvore de arquivos | 426 arquivos, checksums iguais |
-| Supabase | Mesmo projeto `howrjpavjofxbvqpiyey` |
+| Supabase | Mesmo projeto `thnmhsuniahctdnobpem` |
 | Edge functions | 15 (incl. `create-user` / `delete-user`) |
 | Migrations | 99 |
 | Knowledge Lovable | Restaurado a partir do inventário do repo legado |
