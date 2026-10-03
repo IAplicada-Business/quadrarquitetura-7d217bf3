@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import Anthropic from "npm:@anthropic-ai/sdk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,8 +20,8 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
 
     // Verify user
     const userClient = createClient(supabaseUrl, anonKey, {
@@ -225,43 +226,51 @@ ${contextBlock}`;
     const mergedHistory = [...uniqueDbHistory, ...sessionHistory].slice(-20);
 
     const messagesForAI = [
-      { role: "system", content: systemPrompt },
-      ...mergedHistory,
+      ...mergedHistory.map((m: any) => ({ role: m.role, content: m.content })),
       { role: "user", content: message },
     ];
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+    const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+
+    // Proxy Claude's stream as OpenAI-shaped SSE chunks, since the frontend
+    // (useAIChat.ts) parses `data: {"choices":[{"delta":{"content": "..."}}]}`.
+    const encoder = new TextEncoder();
+    const sseStream = new ReadableStream({
+      async start(controller) {
+        try {
+          const claudeStream = anthropic.messages.stream({
+            model: "claude-opus-5-5",
+            max_tokens: 4096,
+            system: systemPrompt,
+            messages: messagesForAI,
+          });
+
+          claudeStream.on("text", (delta) => {
+            const chunk = { choices: [{ delta: { content: delta } }] };
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+          });
+
+          const final = await claudeStream.finalMessage();
+          if (final.stop_reason === "refusal") {
+            const chunk = { choices: [{ delta: { content: "\n\n(resposta interrompida por política de segurança)" } }] };
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+          }
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        } catch (streamErr) {
+          console.error("Claude stream error:", streamErr);
+          const message = streamErr instanceof Anthropic.RateLimitError
+            ? "Limite de requisições excedido. Tente novamente em alguns instantes."
+            : "Erro no serviço de IA";
+          const chunk = { choices: [{ delta: { content: message } }] };
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        }
       },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: messagesForAI,
-        stream: true,
-      }),
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns instantes." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes. Adicione créditos ao workspace." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Erro no serviço de IA" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(response.body, {
+    return new Response(sseStream, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {

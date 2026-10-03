@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import Anthropic from "npm:@anthropic-ai/sdk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -64,7 +65,57 @@ estava saindo bagunçado):
   para essas em quase todos os casos.
 - Se está em dúvida se uma dependência é real, NÃO inclua. O
   cronograma com sequência ordenada já garante a ordem de fluxo;
-  \`depends_on_indices\` serve apenas para travas técnicas reais.`;
+  \`depends_on_indices\` serve apenas para travas técnicas reais.
+
+Gere o escopo usando a ferramenta "generate_activities_list" fornecida.`;
+
+const ACTIVITIES_SCHEMA = {
+  type: "object",
+  properties: {
+    activities: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "Nome técnico curto da atividade (ex: 'Pintura paredes — Sala'). Max 60 chars.",
+          },
+          ambiente: {
+            type: "string",
+            description: "Ambiente onde acontece (Sala, Cozinha, Suíte, Banho social, Lavanderia, Área externa, etc.). Use string curta consistente.",
+          },
+          discipline: {
+            type: "string",
+            enum: [
+              "Demolição", "Alvenaria", "Estrutura", "Hidráulica", "Elétrica", "Gesso/Forro",
+              "Revestimento", "Pintura", "Marcenaria", "Marmoraria", "Esquadrias", "Serralheria",
+              "Vidros", "Ar-condicionado", "Automação", "Iluminação", "Louças e Metais",
+              "Impermeabilização", "Piso", "Acabamento", "Limpeza",
+            ],
+          },
+          area_m2: {
+            type: "number",
+            description: "Área da atividade em m² quando aplicável (piso, parede, forro, revestimento). Derive do material quando o ambiente vier com área citada.",
+          },
+          duration_days: { type: "integer", description: "Duração estimada em dias úteis" },
+          description: { type: "string", description: "Descrição técnica em uma frase do serviço a ser executado." },
+          incluso: { type: "array", items: { type: "string" }, description: "Lista do que ESTÁ incluso neste serviço." },
+          nao_incluso: { type: "array", items: { type: "string" }, description: "Lista do que NÃO está incluso neste serviço (evita conflito com fornecedor)." },
+          depends_on_indices: {
+            type: "array",
+            items: { type: "integer" },
+            description: "Índices (0-based) das outras atividades neste mesmo array que precisam estar concluídas antes desta começar. Use somente para dependências reais entre disciplinas (ex: revestimento depende de hidráulica/elétrica).",
+          },
+        },
+        required: ["name", "ambiente", "discipline", "duration_days", "area_m2", "description", "incluso", "nao_incluso", "depends_on_indices"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["activities"],
+  additionalProperties: false,
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -81,185 +132,53 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY não configurada" }), {
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) {
+      return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY não configurada" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Build messages based on mode
-    const userContent: any[] = [];
+    const userContent: Anthropic.ContentBlockParam[] = [];
 
     if (mode === "image") {
       userContent.push(
-        { type: "image_url", image_url: { url: content } },
-        { type: "text", text: "Analise esta planta/imagem e gere o escopo de obra completo conforme as regras." }
+        { type: "image", source: { type: "url", url: content } },
+        { type: "text", text: "Analise esta planta/imagem e gere o escopo de obra completo conforme as regras." },
       );
     } else {
       // text or audio (audio comes as transcription)
       userContent.push({ type: "text", text: `Descrição do projeto:\n${content}` });
     }
 
-    const body: any = {
-      model: "google/gemini-3-flash-preview",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userContent },
-      ],
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "generate_activities_list",
-            description:
-              "Gera escopo de obra estruturado: lista plana de atividades onde cada linha corresponde a um par (ambiente, disciplina). Pensar primeiro em ambientes e depois nas disciplinas dentro deles.",
-            parameters: {
-              type: "object",
-              properties: {
-                activities: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      name: {
-                        type: "string",
-                        description:
-                          "Nome técnico curto da atividade (ex: 'Pintura paredes — Sala'). Max 60 chars.",
-                      },
-                      ambiente: {
-                        type: "string",
-                        description:
-                          "Ambiente onde acontece (Sala, Cozinha, Suíte, Banho social, Lavanderia, Área externa, etc.). Use string curta consistente.",
-                      },
-                      discipline: {
-                        type: "string",
-                        enum: [
-                          "Demolição",
-                          "Alvenaria",
-                          "Estrutura",
-                          "Hidráulica",
-                          "Elétrica",
-                          "Gesso/Forro",
-                          "Revestimento",
-                          "Pintura",
-                          "Marcenaria",
-                          "Marmoraria",
-                          "Esquadrias",
-                          "Serralheria",
-                          "Vidros",
-                          "Ar-condicionado",
-                          "Automação",
-                          "Iluminação",
-                          "Louças e Metais",
-                          "Impermeabilização",
-                          "Piso",
-                          "Acabamento",
-                          "Limpeza",
-                        ],
-                      },
-                      area_m2: {
-                        type: "number",
-                        description:
-                          "Área da atividade em m² quando aplicável (piso, parede, forro, revestimento). Derive do material quando o ambiente vier com área citada.",
-                      },
-                      duration_days: { type: "integer", description: "Duração estimada em dias úteis" },
-                      description: {
-                        type: "string",
-                        description:
-                          "Descrição técnica em uma frase do serviço a ser executado.",
-                      },
-                      incluso: {
-                        type: "array",
-                        items: { type: "string" },
-                        description: "Lista do que ESTÁ incluso neste serviço.",
-                      },
-                      nao_incluso: {
-                        type: "array",
-                        items: { type: "string" },
-                        description:
-                          "Lista do que NÃO está incluso neste serviço (evita conflito com fornecedor).",
-                      },
-                      depends_on_indices: {
-                        type: "array",
-                        items: { type: "integer" },
-                        description:
-                          "Índices (0-based) das outras atividades neste mesmo array que precisam estar concluídas antes desta começar. Use somente para dependências reais entre disciplinas (ex: revestimento depende de hidráulica/elétrica).",
-                      },
-                    },
-                    required: ["name", "ambiente", "discipline", "duration_days"],
-                    additionalProperties: false,
-                  },
-                },
-              },
-              required: ["activities"],
-              additionalProperties: false,
-            },
-          },
-        },
-      ],
-      tool_choice: { type: "function", function: { name: "generate_activities_list" } },
-    };
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
+    const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+    const response = await anthropic.messages.create({
+      model: "claude-opus-5-5",
+      max_tokens: 8192,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userContent }],
+      output_config: { format: { type: "json_schema", schema: ACTIVITIES_SCHEMA } },
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Muitas requisições. Tente novamente em alguns segundos." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos em Configurações > Workspace > Uso." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
+    if (response.stop_reason === "refusal") {
       return new Response(
-        JSON.stringify({ error: "Erro ao gerar atividades" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "A IA não conseguiu processar este conteúdo. Tente um texto mais direto." }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-
-    if (!toolCall?.function?.arguments) {
-      // Mariana (vídeo 11): quando o tool_calls vem vazio, antes
-      // mostrávamos "Erro ao gerar atividades" seco. Devolvemos
-      // mensagem útil mencionando texto simplificado.
-      console.error("Tool call vazio. Resposta bruta:", JSON.stringify(data).slice(0, 500));
-      return new Response(
-        JSON.stringify({
-          error:
-            "A IA não conseguiu estruturar o conteúdo. Tente um texto mais direto, sem bullets ou markdown.",
-        }),
-        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const textBlock = response.content.find((b) => b.type === "text");
+    const raw = textBlock?.type === "text" ? textBlock.text : "";
 
     let parsed: any;
     try {
-      parsed = JSON.parse(toolCall.function.arguments);
+      parsed = JSON.parse(raw);
     } catch (parseErr) {
-      console.error("Falha ao parsear tool_call:", parseErr, toolCall.function.arguments.slice(0, 300));
+      console.error("Falha ao parsear resposta:", parseErr, raw.slice(0, 300));
       return new Response(
-        JSON.stringify({
-          error:
-            "A IA retornou em formato inesperado. Tente novamente — se persistir, simplifique o texto.",
-        }),
-        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "A IA retornou em formato inesperado. Tente novamente — se persistir, simplifique o texto." }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -286,7 +205,7 @@ serve(async (req) => {
         incluso: a.incluso ?? [],
         nao_incluso: a.nao_incluso ?? [],
         // Sprint 7d (call 23/06): mesmo com o prompt limitando a 1
-        // dependência por atividade, o Gemini às vezes devolve 4-5.
+        // dependência por atividade, o modelo às vezes devolve 4-5.
         // Cortamos no servidor para garantir, mantendo só a primeira
         // (geralmente a mais relevante na ordem que ela retorna).
         depends_on_indices: Array.isArray(a.depends_on_indices)
@@ -300,6 +219,12 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("generate-activities error:", e);
+    if (e instanceof Anthropic.RateLimitError) {
+      return new Response(
+        JSON.stringify({ error: "Muitas requisições. Tente novamente em alguns segundos." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

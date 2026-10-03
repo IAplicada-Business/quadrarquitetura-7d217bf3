@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import Anthropic from "npm:@anthropic-ai/sdk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,8 +12,8 @@ serve(async (req) => {
   try {
     const { leadName, projectType, constructionType, templateIntroduction, templateMethodology, templateDifferentials, services, estimatedArea, value, paymentConditions } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
 
     const servicesList = [];
     if (services?.architectural) servicesList.push("Projeto Arquitetônico completo");
@@ -21,7 +22,7 @@ serve(async (req) => {
     if (services?.visualization) servicesList.push("Visualização 3D e Renders");
     if (services?.custom) servicesList.push(services.custom);
 
-    const systemPrompt = `Você é um especialista em elaboração de propostas comerciais para escritórios de arquitetura e construção civil no Brasil. 
+    const systemPrompt = `Você é um especialista em elaboração de propostas comerciais para escritórios de arquitetura e construção civil no Brasil.
 Gere textos profissionais, persuasivos e personalizados para propostas comerciais.
 Use linguagem formal mas acessível, em português brasileiro.
 NÃO inclua cabeçalhos, títulos ou formatação markdown. Apenas o texto corrido da descrição dos serviços.
@@ -43,47 +44,33 @@ ${templateDifferentials ? `Diferenciais:\n${templateDifferentials}\n` : ""}
 
 Gere um texto descritivo dos serviços que será incluído na proposta comercial. Seja específico sobre o que está incluso e como o trabalho será conduzido.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
+    const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+    const response = await anthropic.messages.create({
+      model: "claude-opus-5-5",
+      max_tokens: 2048,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns instantes." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes. Adicione créditos em Configurações > Workspace > Uso." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Erro ao gerar proposta" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (response.stop_reason === "refusal") {
+      return new Response(JSON.stringify({ error: "Não foi possível gerar o texto para esta solicitação." }), {
+        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const data = await response.json();
-    const generatedText = data.choices?.[0]?.message?.content || "";
+    const textBlock = response.content.find((b) => b.type === "text");
+    const generatedText = textBlock?.type === "text" ? textBlock.text : "";
 
     return new Response(JSON.stringify({ text: generatedText }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("generate-proposal error:", e);
+    if (e instanceof Anthropic.RateLimitError) {
+      return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns instantes." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

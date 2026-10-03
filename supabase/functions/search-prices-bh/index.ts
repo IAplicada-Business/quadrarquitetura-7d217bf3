@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import Anthropic from "npm:@anthropic-ai/sdk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,15 +28,39 @@ interface MaterialResult {
   searched_at: string;
 }
 
+const RESULTS_SCHEMA = {
+  type: "object",
+  properties: {
+    results: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          supplier: { type: "string" },
+          neighborhood: { type: "string" },
+          price_min: { type: "number" },
+          price_max: { type: "number" },
+          unit: { type: "string" },
+          source_url: { type: "string" },
+        },
+        required: ["supplier", "neighborhood", "price_min", "price_max", "unit", "source_url"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["results"],
+  additionalProperties: false,
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
-    if (!PERPLEXITY_API_KEY) {
-      throw new Error("PERPLEXITY_API_KEY is not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) {
+      throw new Error("ANTHROPIC_API_KEY is not configured");
     }
 
     const { activity_name, materials, city } = await req.json() as {
@@ -53,9 +78,10 @@ serve(async (req) => {
 
     const searchCity = city || "Belo Horizonte";
     const results: MaterialResult[] = [];
+    const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
     for (const mat of materials) {
-      const query = `Pesquise preços atuais de "${mat.name}" (${mat.unit}) em distribuidoras e lojas de materiais de construção em ${searchCity}, MG, Brasil, em 2025.
+      const query = `Pesquise na internet preços atuais de "${mat.name}" (${mat.unit}) em distribuidoras e lojas de materiais de construção em ${searchCity}, MG, Brasil, em 2025.
 
 Para cada fornecedor encontrado, retorne:
 - Nome do fornecedor/loja
@@ -63,61 +89,29 @@ Para cada fornecedor encontrado, retorne:
 - Faixa de preço (mínimo e máximo) por ${mat.unit}
 - URL da fonte quando disponível
 
-Retorne no formato JSON:
-{
-  "results": [
-    {
-      "supplier": "Nome da Loja",
-      "neighborhood": "Bairro",
-      "price_min": 0.00,
-      "price_max": 0.00,
-      "unit": "${mat.unit}",
-      "source_url": "https://..."
-    }
-  ]
-}
+Busque pelo menos 3 fornecedores. Use preços reais e atualizados, obtidos via busca na web.`;
 
-Busque pelo menos 3 fornecedores. Use preços reais e atualizados.`;
-
-      const response = await fetch("https://api.perplexity.ai/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${PERPLEXITY_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "sonar",
-          messages: [
-            {
-              role: "system",
-              content: "Você é um assistente especializado em pesquisa de preços de materiais de construção no Brasil. Sempre retorne dados em formato JSON válido. Seja preciso com preços e fornecedores reais.",
-            },
-            { role: "user", content: query },
-          ],
-          temperature: 0.1,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        console.error(`Perplexity API error for ${mat.name}: ${response.status} - ${errorBody}`);
-        results.push({
-          material: mat.name,
-          unit: mat.unit,
-          results: [],
-          searched_at: new Date().toISOString(),
-        });
-        continue;
-      }
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || "";
-
-      let supplierResults: SupplierResult[] = [];
       try {
-        const jsonMatch = content.match(/\{[\s\S]*"results"[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
+        const response = await anthropic.messages.create({
+          model: "claude-opus-5-5",
+          max_tokens: 4096,
+          system: "Você é um assistente especializado em pesquisa de preços de materiais de construção no Brasil, com acesso à internet via busca web. Sempre baseie os preços em resultados reais da busca. Seja preciso com preços e fornecedores reais.",
+          messages: [{ role: "user", content: query }],
+          tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 5 }],
+          output_config: { format: { type: "json_schema", schema: RESULTS_SCHEMA } },
+        });
+
+        if (response.stop_reason === "refusal") {
+          results.push({ material: mat.name, unit: mat.unit, results: [], searched_at: new Date().toISOString() });
+          continue;
+        }
+
+        const textBlock = response.content.find((b) => b.type === "text");
+        const raw = textBlock?.type === "text" ? textBlock.text : "";
+
+        let supplierResults: SupplierResult[] = [];
+        try {
+          const parsed = raw ? JSON.parse(raw) : { results: [] };
           supplierResults = (parsed.results || []).map((r: any) => ({
             supplier: r.supplier || "Não informado",
             neighborhood: r.neighborhood || "Não informado",
@@ -126,17 +120,25 @@ Busque pelo menos 3 fornecedores. Use preços reais e atualizados.`;
             unit: r.unit || mat.unit,
             source_url: r.source_url || "",
           }));
+        } catch (parseErr) {
+          console.error(`Failed to parse results for ${mat.name}:`, parseErr);
         }
-      } catch (parseErr) {
-        console.error(`Failed to parse results for ${mat.name}:`, parseErr);
-      }
 
-      results.push({
-        material: mat.name,
-        unit: mat.unit,
-        results: supplierResults,
-        searched_at: new Date().toISOString(),
-      });
+        results.push({
+          material: mat.name,
+          unit: mat.unit,
+          results: supplierResults,
+          searched_at: new Date().toISOString(),
+        });
+      } catch (matErr) {
+        console.error(`Claude API error for ${mat.name}:`, matErr);
+        results.push({
+          material: mat.name,
+          unit: mat.unit,
+          results: [],
+          searched_at: new Date().toISOString(),
+        });
+      }
     }
 
     return new Response(JSON.stringify({ results }), {
